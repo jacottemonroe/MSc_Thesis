@@ -1,0 +1,367 @@
+## Thesis - Data Exploration 
+
+## Map out some elephant tracking data to see what it looks like 
+
+
+# install packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+if(!('sf') %in% installed.packages()){install.packages('sf')}
+
+if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for dataframe slicing & resampling & path spliting 
+library(dplyr)
+
+if(!('rlang') %in% installed.packages()){install.packages('rlang')} # for turning string into dataframe column frame in dplyr piping 
+library(rlang)
+
+if(!('geosphere') %in% installed.packages()){install.packages('geosphere')} # for calc distance
+library(geosphere)
+
+if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # for histograms and maps
+library(ggplot2)
+
+if(!('ggspatial') %in% installed.packages()){install.packages('ggspatial')} #for north arrow
+library(ggspatial)
+
+if(!('padr') %in% installed.packages()){install.packages('padr')} # for resampling (thicken function)
+library(padr)
+
+if(!('zoo') %in% installed.packages()){install.packages('zoo')} # for linear interpolation
+library(zoo)
+
+if(!('lubridate') %in% installed.packages()){install.packages('lubridate')} # for getting weeks 
+library(lubridate)
+
+# 
+# if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')}
+# if(!('gganimate') %in% installed.packages()){install.packages('gganimate')}
+# if(!('gifski') %in% installed.packages()){install.packages('gifski')}
+
+library(terra)
+library(sf)
+# library(ggplot2)
+# library(ggspatial)
+# 
+# library(tidyterra)
+# library(gganimate)
+# library(gifski)
+
+# create directories 
+if(!dir.exists('data')){dir.create('data')}
+if(!dir.exists('output')){dir.create('output')}
+
+
+
+######################### user input ####################################
+
+study_area_filename <- 'data/etosha_geometry.geojson'
+landcover_filename <- 'data/etosha_landcover_dataframe_cop.csv'
+elephant_dataset_filename <- 'data/africanElephantEtoshaNP_analysis.csv'
+
+# list all faulty elephant datasets to remove (NA if none to remove)
+faulty_elephant_ID <- c(NA) #c('LA5') 
+
+data_exploration <- 'ON' #or 'OFF'
+
+# specify time interval between fixes 
+interval <- 4
+
+# specify time period of a path (in number of weeks)
+time_period <- 1
+
+
+
+
+
+######################### set-up - no user input ############################
+
+# load study area
+sa <- st_read(study_area_filename)
+
+# retrieve the landcover dataframe of etosha for plotting 
+lc_etoshaNP <- read.csv(landcover_filename, sep = ',')
+
+# create basemap of Etosha (for later mapping)
+source("functions/creatingEtoshaBasemap.R")
+basemap_Etosha <- createBasemapEtosha(sa, lc_etoshaNP)
+basemap_Etosha
+
+# read in the tracking data csv file 
+elephant_original_dataset <- read.table(file = elephant_dataset_filename, sep = ',', header = T)
+
+# remove elephant from dataset
+source('functions/removingFaultyElephants.R')
+elephant_data <- removeElephantByID(elephant_original_dataset, faulty_elephant_ID)
+
+# get list of elephant IDs
+# source: https://www.digitalocean.com/community/tutorials/strsplit-function-in-r
+elephant_IDs <- strsplit(unique(elephant_data$individual.local.identifier), ' ')
+print(elephant_IDs)
+
+
+
+########################### data exploration ################################
+
+if (data_exploration == 'ON') {
+  # explore each elephant dataset --> could loop this? 
+  source("functions/exploringElephantDataset.R")
+  elephant_results_list <- list()
+  
+  for (ID in elephant_IDs) {
+    results <- list(exploreElephantData(elephant_data, ID, basemap_Etosha))
+    elephant_results_list <- append(elephant_results_list, results)
+  }
+  
+  names(elephant_results_list) <- unlist(elephant_IDs)
+}
+
+
+
+
+##################### elephant data preprocessing ########################
+
+source('functions/cleaningElephantDataset.R')
+source('functions/resamplingElephant.R')
+source('functions/groupingElephant.R')
+
+# loop for each elephant dataset
+for (ID in elephant_IDs) {
+  
+  # clean data 
+  elephant_clean <- cleanElephantDataset(elephant_data, ID)
+  
+  # resample data to time interval 
+  elephant_resampled <- resampleElephantData(elephant_clean, interval, acceptable_NA_gap = 1, 'linear interpolation')
+  
+  # group data into periods (weeks)
+  elephant_preprocessed <- groupElephantByPeriod(elephant_resampled, time_period, constant_step_size = F)
+  
+  # save preprocessed elephant dataset as csv
+  write.csv(elephant_preprocessed, file = paste0('output/preprocessed_VSS_elephant_', ID, '.csv'))
+}
+
+
+ID <- 'LA15'
+elephant_clean <- cleanElephantDataset(elephant_data, ID)
+
+elephant_resampled <- resampleElephantData(elephant_clean, interval, acceptable_NA_gap = 1, 'linear interpolation')
+
+
+elephant_resampled['week'] <- as.integer(as.numeric(elephant_resampled$date_time)/(604800*1)) # 604800 seconds in a week
+
+elephant_resampled['NA_count'] <- 0
+
+elephant_resampled$NA_count[is.na(elephant_resampled$location.long)] <- 1
+
+period <- syms('week')
+elephant_resampled <- elephant_resampled %>% group_by(!!!period) %>% mutate(csum = cumsum(NA_count)) 
+
+elephant_resampled <- elephant_resampled[!is.na(elephant_resampled$location.long),]
+
+elephant_resampled <- elephant_resampled %>% group_by(!!!period) %>% mutate(path = match(csum, unique(csum)))
+
+elephant_resampled <- subset(elephant_resampled, select = -c(NA_count, csum))
+
+e <- elephant_resampled
+
+# source: https://stackoverflow.com/questions/27829558/count-occurrences-in-unique-group-combination
+e_count <- count(e, week, path) %>% ungroup()
+
+e_solo_steps <- e_count[e_count$n == 1, 1:2]
+
+number_e_solo_steps <- nrow(e_solo_steps)
+print(number_e_solo_steps)
+print(nrow(e) - number_e_solo_steps)
+
+for(i in 1:nrow(e_solo_steps)){
+  e <- e[-(e$week == e_solo_steps$week[i] & e$path == e_solo_steps$path[i]),]
+}
+
+
+
+
+elephant_preprocessed_constantSS <- groupElephantByPeriod(elephant_resampled, time_period, constant_step_size = T)
+elephant_preprocessed_variableSS <- groupElephantByPeriod(elephant_resampled, time_period, constant_step_size = F)
+
+
+
+
+
+########################## see elephant time ranges ####################
+
+# empty dataset of elephant presence dates 
+presence <- data.frame(ID = NA, start_date = NA, end_date = NA, week = NA, path = NA)
+
+# each elephant gets 1 column in dataframe where fill in matching dates 
+for (ID in elephant_IDs) {
+  
+  file_name <- paste0('output/preprocessed_VSS_elephant_', ID,'.csv')
+  
+  # get elephant dataset
+  df <- read.csv(file_name)
+  
+  # change date_time format to remove time 
+  df$date_time <- as.Date(df$date_time, tz = 'Africa/Maputo')
+  
+  # get list of periods 
+  # source: https://www.tutorialspoint.com/how-to-extract-unique-combinations-of-two-or-more-variables-in-an-r-data-frame
+  period_list <- period_list <- unique(df[c('week', 'path')]) 
+  
+  for(p in 1:nrow(period_list)){
+    
+    # subset period
+    period_date_range <- df[df$week == period_list$week[p] & df$path == period_list$path[p],]
+    
+    # add row to dataframe (need tidyverse package)
+    # source: https://sparkbyexamples.com/r-programming/add-row-to-dataframe-in-r/
+    presence <- presence %>% add_row(ID = ID, start_date = min(period_date_range$date_time),
+                                     end_date = max(period_date_range$date_time), 
+                                     week = period_list$week[p], path = period_list$path[p])
+  }
+}
+
+
+
+
+####################### visualize ###############################
+
+# remove first row that had NA (it was the default start row)
+presence <- na.omit(presence)
+
+# define start and end of green up
+GU_start <- c("2008-11-01", "2009-11-01", "2010-11-01", "2011-11-01", "2012-11-01", "2013-11-01")
+GU_end <- c("2009-03-15", "2010-03-15", "2011-03-15", "2012-03-15", "2013-03-15", "2014-03-15")
+obs_start <- c("2008-11-01", "2009-10-01", "2010-10-01", "2011-10-01", "2012-10-01", "2013-10-01")
+obs_end <- c("2009-04-15", "2010-04-15", "2011-04-15", "2012-04-15", "2013-04-15", "2014-03-27")
+
+green_up <- data.frame(start_greenup = as.Date(GU_start), end_greenup = as.Date(GU_end), 
+                       start_observ = as.Date(obs_start), end_observ = as.Date(obs_end))
+
+# plot elephant temporal presence 
+# source: https://stackoverflow.com/questions/72165869/plotting-date-ranges-for-each-id-and-marking-specific-dates-using-ggplot # for line ranges 
+elephant_presence_plot <- ggplot(presence) + 
+  geom_rect(data = green_up, aes(xmin = start_observ, xmax = end_observ, ymin = -Inf, 
+                                 ymax = Inf), fill = 'grey70', alpha = 0.2) +
+  geom_rect(data = green_up, aes(xmin = start_greenup, xmax = end_greenup, ymin = -Inf, 
+                                 ymax = Inf), fill = 'green1', alpha = 0.1) +
+  geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date), linewidth = 4,
+                 color = 'orange') + 
+  theme_bw()
+
+elephant_presence_plot
+
+
+
+
+
+
+
+### EXTRA: perform checks 
+# check that there is no missing data 
+# missing_data_check <- any(is.na(elephant_weekly))
+
+# check that all weeks have same number of fixes 
+# week_length_check <- elephant_weekly %>% count(week)
+# should be the same value as: 
+# number_weekly_fixes <- 7*(24/interval)
+
+
+
+
+
+
+
+
+
+
+
+
+
+LA5_daily <- elephant_data[elephant_data$individual.local.identifier == 'LA11',]
+
+
+
+
+#### plot data
+
+mov_map <- ggplot() +
+  geom_raster(data = lc_etoshaNP, aes(x = x, y = y, fill = landcover), show.legend = F) + 
+  geom_sf(data = sa$geometry, fill = NA, color = 'black', lwd = 1) +
+  #scale_fill_grey(start = 1, end = 0.7) +
+  scale_fill_manual(values = c('grey94', 'grey16', 'grey32', 'grey65', 'grey80', 'grey90', 'grey25', 'grey20')) +
+  #scale_fill_manual(name = 'Land cover', values = lc_lut$lc.color, labels = lc_lut$lc.class, na.translate = F) +
+  #labs(title = "Elephant Movement", subtitle = "2008 - 2014", x = "Longitude", y = "Latitude") +
+  geom_path(data = LA5_daily, aes(x = location.long, y = location.lat, color = 'red3', group=1), linewidth = 0.1, show.legend = F) +
+  #annotation_north_arrow(location = 'tl', which_north = 'true', 
+  # pad_x = unit(0.04, "in"), pad_y = unit(0.3, "in"),
+  # style = north_arrow_fancy_orienteering()) +
+  annotation_scale(location = 'tl') +
+  theme_minimal()
+
+mov_map
+
+
+
+lc_map <- ggplot() +
+  geom_raster(data = lc_etosha_df, aes(x = x, y = y, fill = lc_etosha_df$landcover), show.legend = F) + 
+  geom_sf(data = sa$geometry, fill = NA, color = 'black', lwd = 1) +
+  scale_fill_manual(name = 'Land cover', values = lc_lut$lc.color, labels = lc_lut$lc.class, na.translate = F) +
+  labs(title = "Etosha National Park",
+       subtitle = "Namibia",
+       x = "Longitude",
+       y = "Latitude") +
+  annotation_north_arrow(location = 'tl', which_north = 'true', 
+                         pad_x = unit(0.04, "in"), pad_y = unit(0.3, "in"),
+                         style = north_arrow_fancy_orienteering()) +
+  annotation_scale(location = 'tl') +
+  #annotation_custom(grob = ggplotGrob(mini_map), xmin = 17, xmax = 17.5, ymin = 18.6, ymax = 18.8) +
+  theme_minimal() + 
+  theme(plot.margin=unit(c(1,1,4,0.5),"cm")) + 
+  theme(legend.position = c(1.2, .1))
+lc_map
+
+
+# tutorial: https://conservancy.umn.edu/bitstream/handle/11299/220339/time-maps-tutorial-v2.html?sequence=3&isAllowed=y
+# tutorial: https://hansenjohnson.org/post/animate-movement-in-r/
+
+# plot basemap 
+base_map <- ggplot() +
+  # source: https://bookdown.org/mcwimberly/gdswr-book/raster-geospatial-data---discrete.html --> can't get it to work because of the different land cover data structure
+  #geom_raster(data = lc_masked, show.legend = F, aes(fill = discrete_classification)) +
+  #scale_fill_manual(name = 'Land cover', values = lc_colors, labels = lc_classes, na.translate = F)
+  geom_sf(data = sa$geometry, color = "black") #, fill = "white") 
+
+#base_map
+
+# plot data on basemap 
+map_with_data <- base_map +
+  #geom_point(data = LA5_daily, aes(x = location.long, y = location.lat, group=date), color = 'royalblue1', size = 0.8) +
+  geom_path(data = LA5_daily, aes(x = location.long, y = location.lat, color = tag, group=1), linewidth = 0.1)
+
+#map_with_data
+
+# zoom in 
+min_long <- min(LA5_daily$location.long)
+max_long <- max(LA5_daily$location.long)
+min_lat <- min(LA5_daily$location.lat)
+max_lat <- max(LA5_daily$location.lat)
+
+map_with_data <- map_with_data +
+  coord_sf(xlim = c(min_long, max_long),  ylim = c(min_lat, max_lat))
+
+map_with_data
+
+# animate 
+map_with_animation <- mov_map #map_with_data +
+transition_reveal(along = as.Date(timestamp)) +
+  ggtitle('Date: {frame_along}',
+          subtitle = 'Frame {frame} of {nframes}')
+
+map_with_shadow <- map_with_animation + 
+  shadow_mark()
+
+days <- unique(LA5_daily$date)
+ndays <- max(days) - min(days) + 1
+
+animate(map_with_shadow, nframes = ndays, fps = 100)
+anim_save('output/elephant_LA14_timelapse.gif', animation = last_animation())
+
