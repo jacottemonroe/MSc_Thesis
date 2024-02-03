@@ -120,7 +120,7 @@ plot(st_geometry(LA2_step_ex$geom))
 # save table 
 write.csv(LA2_step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
 
- 
+
 # 
 # # turn elephant data frame into track_xyt object for model building
 # # 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
