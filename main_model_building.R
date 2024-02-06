@@ -93,29 +93,42 @@ LA2_steps <- read.csv('data/elephant_etosha/LA2_elephant_all_steps_temporary.csv
 LA2_step_ex <- LA2_steps
 
 # get date of step
-LA2_step_ex$date <- as.Date(LA2_step_ex$t1_)
+LA2_step_ex$start_date <- as.Date(LA2_step_ex$t1_)
+
+# get end date of step (necessary for GEE part)
+LA2_step_ex$end_date <- LA2_step_ex$start_date + 1
+
+# get start and end dates for the week before 
+LA2_step_ex$start_date_prev_week <- LA2_step_ex$start_date - 7
+LA2_step_ex$end_date_prev_week <- LA2_step_ex$start_date_prev_week + 1
+
+# convert dates into strings 
+LA2_step_ex$start_date <- as.character(LA2_step_ex$start_date)
+LA2_step_ex$end_date <- as.character(LA2_step_ex$end_date)
+LA2_step_ex$end_date_prev_week <- as.character(LA2_step_ex$end_date_prev_week)
+LA2_step_ex$end_date_prev_week <- as.character(LA2_step_ex$end_date_prev_week)
 
 # get extreme coordinates for each day
-LA2_step_ex <- LA2_step_ex %>% group_by(date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
+LA2_step_ex <- LA2_step_ex %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
 
 # get table of all extents per date
-LA2_step_ex <- unique(LA2_step_ex[,c('date', 'xmin', 'ymin', 'xmax', 'ymax')])
+LA2_step_ex <- unique(LA2_step_ex[,c('start_date', 'end_date', 'start_date_prev_week', 'end_date_prev_week', 'xmin', 'ymin', 'xmax', 'ymax')])
 
-# create empty col for geometry of bbox
-LA2_step_ex$geom <- NA
-
-# generate bbox geometry --> for some reason have to turn it into geometry twice for it to work (could do this better)
-createBboxGeometry <- function(x){
-  bbox <- st_as_sfc(st_bbox(c(xmin = LA2_step_ex$xmin[x], xmax = LA2_step_ex$xmax[x], 
-                                             ymax = LA2_step_ex$ymax[x], ymin = LA2_step_ex$ymin[x]), crs = st_crs(4326)))
-}
-
-LA2_step_ex$geom <- sapply(1:nrow(LA2_step_ex), createBboxGeometry)
-
-LA2_step_ex$geom <- st_as_sfc(LA2_step_ex$geom, crs = st_crs(4326))
-
-# visualize bboxes for each day
-plot(st_geometry(LA2_step_ex$geom))
+# # create empty col for geometry of bbox
+# LA2_step_ex$geom <- NA
+# 
+# # generate bbox geometry --> for some reason have to turn it into geometry twice for it to work (could do this better)
+# createBboxGeometry <- function(x){
+#   bbox <- st_as_sfc(st_bbox(c(xmin = LA2_step_ex$xmin[x], xmax = LA2_step_ex$xmax[x], 
+#                                              ymax = LA2_step_ex$ymax[x], ymin = LA2_step_ex$ymin[x]), crs = st_crs(4326)))
+# }
+# 
+# LA2_step_ex$geom <- sapply(1:nrow(LA2_step_ex), createBboxGeometry)
+# 
+# LA2_step_ex$geom <- st_as_sfc(LA2_step_ex$geom, crs = st_crs(4326))
+# 
+# # visualize bboxes for each day
+# plot(st_geometry(LA2_step_ex$geom))
 
 # save table 
 write.csv(LA2_step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
