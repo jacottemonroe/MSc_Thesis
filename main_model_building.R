@@ -17,8 +17,7 @@ library(amt)
 
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 library(dplyr)
-if(!('sf') %in% installed.packages()){install.packages('sf')} #creating geometries of bbox
-library(sf)
+
 
  
 ########################### load MODIS data ################################
@@ -81,102 +80,87 @@ df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')
 # mov_map
 
 
+# turn elephant data frame into track_xyt object for model building
+# 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
+tr <- make_track(df, location.long, location.lat, date_time, week = week, burst_ = path)
 
-###### amt package currently not working on VM so temp solution is to create the steps dataset on local
-######  computer and then manually load in table into VM
-
-## NOTE: currently step coordinates are in EPSG: 4326 when the raster images are in 32733 --> need to change coordinate of images (one line change in JN code)
-
-LA2_steps <- read.csv('data/elephant_etosha/LA2_elephant_all_steps_temporary.csv')
-
-# could make this code more efficient and less repetitive but idk how for now
-LA2_step_ex <- LA2_steps
-
-# get date of step
-LA2_step_ex$start_date <- as.Date(LA2_step_ex$t1_)
-
-# get end date of step (necessary for GEE part)
-LA2_step_ex$end_date <- LA2_step_ex$start_date + 1
-
-# get start and end dates for the week before 
-LA2_step_ex$start_date_prev_week <- LA2_step_ex$start_date - 7
-LA2_step_ex$end_date_prev_week <- LA2_step_ex$start_date_prev_week + 1
-
-# convert dates into strings 
-LA2_step_ex$start_date <- as.character(LA2_step_ex$start_date)
-LA2_step_ex$end_date <- as.character(LA2_step_ex$end_date)
-LA2_step_ex$end_date_prev_week <- as.character(LA2_step_ex$end_date_prev_week)
-LA2_step_ex$end_date_prev_week <- as.character(LA2_step_ex$end_date_prev_week)
-
-# get extreme coordinates for each day
-LA2_step_ex <- LA2_step_ex %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
-
-# get table of all extents per date
-LA2_step_ex <- unique(LA2_step_ex[,c('start_date', 'end_date', 'start_date_prev_week', 'end_date_prev_week', 'xmin', 'ymin', 'xmax', 'ymax')])
-
-# # create empty col for geometry of bbox
-# LA2_step_ex$geom <- NA
-# 
-# # generate bbox geometry --> for some reason have to turn it into geometry twice for it to work (could do this better)
-# createBboxGeometry <- function(x){
-#   bbox <- st_as_sfc(st_bbox(c(xmin = LA2_step_ex$xmin[x], xmax = LA2_step_ex$xmax[x], 
-#                                              ymax = LA2_step_ex$ymax[x], ymin = LA2_step_ex$ymin[x]), crs = st_crs(4326)))
-# }
-# 
-# LA2_step_ex$geom <- sapply(1:nrow(LA2_step_ex), createBboxGeometry)
-# 
-# LA2_step_ex$geom <- st_as_sfc(LA2_step_ex$geom, crs = st_crs(4326))
-# 
-# # visualize bboxes for each day
-# plot(st_geometry(LA2_step_ex$geom))
-
-# save table 
-write.csv(LA2_step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
+# summary to check step interval --> it is correctly 4h nice
+#summarize_sampling_rate(tr)
 
 
-# 
-# # turn elephant data frame into track_xyt object for model building
-# # 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
-# tr <- make_track(df, location.long, location.lat, date_time, week = week, burst_ = path)
-# 
-# # summary to check step interval --> it is correctly 4h nice 
-# summarize_sampling_rate(tr)
-# 
-# 
-# 
-# ########################## generate steps ##############################
-# 
-# # turn elephant track dataset into steps
-# # by burst so steps not created for fixes in different paths 
-# elephant_steps_by_path <- steps_by_burst(tr)
-# 
-# # generate corresponding random steps 
-# elephant_all_steps_by_path <- random_steps(elephant_steps_by_path, n_control = 20, 
-#                                            sl_distr = fit_distr(elephant_steps_by_path$sl_, "gamma"), 
-#                                            ta_distr = fit_distr(elephant_steps_by_path$ta_, "vonmises"))
+
+########################## generate steps ##############################
+
+# turn elephant track dataset into steps
+# by burst so steps not created for fixes in different paths
+elephant_steps_by_path <- steps_by_burst(tr)
+
+# generate corresponding random steps
+elephant_all_steps_by_path <- random_steps(elephant_steps_by_path, n_control = 20,
+                                           sl_distr = fit_distr(elephant_steps_by_path$sl_, "gamma"),
+                                           ta_distr = fit_distr(elephant_steps_by_path$ta_, "vonmises"))
 
 
 
 ######################### step extents table ##########################
 
-t <- data.frame(step_number = elephant_all_steps_by_path$, step_date = elephant_all_steps_by_path$, 
-                xmin = min(elephant_all_steps_by_path$), ymin = min(elephant_all_steps_by_path$), 
-                xmax = max(elephant_all_steps_by_path$), ymax = max(elephant_all_steps_by_path$))
+# could make this code more efficient and less repetitive but idk how for now
+eleph_mov <- elephant_all_steps_by_path
 
+# get start date of step
+eleph_mov$start_date <- as.Date(eleph_mov$t1_)
+
+# get end date of step (necessary for GEE part)
+eleph_mov$end_date <- eleph_mov$start_date + 1
+
+# get start and end dates for the week before 
+eleph_mov$start_date_prev_week <- eleph_mov$start_date - 7
+eleph_mov$end_date_prev_week <- eleph_mov$start_date_prev_week + 1
+
+# convert dates into strings 
+eleph_mov$start_date <- as.character(eleph_mov$start_date)
+eleph_mov$end_date <- as.character(eleph_mov$end_date)
+eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
+eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
+
+# get extreme coordinates for each day
+step_ex <- eleph_mov
+step_ex <- step_ex %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
+
+# get table of all extents per date
+step_ex <- unique(step_ex[,c('start_date', 'end_date', 'start_date_prev_week', 'end_date_prev_week', 'xmin', 'ymin', 'xmax', 'ymax')])
+
+# save table 
+write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
+
+
+######################### create covariate dataset ####################
+
+## stack all MODIS NDVI images 
 
 ########################## extract covariates ##########################
 
 # create new dataset to add covariates to and new column
-step_dataset <- elephant_all_steps_by_path
+step_dataset <- eleph_mov
 step_dataset$ndvi_10 <- NA
 step_dataset$ndvi_50 <- NA
 step_dataset$ndvi_90 <- NA
+
+# change date string format (could be more efficient code)
+step_dataset$start_date <- gsub('-', '_', step_dataset$start_date)    
+step_dataset$end_date <- gsub('-', '_', step_dataset$end_date)   
+step_dataset$start_date_prev_week <- gsub('-', '_', step_dataset$start_date_prev_week)   
+step_dataset$end_date_prev_week <- gsub('-', '_', step_dataset$end_date_prev_week)   
 
 # extract covariates along step 
 step_dataset_along <- extract_covariates_along(step_dataset, modis$ndvi, name_covar = 'ndvi_along')
 
 step_dataset$ndvi_10[1] <- unname(quantile(step_dataset_along[[1]], probs = 0.1))
 
+
+i <- rast('data/modis_ssf/2008_11_06.tif')
+i
+plot(i)
 
 
 
