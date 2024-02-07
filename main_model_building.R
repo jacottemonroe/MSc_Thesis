@@ -100,12 +100,15 @@ elephant_all_steps_by_path <- random_steps(elephant_steps_by_path, n_control = 2
                                            sl_distr = fit_distr(elephant_steps_by_path$sl_, "gamma"),
                                            ta_distr = fit_distr(elephant_steps_by_path$ta_, "vonmises"))
 
+# save table 
+write.csv(elephant_all_steps_by_path, 'data/temp_eleph_path.csv')
+
 
 
 ######################### step extents table ##########################
 
 # could make this code more efficient and less repetitive but idk how for now
-eleph_mov <- elephant_all_steps_by_path
+eleph_mov <- read.csv('data/temp_eleph_path.csv') #elephant_all_steps_by_path
 
 # get start date of step
 eleph_mov$start_date <- as.Date(eleph_mov$t1_)
@@ -125,6 +128,7 @@ eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
 
 # get extreme coordinates for each day
 step_ex <- eleph_mov
+
 step_ex <- step_ex %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
 
 # get table of all extents per date
@@ -134,26 +138,43 @@ step_ex <- unique(step_ex[,c('start_date', 'end_date', 'start_date_prev_week', '
 write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
 
 
-######################### create covariate dataset ####################
+######################### create covariate dataset #################### WHERE I LEFT OFF
 
 ## stack all MODIS NDVI images 
+cov <- sprc(list.files('data/modis_ssf', pattern = glob2rx('*.tif'), full.names = T))
+
+rast_list <- list()
+
+for(i in 1:length(cov)){
+  layer <- cov[i]
+  time(layer, tstep = 'days') <- as.POSIXlt(names(layer), format = '%Y_%m_%d', tz = 'Africa/Maputo')
+  print(time(layer))
+  rast_list <- c(rast_list, layer)
+}
+
+cov_col <- sprc(rast_list)
+cov_col
+
+
+# https://stackoverflow.com/questions/20733555/how-to-create-a-raster-brick-with-rasters-of-different-extents
+
 
 ########################## extract covariates ##########################
 
 # create new dataset to add covariates to and new column
-step_dataset <- eleph_mov
+step_dataset <- eleph_mov[1:30,]
 step_dataset$ndvi_10 <- NA
 step_dataset$ndvi_50 <- NA
 step_dataset$ndvi_90 <- NA
 
-# change date string format (could be more efficient code)
-step_dataset$start_date <- gsub('-', '_', step_dataset$start_date)    
-step_dataset$end_date <- gsub('-', '_', step_dataset$end_date)   
-step_dataset$start_date_prev_week <- gsub('-', '_', step_dataset$start_date_prev_week)   
-step_dataset$end_date_prev_week <- gsub('-', '_', step_dataset$end_date_prev_week)   
+# # change date string format (could be more efficient code)
+# step_dataset$start_date <- gsub('-', '_', step_dataset$start_date)    
+# step_dataset$end_date <- gsub('-', '_', step_dataset$end_date)   
+# step_dataset$start_date_prev_week <- gsub('-', '_', step_dataset$start_date_prev_week)   
+# step_dataset$end_date_prev_week <- gsub('-', '_', step_dataset$end_date_prev_week)   
 
 # extract covariates along step 
-step_dataset_along <- extract_covariates_along(step_dataset, modis$ndvi, name_covar = 'ndvi_along')
+step_dataset_along <- extract_covariates_along(step_dataset, cov[which(names(cov) == step_dataset$start_date)], name_covar = 'ndvi_along')
 
 step_dataset$ndvi_10[1] <- unname(quantile(step_dataset_along[[1]], probs = 0.1))
 
