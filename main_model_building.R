@@ -22,6 +22,7 @@ library(amt)
 
 
 
+
 ################################ load elephant data #########################
 
 # select elephant ID 
@@ -38,6 +39,22 @@ full_df <- read.csv(file_name, row.names = 1)
 # get week of interest 
 df <- full_df
 df <- df[df$week == w,]
+
+## reproject GPS coordinates --> COULD MOVE THIS TO PREPROCESSING 
+# source: https://stackoverflow.com/questions/59774421/how-to-i-convert-coordinates-keeping-all-the-info-from-the-dataframe
+
+# load package 
+if(!('sp') %in% installed.packages()){install.packages('sp')}
+library(sp)
+
+# transform elephant GPS coordinates into SpatialPoint object 
+# projection of elephant GPS data according to README from original dataset
+elephant_coord_4326 <- SpatialPoints(coords = df[, c('location.long', 'location.lat')], proj4string = CRS('EPSG: 4326'))
+
+elephant_coord_32733 <- coordinates(spTransform(elephant_coord_4326, CRS('EPSG:32733')))
+df$location.long <- elephant_coord_32733[,1]
+df$location.lat <- elephant_coord_32733[,2]
+
 
 # change date_time format to remove time 
 df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')
