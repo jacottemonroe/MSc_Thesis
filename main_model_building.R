@@ -201,33 +201,33 @@ step_dataset$ndvi_rate_sd <- NA
 # this is less efficient than option 1 but try it 
 
 # set lag (number of days prior to passage) --> supposed to be 7 but set it to 6 for now because on this exact step there is missing data due to cloudcover
-lag <- 6
+lag <- 7
 
-# loop over all steps 
+#print(step_dataset$ndvi_10[1])
+
+# Attempt1: loop over all steps 
 
 for(i in 1:nrow(step_dataset)){
   
   # retrieve MODIS image (SpatRaster layer) by matching date with step
   # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-  step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i])]]
-  names(step_modis) <- 'ndvi' # necessary for plotting but otherwise not needed
+  step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')]]
   
   # extract NDVI for all pixels along step on day of passage
-  ndvi_along <- extract_covariates_along(step_dataset, step_modis, name_covar = 'ndvi_along') # do i need this last parameter?
+  ndvi_along <- unlist(extract_covariates_along(step_dataset[i,], step_modis, name_covar = 'ndvi_along')) # do i need this last parameter?
   
   # calculate percentile values of NDVI along step
   # source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-  step_dataset$ndvi_10[i] <- quantile(unlist(ndvi_along), probs = 0.1, names = F, na.rm = T)
-  step_dataset$ndvi_50[i] <- quantile(unlist(ndvi_along), probs = 0.5, names = F, na.rm = T)
-  step_dataset$ndvi_90[i] <- quantile(unlist(ndvi_along), probs = 0.9, names = F, na.rm = T)
-  step_dataset$ndvi_sd[i] <- sd(unlist(ndvi_along), na.rm = T)
+  step_dataset$ndvi_10[i] <- quantile(ndvi_along, probs = 0.1, names = F, na.rm = T)
+  step_dataset$ndvi_50[i] <- quantile(ndvi_along, probs = 0.5, names = F, na.rm = T)
+  step_dataset$ndvi_90[i] <- quantile(ndvi_along, probs = 0.9, names = F, na.rm = T)
+  step_dataset$ndvi_sd[i] <- sd(ndvi_along, na.rm = T)
   
   # retrieve MODIS image from previous week (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
-  step_modis_prev_week <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i])-lag]]
-  names(step_modis_prev_week) <- 'ndvi' # necessary for plotting but otherwise not needed
+  step_modis_prev_week <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')-lag]]
   
   # extract NDVI for all pixels along step for 1 week* prior passage
-  ndvi_along_prev_week <- extract_covariates_along(step_dataset, step_modis_prev_week, name_covar = 'ndvi_along_prev_week')
+  ndvi_along_prev_week <- extract_covariates_along(step_dataset[i,], step_modis_prev_week, name_covar = 'ndvi_along_prev_week')
   
   # calculate rate of NDVI change for all pixels along step for 1 week* prior to passage
   # note: have to retrieve vector inside list if want to do arithmatics
@@ -248,6 +248,75 @@ write.csv(step_dataset, 'output/elephant_etosha/LA2_2027_step_dataset.csv')
 
 ## PICK UP FROM HERE (below is draft ideas)
 
+
+
+
+s <- step_dataset[1,]
+s
+
+# retrieve MODIS image (SpatRaster layer) by matching date with step
+# source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
+step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo')]]
+step_modis
+
+print(as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo'))
+
+# extract NDVI for all pixels along step on day of passage
+ndvi_along <- unlist(extract_covariates_along(step_dataset[85,], step_modis, name_covar = 'ndvi_along')) # do i need this last parameter?
+ndvi_along
+
+print(sd(ndvi_along))
+
+# calculate percentile values of NDVI along step
+# source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
+step_dataset$ndvi_10[i] <- quantile(ndvi_along, probs = 0.1, names = F, na.rm = T)
+step_dataset$ndvi_50[i] <- quantile(ndvi_along, probs = 0.5, names = F, na.rm = T)
+step_dataset$ndvi_90[i] <- quantile(ndvi_along, probs = 0.9, names = F, na.rm = T)
+step_dataset$ndvi_sd[i] <- sd(ndvi_along, na.rm = T)
+
+# retrieve MODIS image from previous week (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
+step_modis_prev_week <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo')-lag]]
+step_modis_prev_week
+
+# extract NDVI for all pixels along step for 1 week* prior passage
+ndvi_along_prev_week <- extract_covariates_along(step_dataset[i,], step_modis_prev_week, name_covar = 'ndvi_along_prev_week')
+
+# calculate rate of NDVI change for all pixels along step for 1 week* prior to passage
+# note: have to retrieve vector inside list if want to do arithmatics
+ndvi_rate_along <- (ndvi_along[[1]] - ndvi_along_prev_week[[1]])/lag
+
+# calculate percentile values of NDVI change rate along step
+# source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
+step_dataset$ndvi_rate_10[i] <- quantile(ndvi_rate_along, probs = 0.1, names = F, na.rm = T)
+step_dataset$ndvi_rate_50[i] <- quantile(ndvi_rate_along, probs = 0.5, names = F, na.rm = T)
+step_dataset$ndvi_rate_90[i] <- quantile(ndvi_rate_along, probs = 0.9, names = F, na.rm = T)
+step_dataset$ndvi_rate_sd[i] <- sd(ndvi_rate_along, na.rm = T)
+
+
+
+
+
+
+
+
+
+# Attempt 2: use multiple sapply() --> break down into steps UNFINISHED
+
+retrieveNDVIAlong <- function(i){
+  # retrieve MODIS image (SpatRaster layer) by matching date with step
+  # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
+  step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i])]]
+  
+  # extract NDVI for all pixels along step on day of passage
+  ndvi_along <- extract_covariates_along(step_dataset, step_modis, name_covar = 'ndvi_along') # do i need this last parameter?
+}
+
+
+
+modis_images
+names(modis_images)
+
+plot(modis_images[[14]])
 
 
 
@@ -299,18 +368,21 @@ s1$ndvi_rate_sd <- sd(ndvi_rate_along)
 
 print(s1$ndvi_along)
 
+s1 <- step_dataset[46,]
+s1_df <- data.frame(location.long = c(s1$x1_, s1$x2_), location.lat = c(s1$y1_, s1$y2_))
+s1_df
 
+m <- modis_images[[8]]
+m
+names(m) <- 'ndvi'
 
 # visualize elephant data
 
 modis_ndvi_map <- ggplot() +
-  geom_spatraster(data = s1_modis_prev_week, aes(fill = ndvi), show.legend = T) +
+  geom_spatraster(data = m, aes(fill = ndvi), show.legend = T) +
   scale_fill_terrain_c(name = 'NDVI')
 
 modis_ndvi_map
-
-s1_df <- data.frame(location.long = c(s1$x1_, s1$x2_), location.lat = c(s1$y1_, s1$y2_))
-s1_df
 
 mov_map <- modis_ndvi_map +
   labs(title = "Elephant Movement", subtitle = ID, x = "Longitude", y = "Latitude") +
