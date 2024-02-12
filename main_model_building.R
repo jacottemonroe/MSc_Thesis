@@ -248,6 +248,21 @@ write.csv(step_dataset, 'output/elephant_etosha/LA2_2027_step_dataset.csv')
 
 ## PICK UP FROM HERE (below is draft ideas)
 
+b <- unique(elephant_all_steps_by_path$step_id_)
+c <- unique(step_dataset$step_id_)
+d <- step_dataset[!complete.cases(step_dataset),]
+e <- unique(d$step_id_)
+print(length(e))
+
+f <- step_dataset
+f$NA_count <- rowSums(is.na(f))
+g <- f[f$NA_count >= 3,]
+print(length(unique(g$step_id_)))
+
+print(length(unique(step_dataset$step_id_)))
+s_NA <- step_dataset[!complete.cases(step_dataset),]
+print(length(unique(s_NA$step_id_)))
+print(sum(s_NA$case_ == T))
 
 
 
@@ -427,8 +442,21 @@ mov_map
 
 
 ######################### fit model #################################
+s <- step_dataset[1:294,]
+print(length(unique(s$step_id_)))
+s_NA <- s[!complete.cases(s),]
+print(length(unique(s_NA$step_id_)))
+print(sum(s_NA$case_ == T))
 
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi + strata(step_id_))
+
+
+f <- step_dataset
+f$NA_count <- rowSums(is.na(f))
+g <- f[f$NA_count >= 3,]
+print(length(unique(g$step_id_)))
+
+ss_model <- fit_clogit(s, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
+                         ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 
 summary(ss_model)
 
