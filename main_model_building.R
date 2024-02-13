@@ -131,10 +131,10 @@ eleph_mov$start_date_prev_week <- eleph_mov$start_date - 7
 eleph_mov$end_date_prev_week <- eleph_mov$start_date_prev_week + 1
 
 # convert dates into strings 
-eleph_mov$start_date <- as.character(eleph_mov$start_date)
-eleph_mov$end_date <- as.character(eleph_mov$end_date)
-eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
-eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
+# eleph_mov$start_date <- as.character(eleph_mov$start_date)
+# eleph_mov$end_date <- as.character(eleph_mov$end_date)
+# eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
+# eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
 
 # get extreme coordinates for each day
 step_ex <- eleph_mov
@@ -146,12 +146,17 @@ step_ex <- unique(step_ex[,c('start_date', 'end_date', 'start_date_prev_week', '
 
 # add largest extent as new row in step extent LUT 
 # source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/ext
-step_ex <- rbind(step_ex, data.frame('start_date' = NA, 'end_date' = NA, 'start_date_prev_week' = NA,
-                                     'end_date_prev_week' = NA, 'xmin' = min(step_ex$xmin), 
-                                     'xmax' = max(step_ex$xmax), 'ymin' = min(step_ex$ymin), 'ymax' = max(step_ex$ymax)))
+step_ex <- rbind(step_ex, data.frame('start_date' = min(step_ex$start_date, na.rm = T), 
+                                     'end_date' = max(step_ex$end_date, na.rm = T), 
+                                     'start_date_prev_week' = min(step_ex$start_date_prev_week, na.rm = T),
+                                     'end_date_prev_week' = max(step_ex$end_date_prev_week, na.rm = T), 
+                                     'xmin' = min(step_ex$xmin), 'xmax' = max(step_ex$xmax), 
+                                     'ymin' = min(step_ex$ymin), 'ymax' = max(step_ex$ymax)))
 
 # save table 
 write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
+
+
 
 
 
@@ -174,6 +179,13 @@ modis_images <- rast(list.files('data/modis_ssf', pattern = glob2rx('*.tif'), fu
 time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 
+
+### HERE IS WHERE THE GAP FILLING SHOULD GO 
+# identify pixels with NA that are within extent!
+m <- modis_images[[1]]
+plot(m)
+plot(is.na(m))
+names(modis_images)
 
 
 ########################## extract covariates ##########################
@@ -460,8 +472,7 @@ ss_model <- fit_clogit(s, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd +
 
 summary(ss_model)
 
-
-
-
+t <- modis_images[[8]]
+t
 
 
