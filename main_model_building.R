@@ -130,12 +130,6 @@ eleph_mov$end_date <- eleph_mov$start_date + 1
 eleph_mov$start_date_prev_week <- eleph_mov$start_date - 7
 eleph_mov$end_date_prev_week <- eleph_mov$start_date_prev_week + 1
 
-# convert dates into strings 
-# eleph_mov$start_date <- as.character(eleph_mov$start_date)
-# eleph_mov$end_date <- as.character(eleph_mov$end_date)
-# eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
-# eleph_mov$end_date_prev_week <- as.character(eleph_mov$end_date_prev_week)
-
 # get extreme coordinates for each day
 step_ex <- eleph_mov
 
@@ -170,7 +164,7 @@ write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
 
 ######################### create covariate dataset #################### 
 
-# stack all generated MODIS images together 
+# stack all generated MODIS images together (images already cloudmasked and gap filled in JN script)
 modis_images <- rast(list.files('data/modis_ssf', pattern = glob2rx('*.tif'), full.names = T))
 
 # add a time (date) attribute to the spatraster --> daily interval 
@@ -180,18 +174,11 @@ time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '
                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 
 
-### HERE IS WHERE THE GAP FILLING SHOULD GO 
-# identify pixels with NA that are within extent!
-m <- modis_images[[1]]
-plot(m)
-plot(is.na(m))
-names(modis_images)
-
 
 ########################## extract covariates ##########################
 
 # create new dataset to add covariates to and new column (make sure it's steps_xyt object)
-step_dataset <- elephant_all_steps_by_path #[1:30,]
+step_dataset <- elephant_all_steps_by_path 
 
 step_dataset$ndvi_10 <- NA
 step_dataset$ndvi_50 <- NA
@@ -214,8 +201,6 @@ step_dataset$ndvi_rate_sd <- NA
 
 # set lag (number of days prior to passage) --> supposed to be 7 but set it to 6 for now because on this exact step there is missing data due to cloudcover
 lag <- 7
-
-#print(step_dataset$ndvi_10[1])
 
 # Attempt1: loop over all steps 
 
@@ -278,46 +263,6 @@ print(sum(s_NA$case_ == T))
 
 
 
-s <- step_dataset[1,]
-s
-
-# retrieve MODIS image (SpatRaster layer) by matching date with step
-# source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo')]]
-step_modis
-
-print(as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo'))
-
-# extract NDVI for all pixels along step on day of passage
-ndvi_along <- unlist(extract_covariates_along(step_dataset[85,], step_modis, name_covar = 'ndvi_along')) # do i need this last parameter?
-ndvi_along
-
-print(sd(ndvi_along))
-
-# calculate percentile values of NDVI along step
-# source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-step_dataset$ndvi_10[i] <- quantile(ndvi_along, probs = 0.1, names = F, na.rm = T)
-step_dataset$ndvi_50[i] <- quantile(ndvi_along, probs = 0.5, names = F, na.rm = T)
-step_dataset$ndvi_90[i] <- quantile(ndvi_along, probs = 0.9, names = F, na.rm = T)
-step_dataset$ndvi_sd[i] <- sd(ndvi_along, na.rm = T)
-
-# retrieve MODIS image from previous week (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
-step_modis_prev_week <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[85], tz = 'Africa/Maputo')-lag]]
-step_modis_prev_week
-
-# extract NDVI for all pixels along step for 1 week* prior passage
-ndvi_along_prev_week <- extract_covariates_along(step_dataset[i,], step_modis_prev_week, name_covar = 'ndvi_along_prev_week')
-
-# calculate rate of NDVI change for all pixels along step for 1 week* prior to passage
-# note: have to retrieve vector inside list if want to do arithmatics
-ndvi_rate_along <- (ndvi_along[[1]] - ndvi_along_prev_week[[1]])/lag
-
-# calculate percentile values of NDVI change rate along step
-# source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-step_dataset$ndvi_rate_10[i] <- quantile(ndvi_rate_along, probs = 0.1, names = F, na.rm = T)
-step_dataset$ndvi_rate_50[i] <- quantile(ndvi_rate_along, probs = 0.5, names = F, na.rm = T)
-step_dataset$ndvi_rate_90[i] <- quantile(ndvi_rate_along, probs = 0.9, names = F, na.rm = T)
-step_dataset$ndvi_rate_sd[i] <- sd(ndvi_rate_along, na.rm = T)
 
 
 
@@ -353,55 +298,10 @@ plot(modis_images[[14]])
 # select step 
 s1 <- step_dataset[43:45,]
 
-s1$step_id_[2] <- 900
-
-print(s1)
-
-print(step_dataset$t1_[1])
-
-# retrieve MODIS image (SpatRaster layer) by matching date with step
-# source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-s1_modis <- modis_images[[time(modis_images) == as.Date(s1$t1_)]]
-names(s1_modis) <- 'ndvi' # necessary for plotting but otherwise not needed
-
-# extract NDVI for all pixels along step on day of passage
-ndvi_along <- extract_covariates_along(s1, s1_modis, name_covar = 'ndvi_along')
-
-# retrieve MODIS image from previous week (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
-s1_modis_prev_week <- modis_images[[time(modis_images) == as.Date(s1$t1_)-lag]]
-names(s1_modis_prev_week) <- 'ndvi' # necessary for plotting but otherwise not needed
-
-# extract NDVI for all pixels along step for 1 week* prior passage
-ndvi_along_prev_week <- extract_covariates_along(s1, s1_modis_prev_week, name_covar = 'ndvi_along_prev_week')
-
-# calculate rate of NDVI change for all pixels along step for 1 week* prior to passage
-# note: have to retrieve vector inside list if want to do arithmatics
-ndvi_rate_along <- (ndvi_along[[1]] - ndvi_along_prev_week[[1]])/lag
-
-# calculate percentile values of covariates along step
-# Note: make sure column for covariate exists before filling it in otherwise error
-# source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-s1$ndvi_10 <- quantile(unlist(ndvi_along), probs = 0.1, names = F)
-s1$ndvi_50 <- quantile(unlist(ndvi_along), probs = 0.5, names = F)
-s1$ndvi_90 <- quantile(unlist(ndvi_along), probs = 0.9, names = F)
-s1$ndvi_sd <- sd(unlist(ndvi_along))
-
-s1$ndvi_rate_10 <- quantile(ndvi_rate_along, probs = 0.1, names = F)
-s1$ndvi_rate_50 <- quantile(ndvi_rate_along, probs = 0.5, names = F)
-s1$ndvi_rate_90 <- quantile(ndvi_rate_along, probs = 0.9, names = F)
-s1$ndvi_rate_sd <- sd(ndvi_rate_along)
- 
 
 
-print(s1$ndvi_along)
 
-s1 <- step_dataset[46,]
-s1_df <- data.frame(location.long = c(s1$x1_, s1$x2_), location.lat = c(s1$y1_, s1$y2_))
-s1_df
 
-m <- modis_images[[8]]
-m
-names(m) <- 'ndvi'
 
 # visualize elephant data
 
@@ -418,54 +318,16 @@ mov_map <- modis_ndvi_map +
 mov_map
 
 
-# step_dataset$ndvi_10[1] <- unname(quantile(step_dataset_along[[1]], probs = 0.1))
-# 
-# print(step_dataset[1])
-# 
-# 
-# i <- rast('data/modis_ssf/2008_11_06.tif')
-# i
-# plot(i)
-# 
-# a <- period(1)
-# class(a)
-# 
-# 
-# # function that calculates mean value of covariates along a step 
-# # Note: make sure column for covariate exists before filling it in otherwise error
-# getAlongValue_10 <- function(i){
-#   step_dataset$ndvi_10[i] <- quantile(step_dataset_along[[i]], probs = 0.1, names = F)
-# }
-# 
-# getAlongValue_50 <- function(i){
-#   step_dataset$ndvi_50[i] <- quantile(step_dataset_along[[i]], probs = 0.5)
-# }
-# 
-# getAlongValue_90 <- function(i){
-#   step_dataset$ndvi_90[i] <- mean(step_dataset_along[[i]])
-# }
-# 
-# # apply function to each step 
-# step_dataset$ndvi_10 <- sapply(1:756, getAlongValue_10)
-# step_dataset$ndvi_50 <- sapply(seq.int(1, nrow(step_dataset)), getAlongValue_50)
-# step_dataset$ndvi_90 <- sapply(seq.int(1, nrow(step_dataset)), getAlongValue_90)
 
 
 
 
 ######################### fit model #################################
-s <- step_dataset[1:294,]
+s <- step_dataset #[1:294,]
 print(length(unique(s$step_id_)))
 s_NA <- s[!complete.cases(s),]
 print(length(unique(s_NA$step_id_)))
 print(sum(s_NA$case_ == T))
-
-
-
-f <- step_dataset
-f$NA_count <- rowSums(is.na(f))
-g <- f[f$NA_count >= 3,]
-print(length(unique(g$step_id_)))
 
 ss_model <- fit_clogit(s, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
                          ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
