@@ -10,21 +10,32 @@ library(terra)
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # to plot timeseries
 library(ggplot2)
 
+############################################################################
+############### generate Landsat and MODIS images in JN ####################
+############## once have images i can start this script ####################
+############################################################################
+
+
 # create LUT from Landsat and MODIS images in data folders
-source('functions/creatingLUT.R')
+# matches a Landsat image to each MODIS image (nearest Landsat image)
+source('functions_downscaling/creatingLUT.R')
 
-createLUT('data/modis', 'data/l8')
-
+createLUT('data/modis/cloudmasked', 'data/l8')
 
 # load LUT
 LUT <- readRDS('data/LUT.RData')
-LUT <- LUT[1:30,]
+#LUT <- LUT[1:30,]
 
+m <- rast('data/modis/cloudmasked/2014_01_19.tif')
+m <- m[[2]]
+plot(m[[m == 0]])
+m[m == 0] <- NA
+plot(m)
 # create downscaling model 
 source('functions/generatingDownscalingModels.R')
 
 for(i in 1:nrow(LUT)){
-  generateDownscalingModels(paste0('data/modis/', LUT$modis_image[i]), LUT$modis_date[i], 
+  generateDownscalingModels(paste0('data/modis/cloudmasked', LUT$modis_image[i]), LUT$modis_date[i], 
                             paste0('data/l8/', LUT$closest_landsat_image[i]), 
                             check_multicolinearity = F, multicolinearity_threshold = 0.8, 
                             fit_rf_regression = T)

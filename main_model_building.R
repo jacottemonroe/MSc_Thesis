@@ -288,10 +288,18 @@ retrieveNDVIAlong <- function(i){
 modis_images
 names(modis_images)
 
-plot(modis_images[[14]])
+plot(modis_images[[2]])
 
+othermodis <- rast(list.files('data/modis/cloudmasked', pattern = glob2rx('*.tif'), full.names = T))
+o <- rast('data/modis/cloudmasked/2014_01_19.tif')
+plot(o)
+o[o == 3429] <- NA
+plot(o)
+o[o > 1] <- NA
 
-
+test <- rast('test_modis_cloudmasked.tif')
+test
+plot(test)
 
 
 
