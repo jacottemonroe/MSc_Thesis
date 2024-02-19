@@ -178,8 +178,9 @@ modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern 
 time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 
-plot(modis_images[[8]])
+plot(modis_images[[1]])
 modis_images[[8]]
+modis_images
 
 
 ########################## extract covariates ##########################
