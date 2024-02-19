@@ -29,6 +29,7 @@ library(amt)
 ID <- 'LA2'
 
 # select week to test 
+# original test was with week 2027
 w <- 2027
 
 file_name <- paste0('data/elephant_etosha/preprocessed_VSS_elephant_', ID,'.csv')
@@ -106,14 +107,15 @@ write.csv(elephant_all_steps_by_path, 'data/temp_eleph_path.csv')
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
 if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')} # for mapping spatraster
-#library(tidyterra)
+library(tidyterra)
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
-#library(ggplot2)
+library(ggplot2)
 if(!('lubridate') %in% installed.packages()){install.packages('lubridate')}
 library(lubridate)
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 library(dplyr)
 
+week <- 2043
 
 ######################### step extents table ########################## 
 
@@ -148,7 +150,7 @@ step_ex <- rbind(step_ex, data.frame('start_date' = min(step_ex$start_date, na.r
                                      'ymin' = min(step_ex$ymin), 'ymax' = max(step_ex$ymax)))
 
 # save table 
-write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
+write.csv(step_ex, paste0('data/step_extents/LA2_step_ex_w',as.character(week),'.csv'))
 
 
 
@@ -164,8 +166,11 @@ write.csv(step_ex, 'data/step_extents/LA2_step_ex_w2027.csv')
 
 ######################### create covariate dataset #################### 
 
+# get correct folder
+w_path = paste0('8_day_', as.character(w))
 # stack all generated MODIS images together (images already cloudmasked and gap filled in JN script)
-modis_images <- rast(list.files('data/modis_ssf', pattern = glob2rx('*.tif'), full.names = T))
+#modis_images <- rast(list.files(paste0('data/modis_ssf/', as.character(w)), pattern = glob2rx('*.tif'), full.names = T))
+modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern = glob2rx('*.tif'), full.names = T))
 
 # add a time (date) attribute to the spatraster --> daily interval 
 # source: https://rdrr.io/github/rspatial/terra/man/time.html
@@ -173,6 +178,8 @@ modis_images <- rast(list.files('data/modis_ssf', pattern = glob2rx('*.tif'), fu
 time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 
+plot(modis_images[[8]])
+modis_images[[8]]
 
 
 ########################## extract covariates ##########################
@@ -239,8 +246,64 @@ for(i in 1:nrow(step_dataset)){
   
 }
 
-# save this dataframe for now since took so long to generate --> full of NAs?!
-write.csv(step_dataset, 'output/elephant_etosha/LA2_2027_step_dataset.csv')
+# save this dataframe for now since took so long to generate 
+#write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
+write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', w_path, '_step_dataset.csv'))
+
+####################### scatter plot fo the data ###################
+# create simplified dataframe where y = case and x = ndvi 
+data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,13:ncol(step_dataset)])
+
+# turn case into binary 1 0 values to plot 
+# source: https://stackoverflow.com/questions/33930188/convert-dataframe-column-to-1-or-0-for-true-false-values-and-assign-to-dataf
+data_to_plot$y <- as.integer(data_to_plot$y)
+
+# plot for covariates vs response 
+ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
+                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, y=y)) + 
+  geom_point() + 
+  stat_smooth(method="glm", color="green", se=FALSE, 
+              method.args = list(family=binomial))
+
+ggplot(data_to_plot, aes(x=ndvi_50, y=y)) + 
+  geom_point() + 
+  stat_smooth(method="glm", color="green", se=FALSE, 
+              method.args = list(family=binomial))
+
+# plot for covariate against itself
+m <- ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
+                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, y = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
+                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd)) + 
+  geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
+  scale_color_manual(values=c('grey40','cyan'))
+m
+ggplot(data_to_plot, aes(x = ndvi_50, y = ndvi_50)) + 
+  geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
+  scale_color_manual(values=c('grey40','cyan'))
+
+
+######################### fit model #################################
+s <- step_dataset #[1:294,]
+print(length(unique(s$step_id_)))
+s_NA <- s[!complete.cases(s),]
+print(length(unique(s_NA$step_id_)))
+print(sum(s_NA$case_ == T))
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
+                         ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + strata(step_id_))
+
+summary(ss_model)
+
+t <- ss_model$model
+
+
+
+
+
+
+###################" other test ######################
 
 
 ## PICK UP FROM HERE (below is draft ideas)
@@ -271,48 +334,10 @@ print(sum(s_NA$case_ == T))
 
 
 
-
-# Attempt 2: use multiple sapply() --> break down into steps UNFINISHED
-
-retrieveNDVIAlong <- function(i){
-  # retrieve MODIS image (SpatRaster layer) by matching date with step
-  # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-  step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i])]]
-  
-  # extract NDVI for all pixels along step on day of passage
-  ndvi_along <- extract_covariates_along(step_dataset, step_modis, name_covar = 'ndvi_along') # do i need this last parameter?
-}
-
-
-
-modis_images
-names(modis_images)
-
-plot(modis_images[[2]])
-
-othermodis <- rast(list.files('data/modis/cloudmasked', pattern = glob2rx('*.tif'), full.names = T))
-o <- rast('data/modis/cloudmasked/2014_01_19.tif')
-plot(o)
-o[o == 3429] <- NA
-plot(o)
-o[o > 1] <- NA
-
-test <- rast('test_modis_cloudmasked.tif')
-test
-plot(test)
-
-
-
-# select step 
-s1 <- step_dataset[43:45,]
-
-
-
-
-
-
 # visualize elephant data
-
+m <- modis_images[[8]]
+m
+names(m) <- 'ndvi'
 modis_ndvi_map <- ggplot() +
   geom_spatraster(data = m, aes(fill = ndvi), show.legend = T) +
   scale_fill_terrain_c(name = 'NDVI')
@@ -330,17 +355,6 @@ mov_map
 
 
 
-######################### fit model #################################
-s <- step_dataset #[1:294,]
-print(length(unique(s$step_id_)))
-s_NA <- s[!complete.cases(s),]
-print(length(unique(s_NA$step_id_)))
-print(sum(s_NA$case_ == T))
-
-ss_model <- fit_clogit(s, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-                         ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
-
-summary(ss_model)
 
 t <- modis_images[[8]]
 t
