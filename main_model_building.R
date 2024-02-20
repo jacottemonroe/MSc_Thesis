@@ -26,11 +26,12 @@ library(amt)
 ################################ load elephant data #########################
 
 # select elephant ID 
-ID <- 'LA2'
+# original test was with elephant LA2
+ID <- 'LA26'
 
 # select week to test 
 # original test was with week 2027
-w <- 2027
+w <- 2300
 
 file_name <- paste0('data/elephant_etosha/preprocessed_VSS_elephant_', ID,'.csv')
 
@@ -115,7 +116,7 @@ library(lubridate)
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 library(dplyr)
 
-week <- 2043
+week <- 2300
 
 ######################### step extents table ########################## 
 
