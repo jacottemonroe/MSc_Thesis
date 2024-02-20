@@ -15,37 +15,37 @@ library(ggplot2)
 ############## once have images i can start this script ####################
 ############################################################################
 
+week <- as.character(2300)
+path_modis <- paste0('data/modis/cloudmasked/', week, '/')
+path_landsat <- paste0('data/l8/', week, '/')
 
 # create LUT from Landsat and MODIS images in data folders
 # matches a Landsat image to each MODIS image (nearest Landsat image)
 source('functions_downscaling/creatingLUT.R')
 
-createLUT('data/modis/cloudmasked', 'data/l8')
+createLUT(path_modis, path_landsat)
 
 # load LUT
 LUT <- readRDS('data/LUT.RData')
 #LUT <- LUT[1:30,]
 
-m <- rast('data/modis/cloudmasked/2014_01_19.tif')
-m <- m[[2]]
-plot(m[[m == 0]])
-m[m == 0] <- NA
-plot(m)
 # create downscaling model 
-source('functions/generatingDownscalingModels.R')
+source('functions_downscaling/generatingDownscalingModels.R')
 
 for(i in 1:nrow(LUT)){
-  generateDownscalingModels(paste0('data/modis/cloudmasked', LUT$modis_image[i]), LUT$modis_date[i], 
-                            paste0('data/l8/', LUT$closest_landsat_image[i]), 
+  generateDownscalingModels(paste0(path_modis, '/', LUT$modis_image[i]), LUT$modis_date[i], 
+                            paste0(path_landsat, '/', LUT$closest_landsat_image[i]), 
                             check_multicolinearity = F, multicolinearity_threshold = 0.8, 
-                            fit_rf_regression = T)
+                            fit_rf_regression = T, output_directory = 'output/models/2300/')
 }
 
 # predict modis ndvi 30m
-source('functions/predictingDownscaledModis.R')
+source('functions_downscaling/predictingDownscaledModis.R')
 
 for(i in 1:nrow(LUT)){
-  predictMODIS30(LUT$modis_image[i], LUT$modis_date[i], LUT$closest_landsat_image[i], model_type = 'rf')
+  predictMODIS30(LUT$modis_image[i], LUT$modis_date[i], LUT$closest_landsat_image[i], model_type = 'rf', 
+                 input_modis_directory = path_modis, input_landsat_directory = path_landsat, 
+                 input_model_directory = 'output/models/2300/', output_directory = paste0('output/30m_images/', week, '/'))
 }
 
 # calculate MODIS NDVI 250m [other functions should be adapted so that they retrieve the layer]
