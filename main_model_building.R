@@ -27,11 +27,11 @@ library(amt)
 
 # select elephant ID 
 # original test was with elephant LA2
-ID <- 'LA26'
+ID <- 'LA2' #'LA26'
 
 # select week to test 
 # original test was with week 2027
-w <- 2300
+w <- 2027 #2300
 
 file_name <- paste0('data/elephant_etosha/preprocessed_VSS_elephant_', ID,'.csv')
 
@@ -170,8 +170,8 @@ write.csv(step_ex, paste0('data/step_extents/LA2_step_ex_w',as.character(week),'
 # get correct folder
 w_path = paste0('8_day_', as.character(w))
 # stack all generated MODIS images together (images already cloudmasked and gap filled in JN script)
-#modis_images <- rast(list.files(paste0('data/modis_ssf/', as.character(w)), pattern = glob2rx('*.tif'), full.names = T))
-modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern = glob2rx('*.tif'), full.names = T))
+modis_images <- rast(list.files(paste0('data/modis_ssf/', as.character(w)), pattern = glob2rx('*.tif'), full.names = T))
+#modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern = glob2rx('*.tif'), full.names = T))
 
 # add a time (date) attribute to the spatraster --> daily interval 
 # source: https://rdrr.io/github/rspatial/terra/man/time.html
@@ -254,6 +254,7 @@ write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', w_path, '_step_dat
 
 ####################### scatter plot fo the data ###################
 # create simplified dataframe where y = case and x = ndvi 
+step_dataset <- read.csv(paste0('output/elephant_etosha/LA2_', w, '_step_dataset.csv'))
 data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,13:ncol(step_dataset)])
 
 # turn case into binary 1 0 values to plot 
@@ -267,7 +268,7 @@ ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 
   stat_smooth(method="glm", color="green", se=FALSE, 
               method.args = list(family=binomial))
 
-ggplot(data_to_plot, aes(x=ndvi_50, y=y)) + 
+ggplot(data_to_plot, aes(x=ndvi_rate_50, y=y)) + 
   geom_point() + 
   stat_smooth(method="glm", color="green", se=FALSE, 
               method.args = list(family=binomial))
@@ -279,7 +280,7 @@ m <- ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_r
   geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
   scale_color_manual(values=c('grey40','cyan'))
 m
-ggplot(data_to_plot, aes(x = ndvi_50, y = ndvi_50)) + 
+ggplot(data_to_plot, aes(x = ndvi_rate_50, y = ndvi_rate_50)) + 
   geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
   scale_color_manual(values=c('grey40','cyan'))
 
@@ -294,7 +295,7 @@ print(sum(s_NA$case_ == T))
 ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
                          ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + strata(step_id_))
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_50 + strata(step_id_))
 
 summary(ss_model)
 
