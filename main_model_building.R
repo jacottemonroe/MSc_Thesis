@@ -268,7 +268,8 @@ ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 
   stat_smooth(method="glm", color="green", se=FALSE, 
               method.args = list(family=binomial))
 
-ggplot(data_to_plot, aes(x=ndvi_rate_50, y=y)) + 
+ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_90 + ndvi_sd + 
+                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, y=y)) + 
   geom_point() + 
   stat_smooth(method="glm", color="green", se=FALSE, 
               method.args = list(family=binomial))
@@ -280,9 +281,19 @@ m <- ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_r
   geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
   scale_color_manual(values=c('grey40','cyan'))
 m
-ggplot(data_to_plot, aes(x = ndvi_rate_50, y = ndvi_rate_50)) + 
+ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_90 + ndvi_sd + 
+                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, y = ndvi_10 + ndvi_90 + ndvi_sd + 
+                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd)) + 
   geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
   scale_color_manual(values=c('grey40','cyan'))
+
+# plot all predictors against each other --> check multicolinearity 
+# source: https://r-charts.com/correlation/ggpairs/?utm_content=cmp-true
+if(!('GGally') %in% installed.packages()){install.packages('GGally')}
+library(GGally)
+
+p <- ggpairs(data_to_plot, columns = 3:10, aes(color = as.factor(y), alpha = 0.5))    
+p
 
 
 ######################### fit model #################################
@@ -295,7 +306,8 @@ print(sum(s_NA$case_ == T))
 ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
                          ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_50 + strata(step_id_))
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + 
+                         ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 
 summary(ss_model)
 
