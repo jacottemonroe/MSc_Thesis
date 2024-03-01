@@ -55,12 +55,12 @@ if(!dir.exists('output')){dir.create('output')}
 
 study_area_filename <- 'data/etosha_geometry.geojson'
 landcover_filename <- 'data/etosha_landcover_dataframe_cop.csv'
-elephant_dataset_filename <- 'data/africanElephantEtoshaNP_analysis.csv'
+elephant_dataset_filename <- 'data/elephant_etosha/africanElephantEtoshaNP_analysis.csv'
 
 # list all faulty elephant datasets to remove (NA if none to remove)
 faulty_elephant_ID <- c(NA) #c('LA5') 
 
-data_exploration <- 'ON' #or 'OFF'
+data_exploration <- 'OFF' #or 'ON'
 
 # specify time interval between fixes 
 interval <- 4
@@ -74,28 +74,28 @@ time_period <- 1
 
 ######################### set-up - no user input ############################
 
-# load study area
-sa <- st_read(study_area_filename)
-
-# retrieve the landcover dataframe of etosha for plotting 
-lc_etoshaNP <- read.csv(landcover_filename, sep = ',')
-
-# create basemap of Etosha (for later mapping)
-source("functions/creatingEtoshaBasemap.R")
-basemap_Etosha <- createBasemapEtosha(sa, lc_etoshaNP)
-basemap_Etosha
+# # load study area --> need SF package for this
+# sa <- st_read(study_area_filename)
+# 
+# # retrieve the landcover dataframe of etosha for plotting 
+# lc_etoshaNP <- read.csv(landcover_filename, sep = ',')
+# 
+# # create basemap of Etosha (for later mapping)
+# source("functions/creatingEtoshaBasemap.R")
+# basemap_Etosha <- createBasemapEtosha(sa, lc_etoshaNP)
+# basemap_Etosha
 
 # read in the tracking data csv file 
 elephant_original_dataset <- read.table(file = elephant_dataset_filename, sep = ',', header = T)
 
 # remove elephant from dataset
-source('functions/removingFaultyElephants.R')
+source('functions_preprocessing_elephant/removeFaultyElephant.R')
 elephant_data <- removeElephantByID(elephant_original_dataset, faulty_elephant_ID)
 
 # get list of elephant IDs
 # source: https://www.digitalocean.com/community/tutorials/strsplit-function-in-r
 elephant_IDs <- strsplit(unique(elephant_data$individual.local.identifier), ' ')
-print(elephant_IDs)
+#print(elephant_IDs)
 
 
 
@@ -103,7 +103,7 @@ print(elephant_IDs)
 
 if (data_exploration == 'ON') {
   # explore each elephant dataset --> could loop this? 
-  source("functions/exploringElephantDataset.R")
+  source("functions_preprocessing_elephant/exploringElephantDataset.R")
   elephant_results_list <- list()
   
   for (ID in elephant_IDs) {
@@ -119,9 +119,10 @@ if (data_exploration == 'ON') {
 
 ##################### elephant data preprocessing ########################
 
-source('functions/cleaningElephantDataset.R')
-source('functions/resamplingElephant.R')
-source('functions/groupingElephant.R')
+source('functions_preprocessing_elephant/cleaningElephantDataset.R')
+source('functions_preprocessing_elephant/resamplingElephant.R')
+source('functions_preprocessing_elephant/groupingElephant.R')
+source('functions_preprocessing_elephant/reprojectingElephantData.R')
 
 # loop for each elephant dataset
 for (ID in elephant_IDs) {
@@ -129,15 +130,31 @@ for (ID in elephant_IDs) {
   # clean data 
   elephant_clean <- cleanElephantDataset(elephant_data, ID)
   
+  # reproject data 
+  elephant_reprojected <- reprojectElephantData(elephant_clean)
+  
   # resample data to time interval 
-  elephant_resampled <- resampleElephantData(elephant_clean, interval, acceptable_NA_gap = 1, 'linear interpolation')
+  elephant_resampled <- resampleElephantData(elephant_reprojected, interval, acceptable_NA_gap = 1, 'linear interpolation')
   
   # group data into periods (weeks)
   elephant_preprocessed <- groupElephantByPeriod(elephant_resampled, time_period, constant_step_size = F)
   
   # save preprocessed elephant dataset as csv
-  write.csv(elephant_preprocessed, file = paste0('output/preprocessed_VSS_elephant_', ID, '.csv'))
+  write.csv(elephant_preprocessed, file = paste0('data/elephant_etosha/preprocessed_elephant_', ID, '.csv'))
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ID <- 'LA15'
