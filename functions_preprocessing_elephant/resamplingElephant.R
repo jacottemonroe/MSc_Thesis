@@ -5,6 +5,15 @@
 
 ## function to resample elephant dataset
 
+if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for dataframe slicing & resampling & path spliting 
+library(dplyr)
+
+if(!('padr') %in% installed.packages()){install.packages('padr')} # for resampling (thicken function)
+library(padr)
+
+if(!('zoo') %in% installed.packages()){install.packages('zoo')} # for linear interpolation
+library(zoo)
+
 resampleElephantData <- function(elephant_data, time_interval = 4, acceptable_NA_gap = 1, interpolation_method = 'linear interpolation') {
   
   # specify time interval as string
