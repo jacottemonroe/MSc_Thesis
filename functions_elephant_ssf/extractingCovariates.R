@@ -11,16 +11,15 @@
 # Output: saves covariates table as csv.
 
 
-loadAndExtractCovariates <- function(input_filename = 'data/temp_eleph_path.csv', modis_image_directory, ndvi_rate_lag = 7, output_filename){
+loadAndExtractCovariates <- function(step_dataset, modis_image_directory, ndvi_rate_lag = 7, output_filename){ #input_filename = 'data/temp_eleph_path.csv',
   
   # get elephant step dataset --> CHECK THAT IT IS STEP_XYT FORMAT OTHERWISE HAVE TO TRANSFORM AGAIN?!
-  step_dataset <- read.csv(input_filename)
+  #step_dataset <- read.csv(input_filename)
   
-  # add columns for covariates 
-  # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/#:~:text=Use%20%24%20operator%2C%20square%20bracket%20%5B%5D,()%20function%20from%20tidyverse%20package.
-  step_dataset <- cbind(step_dataset, step_dataset$ndvi_10=NA, step_dataset$ndvi_50=NA,
-                        step_dataset$ndvi_90=NA, step_dataset$ndvi_sd=NA, step_dataset$ndvi_rate_10=NA,
-                        step_dataset$ndvi_rate_50=NA, step_dataset$ndvi_rate_90=NA, step_dataset$ndvi_rate_sd=NA)
+  # add empty columns for covariates 
+  # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/
+  empty_cols <- c('ndvi_10', 'ndvi_50', 'ndvi_90', 'ndvi_sd', 'ndvi_rate_10', 'ndvi_rate_50', 'ndvi_rate_90', 'ndvi_rate_sd')
+  step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
   modis_images <- rast(list.files(modis_image_directory, pattern = glob2rx('*.tif'), full.names = T))

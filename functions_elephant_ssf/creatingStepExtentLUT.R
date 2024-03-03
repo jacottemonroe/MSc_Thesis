@@ -45,6 +45,6 @@ createStepExtentLUT <- function(input_filename, elephant_ID, week_of_data, ndvi_
                                                  'ymin' = min(step_extents$ymin), 'ymax' = max(step_extents$ymax)))
   
   # save table 
-  write.csv(step_ex, paste0(output_directory, elephant_ID, '_step_ex_w', as.character(week_of_data),'.csv'))
+  write.csv(step_extents, paste0(output_directory, elephant_ID, '_step_ex_w', as.character(week_of_data),'.csv'))
   
 }

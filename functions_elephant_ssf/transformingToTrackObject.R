@@ -9,6 +9,12 @@
 # Input: file name (as string), week of interest (numeric)
 # Output: the elephant data of interest as track object 
 
+if(!('lubridate') %in% installed.packages()){install.packages('lubridate')}
+library(lubridate)
+
+if(!('amt') %in% installed.packages()){install.packages('amt')}
+library(amt)
+
 
 transformToTrackObject <- function(file_name, week){
   # get elephant dataset

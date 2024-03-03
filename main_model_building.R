@@ -31,9 +31,9 @@ ID <- 'LA2' #'LA26'
 
 # select week to test 
 # original test was with week 2027
-w <- 2027 #2300
+w <- 2060 #2027 #2300
 
-file_name <- paste0('data/elephant_etosha/preprocessed_VSS_elephant_', ID,'.csv')
+file_name <- paste0('data/elephant_etosha/elephant_fixes/preprocessed_elephant_', ID,'.csv')
 
 source('functions_elephant_ssf/transformingToTrackObject.R')
 
@@ -90,7 +90,7 @@ tr <- transformToTrackObject(file_name, w)
 
 source('functions_elephant_ssf/generatingSteps.R')
 
-generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/temp_eleph_path.csv')
+all_steps_dataset <- generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv')
 
 # generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
 #   
@@ -144,7 +144,7 @@ if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for groupin
 library(dplyr)
 
 ID <- 'LA2'
-week <- 2300
+week <- 2060 #2027 #2300
 
 # set lag (number of days prior to passage) --> supposed to be 7 but set it to 6 for now because on this exact step there is missing data due to cloudcover
 lag <- 7
@@ -153,7 +153,7 @@ lag <- 7
 
 source('functions_elephant_ssf/creatingStepExtentLUT.R')
 
-createStepExtentLUT('data/temp_eleph_path.csv', ID, week, lag, output_directory = 'data/step_extents/')
+createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv', ID, week, lag, output_directory = 'data/step_extents/random_paths/')
 
 
 # 
@@ -261,16 +261,18 @@ createStepExtentLUT('data/temp_eleph_path.csv', ID, week, lag, output_directory 
 ########################## extract covariates ##########################
 
 # get correct folder
-week <- 2300
-w_path <- paste0('8_day_', as.character(week))
+week <- 2060 #2027 #2300
+#w_path <- paste0('8_day_', as.character(week))
 modis_image_directory_name <- paste0('data/modis_ssf/', as.character(week), '/') #paste0('data/modis_ssf/', w_path, '/')
-elephant_covariates_filename <- paste0('output/elephant_etosha/', ID, '_', as.character(w), '_step_dataset.csv') #paste0('output/elephant_etosha/', ID, '_', w_path, '_step_dataset.csv'))
+elephant_covariates_filename <- paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv') #paste0('output/elephant_etosha/', ID, '_', w_path, '_step_dataset.csv'))
 
 # create table of all extracted covariates for each step
 source('functions_elephant_ssf/extractingCovariates.R')
 
-loadAndExtractCovariates(input_filename = 'data/temp_eleph_path.csv', modis_image_directory_name, 
-                         lag, elephant_covariates_filename)
+loadAndExtractCovariates(all_steps_dataset, modis_image_directory_name, lag, elephant_covariates_filename)
+
+
+
 
 
 # createAndExtractCovariates <- function(input_filename = 'data/temp_eleph_path.csv', modis_image_directory, ndvi_rate_lag, output_filename){
@@ -400,8 +402,8 @@ loadAndExtractCovariates(input_filename = 'data/temp_eleph_path.csv', modis_imag
 
 ####################### scatter plot fo the data ###################
 # create simplified dataframe where y = case and x = ndvi 
-step_dataset <- read.csv(paste0('output/elephant_etosha/LA2_', w, '_step_dataset.csv'))
-data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,13:ncol(step_dataset)])
+step_dataset <- read.csv(paste0('output/elephant_etosha/random_paths/LA2_', week, '_step_dataset.csv'))
+data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,16:ncol(step_dataset)])
 
 # turn case into binary 1 0 values to plot 
 # source: https://stackoverflow.com/questions/33930188/convert-dataframe-column-to-1-or-0-for-true-false-values-and-assign-to-dataf
@@ -438,7 +440,7 @@ ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_90 + ndvi_sd +
 if(!('GGally') %in% installed.packages()){install.packages('GGally')}
 library(GGally)
 
-p <- ggpairs(data_to_plot, columns = 3:10, aes(color = as.factor(y), alpha = 0.5))    
+p <- ggpairs(data_to_plot, columns = 2:9, aes(color = as.factor(y), alpha = 0.5))    
 p
 
 
@@ -446,8 +448,11 @@ p
 
 source('functions_elephant_ssf/fittingSSFModel.R')
 
-fitSSFModel('output/elephant_etosha/', ID, week, 'output/ssf_models/')
+fitSSFModel('output/elephant_etosha/random_paths/', ID, week, 'output/ssf_models/random_paths/')
 
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_sd + strata(step_id_))
+
+summary(ss_model)
 
 # 
 # fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, output_directory = 'output/ssf_models/'){
