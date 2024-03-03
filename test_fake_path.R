@@ -32,14 +32,20 @@ df_track <- make_track(df, location.long, location.lat, date_time, week = week, 
 # by burst so steps not created for fixes in different paths
 true_steps <- steps_by_burst(df_track)
 
-true_steps$case_ <- F
+true_steps$case_ <- T
 true_steps$step_id_ <- row.names(true_steps)
+true_steps$random_id_ <- NA
 
 # retrieve average step length to use as fixed step length for random steps
 set_distance <- mean(true_steps$sl_)
 
 
-############################ 3. get initial starting point from observed dataset
+
+########################## 3. create final dataset of presence and absence steps 
+
+all_steps <- true_steps
+
+############################ 4. get initial starting point from observed dataset
 
 # select starting fixes of each burst
 # PACKAGE: dplyr should be installed
@@ -47,55 +53,82 @@ set_distance <- mean(true_steps$sl_)
 starting_fixes <- df_track %>% group_by(burst_) %>% filter(row_number()==1)
 
 
-#### try buffer approach 
+############################# 5. write a function that will generate a fake path
 
-library(sf)
-
-fake_path <- data.frame(t_ = starting_fixes$t_,  x_ = starting_fixes$x_, y_ = starting_fixes$y_)
-
-row_place <- 1
-seed <- 1
-
-for(i in 1:nrow(true_steps)){
+generateFakePath <- function(true_fixes_dataset, true_step_dataset, starting_fixes_dataset, 
+                             all_steps_dataset, step_distance, burst_number, loop_number){
   
-  # transform starting point coordinates into a spatial object 
-  # source: https://www.dpi.inpe.br/gilberto/tutorials/software/R-contrib/sp/html/SpatialPoints.html
-  starting_point <- st_as_sf(fake_path[nrow(fake_path),2:3], coords = c('location.long', 'location.lat'), crs = crs('EPSG:32733'))
+  # create dataframe of starting point for burst of interest 
+  fake_path <- data.frame(t_ = starting_fixes_dataset$t_[starting_fixes_dataset$burst_ == burst_number],  
+                          x_ = starting_fixes_dataset$x_[starting_fixes_dataset$burst_ == burst_number], 
+                          y_ = starting_fixes_dataset$y_[starting_fixes_dataset$burst_ == burst_number])
   
-  # create buffer around point 
-  # source: https://gis.stackexchange.com/questions/292327/creating-buffers-around-points-and-merging-with-spatialpolygonsdataframe-to-crea
-  buffer_point <- st_buffer(starting_point, dist = set_distance)
+  # for all true steps from the burst of interest, generate a random step to get a random path of the same length
+  for(i in 1:nrow(true_step_dataset[true_step_dataset$burst_ == burst_number,])){
+    
+    # transform starting point coordinates into a spatial object 
+    # source: https://www.dpi.inpe.br/gilberto/tutorials/software/R-contrib/sp/html/SpatialPoints.html
+    starting_point <- st_as_sf(fake_path[nrow(fake_path),2:3], coords = c('x_', 'y_'), 
+                               crs = crs('EPSG:32733'))
+    
+    # create buffer around point with fixed distance = average step length from all observed steps
+    # source: https://gis.stackexchange.com/questions/292327/creating-buffers-around-points-and-merging-with-spatialpolygonsdataframe-to-crea
+    buffer_point <- st_buffer(starting_point, dist = set_distance)
+    
+    # convert buffer polygon into polyline and sample random point along line
+    # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
+    set.seed(i+100*(loop_number-1))
+    new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
+    
+    # add coordinates to fake path data frame
+    # source: https://rdrr.io/cran/sf/man/st_coordinates.html
+    fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1], 
+                                             x_ = st_coordinates(new_point)[[1]], 
+                                             y_ = st_coordinates(new_point)[[2]]), 
+                       make.row.names = F)
+    
+  }
   
-  # convert buffer polygon into polyline and sample random point along line
-  # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
-  set.seed(seed)
-  new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
+  # add new column for information on the burst of interest in the new fake path dataset
+  fake_path$burst_ <- burst_number
   
-  # add coordinates to fake path data frame
-  # source: https://rdrr.io/cran/sf/man/st_coordinates.html
-  fake_path <- rbind(fake_path, data.frame(date_time = df$date_time[row_place+1], location.long = st_coordinates(new_point)[[1]], 
-                                     location.lat = st_coordinates(new_point)[[2]]), make.row.names = F)
+  # turn the list of random points into a track object
+  fake_track <- make_track(fake_path, x_, y_, t_, burst_ = burst_)
   
-  seed <- seed + 1
-  row_place <- row_place + 1
+  # transform the fake points dataset into steps
+  fake_steps <- steps_by_burst(fake_track)
   
+  # add columns to the new fake steps dataset for the case (F = false steps), 
+  #     the corresponding step ID (to match with true steps), and the loop number 
+  #     to differentiate between randomly generated steps
+  fake_steps$case_ <- F
+  fake_steps$step_id_ <- row.names(fake_steps)
+  fake_steps$random_id_ <- loop_number
+  
+  # add the new fake steps to the larger dataset containing all steps 
+  all_steps_dataset <- rbind(all_steps_dataset, fake_steps)
+  
+  return(all_steps_dataset)
 }
 
-fake_path$burst_ <- 1
 
-fake_track <- make_track(fake_path, location.long, location.lat, date_time, burst_ = burst_)
+############### 6. loop the function for all bursts/paths in the weekly movement 
+########################################### and generate 20 random sets of paths
 
-fake_steps <- steps_by_burst(fake_track)
+# generate 20 random sets of paths matching the full elephant movement of that week (all true separate paths included)
+for(loop in 1:20){
+  
+  # for each true separate path generate a corresponding false path 
+  for(burst in 1:nrow(starting_fixes)){
+    
+    # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
+    all_steps <- generateFakePath(df_track, true_steps, starting_fixes, all_steps, set_distance, burst, loop) 
+  }
+}
 
-fake_steps$case_ <- F
-fake_steps$step_id_ <- row.names(fake_steps)
+########################### 7. save output dataframe of all steps for that model 
 
-
-
-
-
-
-
+write.csv(all_steps, 'data/elephant_etosha/elephant_steps/all_steps_LA2_w2027.csv')
 
 
 
@@ -109,21 +142,17 @@ fake_steps$step_id_ <- row.names(fake_steps)
 #r <- random_points(df_track, n = nrow(df_track))
 fake_track <- make_track(fake_path, location.long, location.lat, date_time)
 
+all_steps$random_id_ <- as.factor(all_steps$random_id_)
+
 library(ggplot2)
 mov_map <- ggplot() +
   labs(title = "Elephant Movement", subtitle = ID, x = "Longitude", y = "Latitude") +
-  geom_path(data = df_track, aes(x = x_, y = y_), color = 'lightgreen', linewidth = 1, show.legend = F) +
-  geom_path(data = fake_track, aes(x = x_, y = y_), color = 'red', linewidth = 1, show.legend = F) +
+  geom_path(data = all_steps[all_steps$case_ == F & all_steps$burst_ == 1,], aes(x = x1_, y = y1_, color = random_id_, group = random_id_), linewidth = 1, show.legend = T) +
+  geom_path(data = all_steps[all_steps$case_ == T & all_steps$burst_ == 1,], aes(x = x1_, y = y1_), color = 'black', linewidth = 1, show.legend = F) +
   # geom_point(data = r[r$case_ == T,], aes(x = x_, y = y_), color = 'darkgreen') +
   # geom_point(data = r[r$case_ == F,], aes(x = x_, y = y_), color = 'darkred') +
   theme_minimal()
 mov_map
-
-
-
-
-
-
 
 
 
