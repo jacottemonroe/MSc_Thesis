@@ -90,7 +90,7 @@ tr <- transformToTrackObject(file_name, w)
 
 source('functions_elephant_ssf/generatingSteps.R')
 
-generateSteps(tr, 20, 'gamma', 'vonmises', 'data/temp_eleph_path.csv')
+generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/temp_eleph_path.csv')
 
 # generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
 #   
