@@ -450,9 +450,25 @@ source('functions_elephant_ssf/fittingSSFModel.R')
 
 fitSSFModel('output/elephant_etosha/random_paths/', ID, week, 'output/ssf_models/random_paths/')
 
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_sd + strata(step_id_))
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
+                      ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(burst_))
 
 summary(ss_model)
+
+
+# source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
+t <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
+           ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, family = binomial(link = 'logit'), data = step_dataset)
+summary(t)
+a <- anova(t, test="Chisq")
+a
+
+
+
+
+# if(!('car') %in% installed.packages()){install.packages('car')}
+# library(car)
+# v <- vif(ss_model)
 
 # 
 # fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, output_directory = 'output/ssf_models/'){
