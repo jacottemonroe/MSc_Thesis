@@ -27,11 +27,11 @@ library(amt)
 
 # select elephant ID 
 # original test was with elephant LA2
-ID <- 'LA2' #'LA26'
+ID <- 'LA26' #'LA2'
 
 # select week to test 
 # original test was with week 2027
-w <- 2060 #2027 #2300
+w <- 2300 #2060 #2027 #2300
 
 file_name <- paste0('data/elephant_etosha/elephant_fixes/preprocessed_elephant_', ID,'.csv')
 
@@ -90,7 +90,7 @@ tr <- transformToTrackObject(file_name, w)
 
 source('functions_elephant_ssf/generatingSteps.R')
 
-all_steps_dataset <- generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv')
+all_steps_dataset <- generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/all_steps_LA26_w2300.csv')
 
 # generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
 #   
@@ -143,8 +143,8 @@ library(lubridate)
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 library(dplyr)
 
-ID <- 'LA2'
-week <- 2060 #2027 #2300
+ID <- 'LA26' #LA2
+week <- 2300 #2060 #2027 #2300
 
 # set lag (number of days prior to passage) --> supposed to be 7 but set it to 6 for now because on this exact step there is missing data due to cloudcover
 lag <- 7
@@ -153,7 +153,7 @@ lag <- 7
 
 source('functions_elephant_ssf/creatingStepExtentLUT.R')
 
-createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv', ID, week, lag, output_directory = 'data/step_extents/random_paths/')
+createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA26_w2300.csv', ID, week, lag, output_directory = 'data/step_extents/random_paths/')
 
 
 # 
@@ -244,7 +244,8 @@ createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv
 # # get correct folder
 # w_path = paste0('8_day_', as.character(w))
 # # stack all generated MODIS images together (images already cloudmasked and gap filled in JN script)
-# modis_images <- rast(list.files(paste0('data/modis_ssf/', as.character(w)), pattern = glob2rx('*.tif'), full.names = T))
+modis_images <- rast(list.files(paste0('data/modis/cloudmasked/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
+#landsat_images <- rast(list.files(paste0('data/l8/cloudmasked/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
 # #modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern = glob2rx('*.tif'), full.names = T))
 # 
 # # add a time (date) attribute to the spatraster --> daily interval 
@@ -253,15 +254,30 @@ createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA2_w2060.csv
 # time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
 #                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 # 
-# plot(modis_images[[1]])
-# modis_images[[8]]
-# modis_images
+plot(modis_images[[1]])
+modis_images[[8]]
+modis_images
 
+landsat_images <- rast('data/l8/cloudmasked/2300/LC08_179073_20131230.tif')
+print(landsat_images)
+plot(landsat_images[[1]])
+t <- landsat_images[[1]]
+t
+plot(t == -9999)
+landsat_images[landsat_images == -9999] <- NA
+
+print(crs(landsat_images))
+
+
+#landsat_images <- rast(list.files(paste0('data/l8/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
+landsat_images <- rast('data/l8/2300/LC08_179073_20131230.tif')
+plot(landsat_images[[6]])
+print(landsat_images)
 
 ########################## extract covariates ##########################
 
 # get correct folder
-week <- 2060 #2027 #2300
+week <- 2300 #2060 #2027 #2300
 #w_path <- paste0('8_day_', as.character(week))
 modis_image_directory_name <- paste0('data/modis_ssf/', as.character(week), '/') #paste0('data/modis_ssf/', w_path, '/')
 elephant_covariates_filename <- paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv') #paste0('output/elephant_etosha/', ID, '_', w_path, '_step_dataset.csv'))
