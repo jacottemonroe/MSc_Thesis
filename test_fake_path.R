@@ -11,7 +11,7 @@ ID <- 'LA2' #'LA26'
 # original test was with week 2027
 week <- 2027 #2300
 
-file_name <- paste0('data/elephant_etosha/preprocessed_elephant_', ID,'.csv')
+file_name <- paste0('data/elephant_etosha/elephant_fixes/preprocessed_elephant_', ID,'.csv')
 
 # get elephant dataset
 full_df <- read.csv(file_name, row.names = 1)
@@ -39,6 +39,97 @@ true_steps$random_id_ <- NA
 # retrieve average step length to use as fixed step length for random steps
 set_distance <- mean(true_steps$sl_)
 
+sl <- true_steps$sl_
+
+f <- as.data.frame(table(sl))
+f2 <- tabulate(sl, 100)
+f2
+h <- hist(sl, prob = T)
+
+full_df$date_time <- as.POSIXct(full_df$date_time, tz = 'Africa/Maputo')
+full_df_track <- make_track(full_df, location.long, location.lat, date_time, week = week, burst_ = path)
+full_df_steps <- steps_by_burst(full_df_track)
+h2 <- hist(full_df_steps$sl_, breaks = 30, prob = T)
+
+# source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
+d <- density(sl)
+d
+print(d$x)
+class(d)
+hist(sl)
+lines(d)
+
+# https://stackoverflow.com/questions/32871602/r-generate-data-from-a-probability-density-distribution
+rp <- approx(
+  cumsum(d$y)/sum(d$y),
+  d$x,
+  runif(10000)
+)$y
+
+hist(rp, 30)
+
+if(!('RVCompare') %in% installed.packages()){install.packages('RVCompare')} #for grouping in table (max/min)
+library(RVCompare)
+
+rp2 <- sampleFromDensity(d, )
+
+# source: https://stackoverflow.com/questions/1497539/fitting-a-density-curve-to-a-histogram-in-r
+hist(full_df_steps$sl_, breaks = 30, prob = T)
+lines(density(full_df_steps$sl_))
+
+hist(full_df_steps$ta_, breaks = 30, prob = T)
+lines(density(full_df_steps$ta_, na.rm = T))
+
+
+
+
+# sampling random step length 
+sl_full <- full_df_steps$sl_
+# source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
+d <- density(sl_full)
+rp <- c()
+random_seed <- 1
+while(length(rp) < 1){
+  set.seed(random_seed)
+  # rejection sampling 
+  # generate random x value from uniform distribution
+  # source: https://www.spsanderson.com/steveondata/posts/2023-10-30/index.html#:~:text=The%20runif()%20function%20generates,of%20random%20numbers%20to%20generate
+  random_x <- runif(1, min(full_df_steps$sl_), max(full_df_steps$sl_))
+  # generate random y value 
+  random_y <- runif(1, min(d$y), max(d$y))
+  # need to know if the y of x is above the density function or not 
+  # interpolate density function for the random x
+  # source: https://stackoverflow.com/questions/28077500/find-the-probability-density-of-a-new-data-point-using-density-function-in-r
+  density_y <- approx(d$x,d$y,xout=random_x)$y
+  if(random_y <= density_y){
+    rp <- append(rp, random_x)
+  }
+  random_seed <- random_seed*2
+}
+
+# sampling random step length 
+ta_full <- full_df_steps$ta_
+# source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
+d <- density(ta_full, na.rm = T)
+rp <- c()
+random_seed <- 1
+while(length(rp) < 1){
+  set.seed(random_seed)
+  # rejection sampling 
+  # generate random x value from uniform distribution
+  # source: https://www.spsanderson.com/steveondata/posts/2023-10-30/index.html#:~:text=The%20runif()%20function%20generates,of%20random%20numbers%20to%20generate
+  random_x <- runif(1, min(full_df_steps$ta_, na.rm = T), max(full_df_steps$ta_, na.rm = T))
+  # generate random y value 
+  random_y <- runif(1, min(d$y), max(d$y))
+  # need to know if the y of x is above the density function or not 
+  # interpolate density function for the random x
+  # source: https://stackoverflow.com/questions/28077500/find-the-probability-density-of-a-new-data-point-using-density-function-in-r
+  density_y <- approx(d$x,d$y,xout=random_x)$y
+  if(random_y <= density_y){
+    rp <- append(rp, random_x)
+  }
+  random_seed <- random_seed*2
+}
 
 
 ########################## 3. create final dataset of presence and absence steps 
