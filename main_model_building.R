@@ -274,6 +274,13 @@ landsat_images <- rast('data/l8/2300/LC08_179073_20131230.tif')
 plot(landsat_images[[6]])
 print(landsat_images)
 
+q <- rast('quality_band.tif')
+q
+plot(q)
+c <- rast('cloudmasked_l8.tif')
+c
+plot(c[[1]] == 0)
+
 ########################## extract covariates ##########################
 
 # get correct folder
