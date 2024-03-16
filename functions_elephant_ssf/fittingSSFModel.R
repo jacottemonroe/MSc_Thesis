@@ -10,7 +10,7 @@
 
 
 
-fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, output_directory = 'output/ssf_models/'){
+fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, full = T, output_directory = 'output/ssf_models/'){
   
   # read step dataset
   step_dataset <- read.csv(paste0(input_repository, ID, '_', as.character(week), '_step_dataset.csv'))
@@ -19,8 +19,18 @@ fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, 
   step_dataset_NA <- step_dataset[!complete.cases(step_dataset),]
   
   # fit SSF model 
-  ssf_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-                            ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
+  if(full == T){
+    model_type = 'clr_full_'
+    
+    ssf_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
+                              ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
+    
+  }else{
+    model_type = 'clr_50p_sd_'
+    
+    ssf_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + ndvi_sd + 
+                              ndvi_rate_50 + ndvi_rate_sd + strata(step_id_))
+  }
   
   # get model summary
   model_summary <- summary(ssf_model)
@@ -31,6 +41,7 @@ fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, 
   print(paste('Number of total observations:', as.character(nrow(step_dataset))))
   print(paste('Number of observations included in model:', model_summary$n))
   print(paste('Sets of steps:', model_summary$nevent))
+  print(model_summary)
   
   # get model coefficients 
   # source: https://stackoverflow.com/questions/61482594/export-coxph-summary-from-r-to-csv
@@ -45,11 +56,11 @@ fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
   
   # create data directory if it does not yet exist
-  if(!dir.exists(output_filepath)){dir.create(output_filepath)}
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # save model results as csv 
-  write.csv(model_coef, paste0(output_filepath, 'clr_coefs.csv'))
-  write.csv(model_tests, paste0(output_filepath, 'clr_tests.csv'))
+  write.csv(model_coef, paste0(output_filepath, paste0(model_type, 'coefs.csv')))
+  write.csv(model_tests, paste0(output_filepath, paste0(model_type, 'tests.csv')))
   
-  return(model_summary)
+  print(paste('Done processing elephant', ID, 'week', week))
 }
