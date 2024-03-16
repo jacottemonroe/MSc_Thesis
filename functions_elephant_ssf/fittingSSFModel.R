@@ -18,22 +18,38 @@ fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, 
   # select only rows with NA
   step_dataset_NA <- step_dataset[!complete.cases(step_dataset),]
   
-  # print information about the dataset 
-  print(paste('Dataset elephant:', ID, '\n', 
-              'Week:', as.character(week), '\n', 
-              'Number of total steps:', as.character(nrow(step_dataset)), '\n', 
-              'Number of observed steps:', as.character(length(unique(step_dataset$step_id_))), '\n', 
-              'Number of steps with NA:', as.character(length(unique(step_dataset_NA$step_id_))), '\n', 
-              'Number of observed steps with NA:', as.character(sum(step_dataset_NA$case_ == T))))
-  
   # fit SSF model 
   ssf_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
                             ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
   
-  # print model summary
-  print(summary(ssf_model))
+  # get model summary
+  model_summary <- summary(ssf_model)
   
-  # save model as RDS 
-  saveRDS(ssf_model, file = paste0(output_directory, ID, '_', as.character(week), '_ssf_model.rds'))
+  # print information about the dataset and the model
+  print(paste('Dataset elephant:', ID))
+  print(paste('Week:', as.character(week)))
+  print(paste('Number of total observations:', as.character(nrow(step_dataset))))
+  print(paste('Number of observations included in model:', model_summary$n))
+  print(paste('Sets of steps:', model_summary$nevent))
   
+  # get model coefficients 
+  # source: https://stackoverflow.com/questions/61482594/export-coxph-summary-from-r-to-csv
+  model_coef <- data.frame(model_summary$coefficients)
+  
+  # create dataframe with statistical test results, the concordance and its standard error 
+  model_tests <- data.frame(log_likelihood = model_summary$logtest, score = model_summary$sctest, wald = model_summary$waldtest)
+  model_tests <- rbind(model_tests, SE_concordance = c(NA))
+  model_tests <- cbind(model_tests, concordance = c(model_summary$concordance[1], NA, NA, model_summary$concordance[2]))
+  
+  # create output filepath 
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create data directory if it does not yet exist
+  if(!dir.exists(output_filepath)){dir.create(output_filepath)}
+  
+  # save model results as csv 
+  write.csv(model_coef, paste0(output_filepath, 'clr_coefs.csv'))
+  write.csv(model_tests, paste0(output_filepath, 'clr_tests.csv'))
+  
+  return(model_summary)
 }
