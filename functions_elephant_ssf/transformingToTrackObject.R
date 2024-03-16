@@ -16,12 +16,14 @@ if(!('amt') %in% installed.packages()){install.packages('amt')}
 library(amt)
 
 
-transformToTrackObject <- function(file_name, week){
+transformToTrackObject <- function(file_name, week = NULL){
   # get elephant dataset
   full_df <- read.csv(file_name, row.names = 1)
   
-  # get week of interest 
-  df <- full_df[full_df$week == week,]
+  # get week of interest if specified, otherwise take whole dataset
+  if(!is.null(week)){
+    df <- full_df[full_df$week == week,]
+  }else{df <- full_df}
   
   # change date_time format to remove time 
   df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')

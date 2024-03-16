@@ -27,102 +27,143 @@ library(amt)
 
 # select elephant ID 
 # original test was with elephant LA2
-ID <- 'LA26' #'LA2'
+ID <- 'LA2' #'LA2'
 
 # select week to test 
 # original test was with week 2027
-w <- 2300 #2060 #2027 #2300
+week <- 2027 #2048 #2060 #2027 #2300
 
 file_name <- paste0('data/elephant_etosha/elephant_fixes/preprocessed_elephant_', ID,'.csv')
 
 source('functions_elephant_ssf/transformingToTrackObject.R')
 
-tr <- transformToTrackObject(file_name, w)
+true_tr <- transformToTrackObject(file_name, week)
+full_tr <- transformToTrackObject(file_name)
 
-# transformToTrackObject <- function(file_name, w){
-#   # get elephant dataset
-#   full_df <- read.csv(file_name, row.names = 1)
-#   
-#   # get week of interest 
-#   df <- full_df[full_df$week == w,]
-#   
-#   # change date_time format to remove time 
-#   df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')
-#   
-#   # turn elephant data frame into track_xyt object for model building
-#   # 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
-#   df_track <- make_track(df, location.long, location.lat, date_time, week = week, burst_ = path)
-#   
-#   return(df_track)
-# }
-
-# # get elephant dataset
-# full_df <- read.csv(file_name, row.names = 1)
-# 
-# # get week of interest 
-# df <- full_df
-# df <- df[df$week == w,]
-
-
-# # change date_time format to remove time 
-# df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')
-
-# # visualize elephant data 
-# mov_map <- modis_ndvi_map + 
-#   labs(title = "Elephant Movement", subtitle = ID, x = "Longitude", y = "Latitude") +
-#   geom_path(data = full_df, aes(x = location.long, y = location.lat), color = 'grey50', linewidth = 0.1, show.legend = F) +
-#   geom_path(data = df, aes(x = location.long, y = location.lat), color = 'red', linewidth = 1, show.legend = F) +
-#   annotation_north_arrow(location = 'tl', which_north = 'true', 
-#                          pad_x = unit(0.04, "in"), pad_y = unit(0.3, "in"),
-#                          style = north_arrow_fancy_orienteering()) +
-#   annotation_scale(location = 'tl') +
-#   theme_minimal()
-# mov_map
-
-
-# # turn elephant data frame into track_xyt object for model building
-# # 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
-# tr <- make_track(df, location.long, location.lat, date_time, week = week, burst_ = path)
-# 
 
 
 ########################## generate steps ############################## 
 
 source('functions_elephant_ssf/generatingSteps.R')
 
-all_steps_dataset <- generateSteps(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/all_steps_LA26_w2300.csv')
+all_steps_dataset <- generateSteps(true_tr, full_tr, 20, paste0('data/elephant_etosha/elephant_steps/all_steps_', ID, '_w', week, '_custom_distr.csv'))
 
-# generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
+# generateRandomPath_old <- function(true_fixes_dataset, true_step_dataset, starting_fixes_dataset, 
+#                                all_steps_dataset, buffer_distance, burst_number, loop_number){
+#   
+#   # create dataframe of starting point for burst of interest 
+#   fake_path <- data.frame(t_ = starting_fixes_dataset$t_[starting_fixes_dataset$burst_ == burst_number],  
+#                           x_ = starting_fixes_dataset$x_[starting_fixes_dataset$burst_ == burst_number], 
+#                           y_ = starting_fixes_dataset$y_[starting_fixes_dataset$burst_ == burst_number])
+#   
+#   # for all true steps from the burst of interest, generate a random step to get a random path of the same length
+#   for(i in 1:nrow(true_step_dataset[true_step_dataset$burst_ == burst_number,])){
+#     
+#     # transform starting point coordinates into a spatial object 
+#     # source: https://www.dpi.inpe.br/gilberto/tutorials/software/R-contrib/sp/html/SpatialPoints.html
+#     starting_point <- st_as_sf(fake_path[nrow(fake_path),2:3], coords = c('x_', 'y_'), 
+#                                crs = crs('EPSG:32733'))
+#     
+#     # create buffer around point with fixed distance = average step length from all observed steps
+#     # source: https://gis.stackexchange.com/questions/292327/creating-buffers-around-points-and-merging-with-spatialpolygonsdataframe-to-crea
+#     buffer_point <- st_buffer(starting_point, dist = buffer_distance)
+#     
+#     # convert buffer polygon into polyline and sample random point along line
+#     # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
+#     set.seed(i+100*(loop_number-1))
+#     new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
+#     
+#     # add coordinates to fake path data frame
+#     # source: https://rdrr.io/cran/sf/man/st_coordinates.html
+#     fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1], 
+#                                              x_ = st_coordinates(new_point)[[1]], 
+#                                              y_ = st_coordinates(new_point)[[2]]), 
+#                        make.row.names = F)
+#     
+#   }
+#   
+#   # add new column for information on the burst of interest in the new fake path dataset
+#   fake_path$burst_ <- burst_number
+#   
+#   # turn the list of random points into a track object
+#   fake_track <- make_track(fake_path, x_, y_, t_, burst_ = burst_)
+#   
+#   # transform the fake points dataset into steps
+#   fake_steps <- steps_by_burst(fake_track)
+#   
+#   # add columns to the new fake steps dataset for the case (F = false steps), 
+#   #     the corresponding step ID (to match with true steps), and the loop number 
+#   #     to differentiate between randomly generated steps
+#   fake_steps$case_ <- F
+#   fake_steps$step_id_ <- row.names(fake_steps)
+#   fake_steps$random_id_ <- loop_number
+#   
+#   # add the new fake steps to the larger dataset containing all steps 
+#   all_steps_dataset <- rbind(all_steps_dataset, fake_steps)
+#   
+#   return(all_steps_dataset)
+# }
+# 
+# generateSteps_old <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
+#   
+#   ##### create observed dataset of steps 
 #   
 #   # turn fixes into observed steps 
 #   # by burst so steps not created for fixes in different paths
 #   true_steps <- steps_by_burst(track_dataset)
 #   
-#   # generate corresponding random pseudo-absence steps
-#   set.seed(1234)
-#   all_steps <- random_steps(true_steps, n_control = n_random_steps,
-#                                              sl_distr = fit_distr(true_steps$sl_, step_length_distribution),
-#                                              ta_distr = fit_distr(true_steps$ta_, turn_angle_distribution))
+#   # add information attributes as new columns (to differentiate the true and false steps)
+#   true_steps$case_ <- T
+#   true_steps$step_id_ <- row.names(true_steps)
+#   true_steps$random_id_ <- NA
 #   
-#   # save table
+#   # retrieve average step length to use as fixed step length for random steps
+#   set_distance <- mean(true_steps$sl_)
+#   
+#   
+#   ##### create final dataset of presence and absence steps 
+#   
+#   # add presence steps to final step dataset
+#   all_steps <- true_steps
+#   
+#   
+#   ##### get initial starting points from the observed dataset (necessary for multiple paths)
+#   
+#   # select starting fixes of each burst
+#   # PACKAGE: dplyr should be installed
+#   # source: https://www.r-bloggers.com/2022/07/select-the-first-row-by-group-in-r/
+#   starting_fixes <- track_dataset %>% group_by(burst_) %>% filter(row_number()==1)
+#   
+#   
+#   ##### generate random pseudo-absence paths 
+#   
+#   source('functions_elephant_ssf/generatingRandomPath.R')
+#   
+#   # generate random sets of paths matching the full elephant movement of that week (all true separate paths included)
+#   for(loop in 1:n_random_steps){
+#     
+#     # for each true separate path generate a corresponding false path 
+#     for(burst in 1:nrow(starting_fixes)){
+#       
+#       # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
+#       all_steps <- generateRandomPath_old(track_dataset, true_steps, starting_fixes, all_steps, set_distance, burst, loop) 
+#     }
+#   }
+#   
+#   ##### save output dataframe of all steps
+#   
 #   write.csv(all_steps, output_filename)
 #   
+#   # # generate corresponding random pseudo-absence steps
+#   # set.seed(1234)
+#   # all_steps <- random_steps(true_steps, n_control = n_random_steps,
+#   #                           sl_distr = fit_distr(true_steps$sl_, step_length_distribution),
+#   #                           ta_distr = fit_distr(true_steps$ta_, turn_angle_distribution))
+#   
+#   return(all_steps)
 # }
 # 
-# # turn elephant track dataset into steps
-# # by burst so steps not created for fixes in different paths
-# elephant_steps_by_path <- steps_by_burst(tr)
-# 
-# # generate corresponding random steps
-# set.seed(1234)
-# elephant_all_steps_by_path <- random_steps(elephant_steps_by_path, n_control = 20,
-#                                            sl_distr = fit_distr(elephant_steps_by_path$sl_, "gamma"),
-#                                            ta_distr = fit_distr(elephant_steps_by_path$ta_, "vonmises"))
-# 
-# # save table (TEMPORARY FIX TO PROBLEM)
-# write.csv(elephant_all_steps_by_path, 'data/temp_eleph_path.csv')
-
-
+# all_steps_dataset <- generateSteps_old(tr, 20, 'gamma', 'vonmises', 'data/elephant_etosha/elephant_steps/all_steps_LA2_w2027.csv')
 
 
 ###############################################################################
@@ -143,8 +184,8 @@ library(lubridate)
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 library(dplyr)
 
-ID <- 'LA26' #LA2
-week <- 2300 #2060 #2027 #2300
+ID <- 'LA2' #LA26
+week <- 2027 #2048 #2060 #2027 #2300
 
 # set lag (number of days prior to passage) --> supposed to be 7 but set it to 6 for now because on this exact step there is missing data due to cloudcover
 lag <- 7
@@ -153,81 +194,8 @@ lag <- 7
 
 source('functions_elephant_ssf/creatingStepExtentLUT.R')
 
-createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA26_w2300.csv', ID, week, lag, output_directory = 'data/step_extents/random_paths/')
-
-
-# 
-# createStepExtentLUT <- function(input_filename, elephant_ID, week_of_data, ndvi_rate_lag = 7, output_directory = 'data/step_extents/'){
-#   
-#   # read elephant step dataset
-#   all_steps <- read.csv(input_filename)
-#   
-#   # get start date of step
-#   all_steps$start_date <- as.Date(all_steps$t1_)
-#   
-#   # get end date of step (necessary for GEE part? to check --> NEEDED)
-#   all_steps$end_date <- all_steps$start_date + 1
-#   
-#   # get start and end dates for the week before 
-#   all_steps$start_date_prev_week <- all_steps$start_date - ndvi_rate_lag
-#   all_steps$end_date_prev_week <- all_steps$start_date_prev_week + 1
-#   
-#   # get extreme coordinates for each day
-#   step_extents <- all_steps
-#   
-#   step_extents <- step_extents %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
-#   
-#   # get table of all extents per date
-#   step_extents <- unique(step_extents[,c('start_date', 'end_date', 'start_date_prev_week', 'end_date_prev_week', 'xmin', 'ymin', 'xmax', 'ymax')])
-#   
-#   # add largest extent as new row in step extent LUT 
-#   # source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/ext
-#   step_extents <- rbind(step_extents, data.frame('start_date' = min(step_extents$start_date, na.rm = T), 
-#                                        'end_date' = max(step_extents$end_date, na.rm = T), 
-#                                        'start_date_prev_week' = min(step_extents$start_date_prev_week, na.rm = T),
-#                                        'end_date_prev_week' = max(step_extents$end_date_prev_week, na.rm = T), 
-#                                        'xmin' = min(step_extents$xmin), 'xmax' = max(step_extents$xmax), 
-#                                        'ymin' = min(step_extents$ymin), 'ymax' = max(step_extents$ymax)))
-#   
-#   # save table 
-#   write.csv(step_ex, paste0(output_directory, elephant_ID, '_step_ex_w', as.character(week_of_data),'.csv'))
-#   
-# }
-# # 
-# # could make this code more efficient and less repetitive but idk how for now
-# eleph_mov <- read.csv('data/temp_eleph_path.csv') #elephant_all_steps_by_path
-# 
-# # get start date of step
-# eleph_mov$start_date <- as.Date(eleph_mov$t1_)
-# 
-# # get end date of step (necessary for GEE part)
-# eleph_mov$end_date <- eleph_mov$start_date + 1
-# 
-# # get start and end dates for the week before 
-# eleph_mov$start_date_prev_week <- eleph_mov$start_date - 7
-# eleph_mov$end_date_prev_week <- eleph_mov$start_date_prev_week + 1
-# 
-# # get extreme coordinates for each day
-# step_ex <- eleph_mov
-# 
-# step_ex <- step_ex %>% group_by(start_date) %>% mutate(xmin = min(c(x1_, x2_))) %>% mutate(ymin = min(c(y1_, y2_))) %>% mutate(xmax = max(c(x1_, x2_))) %>% mutate(ymax = max(c(y1_, y2_)))
-# 
-# # get table of all extents per date
-# step_ex <- unique(step_ex[,c('start_date', 'end_date', 'start_date_prev_week', 'end_date_prev_week', 'xmin', 'ymin', 'xmax', 'ymax')])
-# 
-# # add largest extent as new row in step extent LUT 
-# # source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/ext
-# step_ex <- rbind(step_ex, data.frame('start_date' = min(step_ex$start_date, na.rm = T), 
-#                                      'end_date' = max(step_ex$end_date, na.rm = T), 
-#                                      'start_date_prev_week' = min(step_ex$start_date_prev_week, na.rm = T),
-#                                      'end_date_prev_week' = max(step_ex$end_date_prev_week, na.rm = T), 
-#                                      'xmin' = min(step_ex$xmin), 'xmax' = max(step_ex$xmax), 
-#                                      'ymin' = min(step_ex$ymin), 'ymax' = max(step_ex$ymax)))
-# 
-# # save table 
-# write.csv(step_ex, paste0('data/step_extents/LA2_step_ex_w',as.character(week),'.csv'))
-
-
+createStepExtentLUT(paste0('data/elephant_etosha/elephant_steps/all_steps_', ID, '_w', week, '_custom_distr.csv'), ID, week, lag, output_directory = 'data/step_extents/random_paths/')
+#createStepExtentLUT(paste0('data/elephant_etosha/elephant_steps/all_steps_', ID, '_w', week, '.csv'), ID, week, lag, output_directory = 'data/step_extents/random_paths/')
 
 
 
@@ -244,7 +212,7 @@ createStepExtentLUT('data/elephant_etosha/elephant_steps/all_steps_LA26_w2300.cs
 # # get correct folder
 # w_path = paste0('8_day_', as.character(w))
 # # stack all generated MODIS images together (images already cloudmasked and gap filled in JN script)
-modis_images <- rast(list.files(paste0('data/modis/cloudmasked/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
+# modis_images <- rast(list.files(paste0('data/modis/cloudmasked/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
 #landsat_images <- rast(list.files(paste0('data/l8/cloudmasked/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
 # #modis_images <- rast(list.files(paste0('data/modis_ssf/', w_path, '/'), pattern = glob2rx('*.tif'), full.names = T))
 # 
@@ -254,38 +222,42 @@ modis_images <- rast(list.files(paste0('data/modis/cloudmasked/', as.character(w
 # time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
 #                                               tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
 # 
-plot(modis_images[[1]])
-modis_images[[8]]
-modis_images
-
-landsat_images <- rast('data/l8/cloudmasked/2300/LC08_179073_20131230.tif')
-print(landsat_images)
-plot(landsat_images[[1]])
-t <- landsat_images[[1]]
-t
-plot(t == -9999)
-landsat_images[landsat_images == -9999] <- NA
-
-print(crs(landsat_images))
-
-
-#landsat_images <- rast(list.files(paste0('data/l8/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
-landsat_images <- rast('data/l8/2300/LC08_179073_20131230.tif')
-plot(landsat_images[[6]])
-print(landsat_images)
-
-q <- rast('quality_band.tif')
-q
-plot(q)
-c <- rast('cloudmasked_l8.tif')
-c
-plot(c[[1]] == 0)
+# plot(modis_images[[1]])
+# modis_images[[8]]
+# modis_images
+# 
+# landsat_images <- rast('data/l8/cloudmasked/2300/LC08_179073_20131230.tif')
+# print(landsat_images)
+# plot(landsat_images[[1]])
+# t <- landsat_images[[1]]
+# t
+# plot(t == -9999)
+# landsat_images[landsat_images == -9999] <- NA
+# 
+# print(crs(landsat_images))
+# 
+# 
+# #landsat_images <- rast(list.files(paste0('data/l8/', as.character(week)), pattern = glob2rx('*.tif'), full.names = T))
+# landsat_images <- rast('data/l8/2300/LC08_179073_20131230.tif')
+# plot(landsat_images[[6]])
+# print(landsat_images)
+# 
+# q <- rast('quality_band.tif')
+# q
+# plot(q)
+# c <- rast('cloudmasked_l8.tif')
+# c
+# plot(c[[1]] == 0)
 
 ########################## extract covariates ##########################
 
-# get correct folder
-week <- 2300 #2060 #2027 #2300
+if(!('amt') %in% installed.packages()){install.packages('amt')}
+library(amt)
+
+
 #w_path <- paste0('8_day_', as.character(week))
+
+#REMOVE "OLD"" AFTER THIS CHECK (OLD USES BUFFER METHOD FOR GENERATING FAKE PATHS)
 modis_image_directory_name <- paste0('data/modis_ssf/', as.character(week), '/') #paste0('data/modis_ssf/', w_path, '/')
 elephant_covariates_filename <- paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv') #paste0('output/elephant_etosha/', ID, '_', w_path, '_step_dataset.csv'))
 
@@ -297,135 +269,13 @@ loadAndExtractCovariates(all_steps_dataset, modis_image_directory_name, lag, ele
 
 
 
-
-# createAndExtractCovariates <- function(input_filename = 'data/temp_eleph_path.csv', modis_image_directory, ndvi_rate_lag, output_filename){
-#   
-#   # get elephant step dataset --> CHECK THAT IT IS STEP_XYT FORMAT OTHERWISE HAVE TO TRANSFORM AGAIN?!
-#   step_dataset <- read.csv(input_filename)
-#   
-#   # add columns for covariates 
-#   # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/#:~:text=Use%20%24%20operator%2C%20square%20bracket%20%5B%5D,()%20function%20from%20tidyverse%20package.
-#   step_dataset <- cbind(step_dataset, step_dataset$ndvi_10=NA, step_dataset$ndvi_50=NA,
-#                         step_dataset$ndvi_90=NA, step_dataset$ndvi_sd=NA, step_dataset$ndvi_rate_10=NA,
-#                         step_dataset$ndvi_rate_50=NA, step_dataset$ndvi_rate_90=NA, step_dataset$ndvi_rate_sd=NA)
-#   
-#   # retrieve and stack all generated MODIS images together
-#   modis_images <- rast(list.files(modis_image_directory, pattern = glob2rx('*.tif'), full.names = T))
-#   
-#   # add a time (date) attribute to the spatraster --> daily interval 
-#   # source: https://rdrr.io/github/rspatial/terra/man/time.html
-#   # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-#   time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
-#                                                 tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
-# 
-#   # extract covariates from corresponding MODIS image
-#   for(i in 1:nrow(step_dataset)){
-#     
-#     # retrieve MODIS image (SpatRaster layer) by matching date with step
-#     # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-#     step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')]]
-#     
-#     # extract NDVI for all pixels along step on day of passage
-#     ndvi_along <- unlist(extract_covariates_along(step_dataset[i,], step_modis, name_covar = 'ndvi_along'))
-#     
-#     # calculate percentile values of NDVI along step
-#     # source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-#     step_dataset$ndvi_10[i] <- quantile(ndvi_along, probs = 0.1, names = F, na.rm = T)
-#     step_dataset$ndvi_50[i] <- quantile(ndvi_along, probs = 0.5, names = F, na.rm = T)
-#     step_dataset$ndvi_90[i] <- quantile(ndvi_along, probs = 0.9, names = F, na.rm = T)
-#     step_dataset$ndvi_sd[i] <- sd(ndvi_along, na.rm = T)
-#     
-#     # retrieve MODIS image from prior to passage (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
-#     step_modis_prior <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')-ndvi_rate_lag]]
-#     
-#     # extract NDVI for all pixels along step for prior passage
-#     ndvi_along_prior <- extract_covariates_along(step_dataset[i,], step_modis_prior, name_covar = 'ndvi_along_prior')
-#     
-#     # calculate rate of NDVI change for all pixels along step for prior to passage
-#     # note: have to retrieve vector inside list if want to do arithmatics
-#     ndvi_rate_along <- (ndvi_along[[1]] - ndvi_along_prior[[1]])/ndvi_rate_lag
-#     
-#     # calculate percentile values of NDVI change rate along step
-#     # source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-#     step_dataset$ndvi_rate_10[i] <- quantile(ndvi_rate_along, probs = 0.1, names = F, na.rm = T)
-#     step_dataset$ndvi_rate_50[i] <- quantile(ndvi_rate_along, probs = 0.5, names = F, na.rm = T)
-#     step_dataset$ndvi_rate_90[i] <- quantile(ndvi_rate_along, probs = 0.9, names = F, na.rm = T)
-#     step_dataset$ndvi_rate_sd[i] <- sd(ndvi_rate_along, na.rm = T)
-#     
-#   }
-#   
-#   # save this dataframe for now since took so long to generate 
-#   #write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
-#   write.csv(step_dataset, output_filename)
-#   
-# }
-
-# # create new dataset to add covariates to and new column (make sure it's steps_xyt object)
-# step_dataset <- elephant_all_steps_by_path 
-# 
-# step_dataset$ndvi_10 <- NA
-# step_dataset$ndvi_50 <- NA
-# step_dataset$ndvi_90 <- NA
-# step_dataset$ndvi_sd <- NA
-# 
-# step_dataset$ndvi_rate_10 <- NA
-# step_dataset$ndvi_rate_50 <- NA
-# step_dataset$ndvi_rate_90 <- NA
-# step_dataset$ndvi_rate_sd <- NA
-# 
-# # extract covariates from correct MODIS image
-# 
-# # option 1: extract only end pixel of each step 
-# #step_dataset <- extract_covariates_var_time(step_dataset, modis_images, where = 'end', max_time = period(1, units = 'days'), name_covar = 'ndvi_var_time')
-# 
-# # option 2: extract all pixels along step for correct day 
-# # need to construct a loop that will retrieve correct modis image for each step
-# # this is less efficient than option 1 but try it 
-# 
-# # Attempt1: loop over all steps 
-# 
-# for(i in 1:nrow(step_dataset)){
-#   
-#   # retrieve MODIS image (SpatRaster layer) by matching date with step
-#   # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-#   step_modis <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')]]
-#   
-#   # extract NDVI for all pixels along step on day of passage
-#   ndvi_along <- unlist(extract_covariates_along(step_dataset[i,], step_modis, name_covar = 'ndvi_along')) # do i need this last parameter?
-#   
-#   # calculate percentile values of NDVI along step
-#   # source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-#   step_dataset$ndvi_10[i] <- quantile(ndvi_along, probs = 0.1, names = F, na.rm = T)
-#   step_dataset$ndvi_50[i] <- quantile(ndvi_along, probs = 0.5, names = F, na.rm = T)
-#   step_dataset$ndvi_90[i] <- quantile(ndvi_along, probs = 0.9, names = F, na.rm = T)
-#   step_dataset$ndvi_sd[i] <- sd(ndvi_along, na.rm = T)
-#   
-#   # retrieve MODIS image from previous week (*tested on step 43, had to take 6 days instead of 7 days because of cloudcover)
-#   step_modis_prev_week <- modis_images[[time(modis_images) == as.Date(step_dataset$t1_[i], tz = 'Africa/Maputo')-lag]]
-#   
-#   # extract NDVI for all pixels along step for 1 week* prior passage
-#   ndvi_along_prev_week <- extract_covariates_along(step_dataset[i,], step_modis_prev_week, name_covar = 'ndvi_along_prev_week')
-#   
-#   # calculate rate of NDVI change for all pixels along step for 1 week* prior to passage
-#   # note: have to retrieve vector inside list if want to do arithmatics
-#   ndvi_rate_along <- (ndvi_along[[1]] - ndvi_along_prev_week[[1]])/lag
-#   
-#   # calculate percentile values of NDVI change rate along step
-#   # source: https://www.statology.org/how-to-fix-in-r-error-in-sort-intx-na-last-decreasing-x-must-be-atomic/
-#   step_dataset$ndvi_rate_10[i] <- quantile(ndvi_rate_along, probs = 0.1, names = F, na.rm = T)
-#   step_dataset$ndvi_rate_50[i] <- quantile(ndvi_rate_along, probs = 0.5, names = F, na.rm = T)
-#   step_dataset$ndvi_rate_90[i] <- quantile(ndvi_rate_along, probs = 0.9, names = F, na.rm = T)
-#   step_dataset$ndvi_rate_sd[i] <- sd(ndvi_rate_along, na.rm = T)
-#   
-# }
-# 
-# # save this dataframe for now since took so long to generate 
-# #write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
-# write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', w_path, '_step_dataset.csv'))
-
 ####################### scatter plot fo the data ###################
 # create simplified dataframe where y = case and x = ndvi 
-step_dataset <- read.csv(paste0('output/elephant_etosha/random_paths/LA2_', week, '_step_dataset.csv'))
+step_dataset <- read.csv(paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv'))
+
+# source: https://stackoverflow.com/questions/19379081/how-to-replace-na-values-in-a-table-for-selected-columns
+step_dataset[c('ndvi_sd', 'ndvi_rate_sd')][is.na(step_dataset[c('ndvi_sd', 'ndvi_rate_sd')])] <- 0
+
 data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,16:ncol(step_dataset)])
 
 # turn case into binary 1 0 values to plot 
@@ -474,24 +324,76 @@ source('functions_elephant_ssf/fittingSSFModel.R')
 fitSSFModel('output/elephant_etosha/random_paths/', ID, week, 'output/ssf_models/random_paths/')
 
 ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-                      ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(burst_))
+                      ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 
+model_summary <- summary(ss_model)
+
+print(model_summary$na.action)
+
+class(summary(ss_model))
+
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + 
+                         ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
 summary(ss_model)
 
 
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + ndvi_sd
+                          + ndvi_rate_50 + ndvi_rate_sd + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_90 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_sd + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_10 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_50 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_90 + strata(step_id_))
+summary(ss_model)
+
+ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_sd + strata(step_id_))
+summary(ss_model)
+
+
+
 # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
-t <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-           ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, family = binomial(link = 'logit'), data = step_dataset)
+
+t <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, 
+         family = binomial(link = 'logit'), data = step_dataset)
+
 summary(t)
-a <- anova(t, test="Chisq")
-a
+
+t <- glm(case_ ~ ndvi_50 + ndvi_sd + ndvi_rate_50 + ndvi_rate_sd, 
+         family = binomial(link = 'logit'), data = step_dataset)
+
+summary(t)
+
+t <- glm(case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, 
+         family = binomial(link = 'logit'), data = step_dataset)
+
+summary(t)
+
+t <- glm(case_ ~ ndvi_90 + ndvi_sd + ndvi_rate_90 + ndvi_rate_sd, 
+         family = binomial(link = 'logit'), data = step_dataset)
+
+summary(t)
 
 
-
-
-# if(!('car') %in% installed.packages()){install.packages('car')}
-# library(car)
-# v <- vif(ss_model)
+if(!('car') %in% installed.packages()){install.packages('car')}
+library(car)
+vif(t) 
 
 # 
 # fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, output_directory = 'output/ssf_models/'){

@@ -15,21 +15,33 @@ if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for groupin
 library(dplyr)
 
 
-generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distribution = 'gamma', turn_angle_distribution = 'vonmises', output_filename){
+generateSteps <- function(track_dataset_subset, track_dataset_full, n_random_steps = 20, output_filename){
   
   ##### create observed dataset of steps 
   
   # turn fixes into observed steps 
   # by burst so steps not created for fixes in different paths
-  true_steps <- steps_by_burst(track_dataset)
+  true_steps <- steps_by_burst(track_dataset_subset)
   
   # add information attributes as new columns (to differentiate the true and false steps)
   true_steps$case_ <- T
   true_steps$step_id_ <- row.names(true_steps)
   true_steps$random_id_ <- NA
   
-  # retrieve average step length to use as fixed step length for random steps
-  set_distance <- mean(true_steps$sl_)
+  
+  ##### create custom distributions from full dataset of all observations for that elephant 
+  
+  # turn the full dataset into steps 
+  full_steps <- steps_by_burst(track_dataset_full)
+  
+  # retrieve the step lengths and turning angles of the true steps
+  sl <- full_steps$sl_
+  ta <- full_steps$ta_
+  
+  # derive the probability density functions from step lengths and turning angles of the elephant in week of interest
+  # source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
+  density_sl <- density(sl, na.rm = T)
+  density_ta <- density(ta, na.rm = T) 
   
   
   ##### create final dataset of presence and absence steps 
@@ -38,12 +50,12 @@ generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distri
   all_steps <- true_steps
   
   
-  ##### get initial starting points from the observed dataset (necessary for multiple paths)
+  ##### get initial starting points from the observed dataset of the week (necessary for multiple paths)
   
   # select starting fixes of each burst
   # PACKAGE: dplyr should be installed
   # source: https://www.r-bloggers.com/2022/07/select-the-first-row-by-group-in-r/
-  starting_fixes <- track_dataset %>% group_by(burst_) %>% filter(row_number()==1)
+  starting_fixes <- track_dataset_subset %>% group_by(burst_) %>% filter(row_number()==1)
   
   
   ##### generate random pseudo-absence paths 
@@ -57,10 +69,10 @@ generateSteps <- function(track_dataset, n_random_steps = 20, step_length_distri
     for(burst in 1:nrow(starting_fixes)){
       
       # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
-      all_steps <- generateRandomPath(track_dataset, true_steps, starting_fixes, all_steps, set_distance, burst, loop) 
+      all_steps <- generateRandomPath(starting_fixes, true_steps, sl, ta, density_sl,
+                                      density_ta, track_dataset_subset, all_steps, burst, loop) 
     }
   }
-  
   
   
   ##### save output dataframe of all steps

@@ -21,8 +21,13 @@ library(sf)
 
 
 
-generateRandomPath <- function(true_fixes_dataset, true_step_dataset, starting_fixes_dataset, 
-                             all_steps_dataset, buffer_distance, burst_number, loop_number){
+generateRandomPath <- function(starting_fixes_dataset, true_step_dataset, step_lengths, 
+                               turning_angles, density_distr_step_lengths, density_distr_turning_angles, 
+                               true_fixes_dataset, all_steps_dataset, burst_number, loop_number){
+  
+  # call necessary functions 
+  source('functions_elephant_ssf/samplingCustomDistribution.R')
+  source('functions_elephant_ssf/calculatingNewPoint.R')
   
   # create dataframe of starting point for burst of interest 
   fake_path <- data.frame(t_ = starting_fixes_dataset$t_[starting_fixes_dataset$burst_ == burst_number],  
@@ -32,25 +37,27 @@ generateRandomPath <- function(true_fixes_dataset, true_step_dataset, starting_f
   # for all true steps from the burst of interest, generate a random step to get a random path of the same length
   for(i in 1:nrow(true_step_dataset[true_step_dataset$burst_ == burst_number,])){
     
-    # transform starting point coordinates into a spatial object 
-    # source: https://www.dpi.inpe.br/gilberto/tutorials/software/R-contrib/sp/html/SpatialPoints.html
-    starting_point <- st_as_sf(fake_path[nrow(fake_path),2:3], coords = c('x_', 'y_'), 
-                               crs = crs('EPSG:32733'))
+    # get starting coordinates 
+    starting_x <- fake_path[nrow(fake_path), 2]
+    starting_y <- fake_path[nrow(fake_path), 3]
     
-    # create buffer around point with fixed distance = average step length from all observed steps
-    # source: https://gis.stackexchange.com/questions/292327/creating-buffers-around-points-and-merging-with-spatialpolygonsdataframe-to-crea
-    buffer_point <- st_buffer(starting_point, dist = buffer_distance)
+    # set seed 
+    seed <- i+100*(loop_number-1)
     
-    # convert buffer polygon into polyline and sample random point along line
-    # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
-    set.seed(i+100*(loop_number-1))
-    new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
+    # generate random step length 
+    random_sl <- sampleCustomDistribution(step_lengths, density_distr_step_lengths, seed) #full_sl
+    
+    # generate random turning angle 
+    random_ta <- sampleCustomDistribution(turning_angles, density_distr_turning_angles, seed) #full_ta
+    
+    # calculate coordinates of new point 
+    new_coordinates <- calculateNewPoint(starting_x, starting_y, random_sl, random_ta)
     
     # add coordinates to fake path data frame
     # source: https://rdrr.io/cran/sf/man/st_coordinates.html
-    fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1], 
-                                             x_ = st_coordinates(new_point)[[1]], 
-                                             y_ = st_coordinates(new_point)[[2]]), 
+    fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1],
+                                             x_ = new_coordinates[1],
+                                             y_ = new_coordinates[2]),
                        make.row.names = F)
     
   }
