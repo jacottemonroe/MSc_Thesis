@@ -66,6 +66,10 @@ loadAndExtractCovariates <- function(step_dataset, modis_image_directory, ndvi_r
     
   }
   
+  # change all NA values in sd columns to 0 --> sd = 0 when sample size = 1 but here it returns sd as NA so manually change to 0
+  # source: https://stackoverflow.com/questions/19379081/how-to-replace-na-values-in-a-table-for-selected-columns
+  step_dataset[c('ndvi_sd', 'ndvi_rate_sd')][is.na(step_dataset[c('ndvi_sd', 'ndvi_rate_sd')])] <- 0
+  
   # save this dataframe for now since took so long to generate 
   #write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
   write.csv(step_dataset, output_filename)
