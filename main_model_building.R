@@ -272,10 +272,6 @@ loadAndExtractCovariates(all_steps_dataset, modis_image_directory_name, lag, ele
 ####################### scatter plot fo the data ###################
 # create simplified dataframe where y = case and x = ndvi 
 step_dataset <- read.csv(paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv'))
-
-# source: https://stackoverflow.com/questions/19379081/how-to-replace-na-values-in-a-table-for-selected-columns
-step_dataset[c('ndvi_sd', 'ndvi_rate_sd')][is.na(step_dataset[c('ndvi_sd', 'ndvi_rate_sd')])] <- 0
-
 data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,16:ncol(step_dataset)])
 
 # turn case into binary 1 0 values to plot 
@@ -321,59 +317,33 @@ p
 
 source('functions_elephant_ssf/fittingSSFModel.R')
 
-fitSSFModel('output/elephant_etosha/random_paths/', ID, week, 'output/ssf_models/random_paths/')
+# libraries to run next function (needed to generate correlation matrix)
+if(!('dplyr') %in% installed.packages()){install.packages('dplyr')}
+if(!('GGally') %in% installed.packages()){install.packages('GGally')}
+library(dplyr) 
+library(GGally)
 
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-                      ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
+fitSSFModel('output/elephant_etosha/random_paths/', ID, week, full = T, 'output/ssf_models/random_paths/', multicolinearity_check = T)
+fitSSFModel('output/elephant_etosha/random_paths/', ID, week, full = F, 'output/ssf_models/random_paths/', multicolinearity_check = F)
 
-model_summary <- summary(ss_model)
-
-print(model_summary$na.action)
-
-class(summary(ss_model))
-
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + 
-                         ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
-summary(ss_model)
-
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + ndvi_sd
-                          + ndvi_rate_50 + ndvi_rate_sd + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_50 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_90 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_sd + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_10 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_50 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_90 + strata(step_id_))
-summary(ss_model)
-
-ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_rate_sd + strata(step_id_))
-summary(ss_model)
-
-
+png(filename = paste0('output/ssf_models/random_paths/LA2/2027/', 'correlation_matrix.png'))
+ggpairs(covariates, aes(color = as.factor(case_), alpha = 0.5))    
+dev.off()
 
 # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
 
 t <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, 
          family = binomial(link = 'logit'), data = step_dataset)
 
-summary(t)
+tsum <- summary(t)
+
+print(tsum$aic)
+print(tsum$null.deviance)
+print(tsum$df.null)
+print(tsum$deviance)
+print(tsum$df.residual) #df for residual deviance 
+print(tsum$coefficients)
+
 
 t <- glm(case_ ~ ndvi_50 + ndvi_sd + ndvi_rate_50 + ndvi_rate_sd, 
          family = binomial(link = 'logit'), data = step_dataset)
