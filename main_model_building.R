@@ -268,49 +268,21 @@ loadAndExtractCovariates(all_steps_dataset, modis_image_directory_name, lag, ele
 
 
 
+###################### visualize paths #####################
+source('functions_elephant_ssf/visualizingPaths.R')
 
-####################### scatter plot fo the data ###################
-# create simplified dataframe where y = case and x = ndvi 
-step_dataset <- read.csv(paste0('output/elephant_etosha/random_paths/', ID, '_', as.character(week), '_step_dataset.csv'))
-data_to_plot <- data.frame(y = step_dataset$case_, step_dataset[,16:ncol(step_dataset)])
+# libraries to run next function (needed to generate correlation matrix)
+if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(ggplot2)
+library(terra)
 
-# turn case into binary 1 0 values to plot 
-# source: https://stackoverflow.com/questions/33930188/convert-dataframe-column-to-1-or-0-for-true-false-values-and-assign-to-dataf
-data_to_plot$y <- as.integer(data_to_plot$y)
+visualizePaths(modis_filepath = paste0('data/modis_ssf/2027/', 'mean_ndvi.tif'), 
+               step_dataset_filepath = 'output/elephant_etosha/random_paths/LA2_2027_step_dataset.csv', 
+               ID = ID, week = week, title = "Elephant Movement on Mean NDVI",
+               output_directory = 'output/elephant_etosha/')
 
-# plot for covariates vs response 
-ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
-                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, y=y)) + 
-  geom_point() + 
-  stat_smooth(method="glm", color="green", se=FALSE, 
-              method.args = list(family=binomial))
 
-ggplot(data_to_plot, aes(x=ndvi_10 + ndvi_90 + ndvi_sd + 
-                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, y=y)) + 
-  geom_point() + 
-  stat_smooth(method="glm", color="green", se=FALSE, 
-              method.args = list(family=binomial))
-
-# plot for covariate against itself
-m <- ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
-                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, y = ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + 
-                           ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd)) + 
-  geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
-  scale_color_manual(values=c('grey40','cyan'))
-m
-ggplot(data_to_plot, aes(x = ndvi_10 + ndvi_90 + ndvi_sd + 
-                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, y = ndvi_10 + ndvi_90 + ndvi_sd + 
-                           ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd)) + 
-  geom_point(aes(color = as.factor(y), size = as.factor(y))) + 
-  scale_color_manual(values=c('grey40','cyan'))
-
-# plot all predictors against each other --> check multicolinearity 
-# source: https://r-charts.com/correlation/ggpairs/?utm_content=cmp-true
-if(!('GGally') %in% installed.packages()){install.packages('GGally')}
-library(GGally)
-
-p <- ggpairs(data_to_plot, columns = 2:9, aes(color = as.factor(y), alpha = 0.5))    
-p
 
 
 ######################### fit model #################################
@@ -320,155 +292,13 @@ source('functions_elephant_ssf/fittingSSFModel.R')
 # libraries to run next function (needed to generate correlation matrix)
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')}
 if(!('GGally') %in% installed.packages()){install.packages('GGally')}
+if(!('car') %in% installed.packages()){install.packages('car')}
 library(dplyr) 
 library(GGally)
+library(car)
 
 fitSSFModel('output/elephant_etosha/random_paths/', ID, week, full = T, 'output/ssf_models/random_paths/', multicolinearity_check = T)
 fitSSFModel('output/elephant_etosha/random_paths/', ID, week, full = F, 'output/ssf_models/random_paths/', multicolinearity_check = F)
 
-png(filename = paste0('output/ssf_models/random_paths/LA2/2027/', 'correlation_matrix.png'))
-ggpairs(covariates, aes(color = as.factor(case_), alpha = 0.5))    
-dev.off()
-
-# source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
-
-t <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd, 
-         family = binomial(link = 'logit'), data = step_dataset)
-
-tsum <- summary(t)
-
-print(tsum$aic)
-print(tsum$null.deviance)
-print(tsum$df.null)
-print(tsum$deviance)
-print(tsum$df.residual) #df for residual deviance 
-print(tsum$coefficients)
-
-
-t <- glm(case_ ~ ndvi_50 + ndvi_sd + ndvi_rate_50 + ndvi_rate_sd, 
-         family = binomial(link = 'logit'), data = step_dataset)
-
-summary(t)
-
-t <- glm(case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd, 
-         family = binomial(link = 'logit'), data = step_dataset)
-
-summary(t)
-
-t <- glm(case_ ~ ndvi_90 + ndvi_sd + ndvi_rate_90 + ndvi_rate_sd, 
-         family = binomial(link = 'logit'), data = step_dataset)
-
-summary(t)
-
-
-if(!('car') %in% installed.packages()){install.packages('car')}
-library(car)
-vif(t) 
-
-# 
-# fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, output_directory = 'output/ssf_models/'){
-#   
-#   # read step dataset
-#   step_dataset <- read.csv(paste0(input_repository, ID, '_', as.character(week), '_step_dataset.csv'))
-#   
-#   # select only rows with NA
-#   step_dataset_NA <- step_dataset[!complete.cases(step_dataset),]
-#   
-#   # print information about the dataset 
-#   print(paste('Dataset elephant:', ID, '\n', 
-#               'Week:', as.character(week), '\n', 
-#               'Number of total steps:', as.character(nrow(step_dataset)), '\n', 
-#               'Number of observed steps:', as.character(length(unique(step_dataset$step_id_))), '\n', 
-#               'Number of steps with NA:', as.character(length(unique(step_dataset_NA$step_id_))), '\n', 
-#               'Number of observed steps with NA:', as.character(sum(step_dataset_NA$case_ == T))))
-#   
-#   # fit SSF model 
-#   ssf_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-#                            ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
-#   
-#   # print model summary
-#   print(summary(ssf_model))
-#   
-#   # save model as RDS 
-#   saveRDS(ssf_model, file = paste0(output_directory, ID, '_', as.character(week), '_ssf_model.rds'))
-#   
-# }
-# 
-# s <- step_dataset #[1:294,]
-# print(length(unique(s$step_id_)))
-# s_NA <- s[!complete.cases(s),]
-# print(length(unique(s_NA$step_id_)))
-# print(sum(s_NA$case_ == T))
-# 
-# ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + 
-#                          ndvi_rate_10 + ndvi_rate_50 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
-# 
-# ss_model <- fit_clogit(step_dataset, case_ ~ ndvi_10 + ndvi_90 + ndvi_sd + 
-#                          ndvi_rate_10 + ndvi_rate_90 + ndvi_rate_sd + strata(step_id_))
-# 
-# summary(ss_model)
-# 
-# t <- ss_model$model
-
-
-
-
-
-
-###################" other test ######################
-
-
-## PICK UP FROM HERE (below is draft ideas)
-
-b <- unique(elephant_all_steps_by_path$step_id_)
-c <- unique(step_dataset$step_id_)
-d <- step_dataset[!complete.cases(step_dataset),]
-e <- unique(d$step_id_)
-print(length(e))
-
-f <- step_dataset
-f$NA_count <- rowSums(is.na(f))
-g <- f[f$NA_count >= 3,]
-print(length(unique(g$step_id_)))
-
-print(length(unique(step_dataset$step_id_)))
-s_NA <- step_dataset[!complete.cases(step_dataset),]
-print(length(unique(s_NA$step_id_)))
-print(sum(s_NA$case_ == T))
-
-
-
-
-
-
-
-
-
-
-
-# visualize elephant data
-m <- modis_images[[8]]
-m
-names(m) <- 'ndvi'
-modis_ndvi_map <- ggplot() +
-  geom_spatraster(data = m, aes(fill = ndvi), show.legend = T) +
-  scale_fill_terrain_c(name = 'NDVI')
-
-modis_ndvi_map
-
-mov_map <- modis_ndvi_map +
-  labs(title = "Elephant Movement", subtitle = ID, x = "Longitude", y = "Latitude") +
-  geom_path(data = s1_df, aes(x = location.long, y = location.lat), color = 'red', linewidth = 1, show.legend = F) +
-  theme_minimal()
-mov_map
-
-
-
-
-
-
-
-t <- modis_images[[8]]
-t
 
 
