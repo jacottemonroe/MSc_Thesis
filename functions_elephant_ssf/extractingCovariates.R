@@ -11,10 +11,11 @@
 # Output: saves covariates table as csv.
 
 
-loadAndExtractCovariates <- function(step_dataset, modis_image_directory, ndvi_rate_lag = 7, output_filename){ #input_filename = 'data/temp_eleph_path.csv',
+loadAndExtractCovariates <- function(input_step_dataset_directory = 'data/elephant_etosha/', modis_image_directory, ID, week, ndvi_rate_lag = 7, 
+                                     random_data_method, output_directory = 'output/elephant_etosha/'){ 
   
-  # get elephant step dataset --> CHECK THAT IT IS STEP_XYT FORMAT OTHERWISE HAVE TO TRANSFORM AGAIN?!
-  #step_dataset <- read.csv(input_filename)
+  # load step dataset RDS 
+  step_dataset <- readRDS(paste0(input_step_dataset_directory, ID, '/', week, '/', 'all_steps_', random_data_method, '.RDS'))
   
   # add empty columns for covariates 
   # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/
@@ -22,7 +23,7 @@ loadAndExtractCovariates <- function(step_dataset, modis_image_directory, ndvi_r
   step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
-  modis_images <- rast(list.files(modis_image_directory, pattern = glob2rx('*.tif'), full.names = T))
+  modis_images <- rast(list.files(modis_image_directory, pattern = glob2rx('2*.tif'), full.names = T))
   
   # add a time (date) attribute to the spatraster --> daily interval 
   # source: https://rdrr.io/github/rspatial/terra/man/time.html
@@ -70,8 +71,13 @@ loadAndExtractCovariates <- function(step_dataset, modis_image_directory, ndvi_r
   # source: https://stackoverflow.com/questions/19379081/how-to-replace-na-values-in-a-table-for-selected-columns
   step_dataset[c('ndvi_sd', 'ndvi_rate_sd')][is.na(step_dataset[c('ndvi_sd', 'ndvi_rate_sd')])] <- 0
   
+  # create output filepath 
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create data directory if it does not yet exist
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  
   # save this dataframe for now since took so long to generate 
   #write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
-  write.csv(step_dataset, output_filename)
-  
+  write.csv(step_dataset, paste0(output_filepath, 'cov_resp_dataset_', random_data_method, '.csv'))
 }

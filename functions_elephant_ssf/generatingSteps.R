@@ -11,11 +11,24 @@
 #   
 # Output: step dataset saved as csv 
 
-if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
-library(dplyr)
+# if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
+# library(dplyr)
 
 
-generateSteps <- function(track_dataset_subset, track_dataset_full, n_random_steps = 20, output_filename){
+generateSteps <- function(track_dataset_subset_directory, track_dataset_full_directory, 
+                          ID, week, n_random_steps = 20, random_data_method = 'random_path_custom_distr', 
+                          output_directory = 'data/elephant_etosha/'){
+  
+  # create output filepath 
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create data directory if it does not yet exist
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  
+  # load track datasets 
+  track_dataset_subset <- readRDS(list.files(track_dataset_subset_directory, pattern = glob2rx('elephant_track_xyt.RDS'), full.names = T))
+  track_dataset_full <- readRDS(list.files(track_dataset_full_directory, pattern = glob2rx('elephant_full_track_xyt.RDS'), full.names = T))
+  
   
   ##### create observed dataset of steps 
   
@@ -34,14 +47,23 @@ generateSteps <- function(track_dataset_subset, track_dataset_full, n_random_ste
   # turn the full dataset into steps 
   full_steps <- steps_by_burst(track_dataset_full)
   
-  # retrieve the step lengths and turning angles of the true steps
-  sl <- full_steps$sl_
-  ta <- full_steps$ta_
-  
-  # derive the probability density functions from step lengths and turning angles of the elephant in week of interest
-  # source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
-  density_sl <- density(sl, na.rm = T)
-  density_ta <- density(ta, na.rm = T) 
+  if(random_data_method == 'random_path_custom_distr'){
+    
+    # retrieve the step lengths and turning angles of the true steps
+    sl <- full_steps$sl_
+    ta <- full_steps$ta_
+    
+    # derive the probability density functions from step lengths and turning angles of the elephant in week of interest
+    # source: https://www.tutorialspoint.com/how-to-generate-a-probability-density-distribution-from-a-set-of-observations-in-r
+    density_sl <- density(sl, na.rm = T)
+    density_ta <- density(ta, na.rm = T) 
+    
+  }else if(random_data_method == 'random_path_buffer_point'){
+    
+    # calculate average step length from full elephant dataset 
+    average_step_length <- mean(full_steps$sl_)
+    
+  }
   
   
   ##### create final dataset of presence and absence steps 
@@ -62,107 +84,62 @@ generateSteps <- function(track_dataset_subset, track_dataset_full, n_random_ste
 
   source('functions_elephant_ssf/generatingRandomPath.R')
   
-  # generate random sets of paths matching the full elephant movement of that week (all true separate paths included)
-  for(loop in 1:n_random_steps){
+  if(random_data_method == 'random_path_custom_distr'){
     
-    # for each true separate path generate a corresponding false path 
-    for(burst in 1:nrow(starting_fixes)){
+    # take random step length and turning angle from custom distributions then generate steps to create pseudo-absence paths
+    
+    # generate random sets of paths matching the full elephant movement of that week (all true separate paths included)
+    for(loop in 1:n_random_steps){
       
-      # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
-      all_steps <- generateRandomPath(starting_fixes, true_steps, sl, ta, density_sl,
-                                      density_ta, track_dataset_subset, all_steps, burst, loop) 
+      # for each true separate path generate a corresponding false path 
+      for(burst in 1:nrow(starting_fixes)){
+        
+        # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
+        all_steps <- generateRandomPathFromCustomDistribution(starting_fixes, true_steps, sl, ta, density_sl,
+                                                              density_ta, track_dataset_subset, all_steps, burst, loop) 
+      }
     }
-  }
-  
+    
+    # define filename 
+    output_filename <- paste0('all_steps_', random_data_method, '.RDS')
+    
+  }else if(random_data_method == 'random_path_buffer_point'){
+    
+    # create a spatial buffer around a point then randomly sample a point on the buffer line to create a new point 
+    # then generate steps to create pseudo-absence paths 
+    
+    # generate random sets of paths matching the full elephant movement of that week (all true separate paths included)
+    for(loop in 1:n_random_steps){
+      
+      # for each true separate path generate a corresponding false path 
+      for(burst in 1:nrow(starting_fixes)){
+        
+        # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
+        all_steps <- generateRandomPathFromRandomPoint(starting_fixes, true_steps, track_dataset_subset, 
+                                                       all_steps, average_step_length, burst, loop) 
+      }
+    }
+    
+    # define filename 
+    output_filename <- paste0('all_steps_', random_data_method, '.RDS')
+    
+  }else if(random_data_method == 'random_step'){
+    
+    # create random pseudo-absence steps at the starting point of each true step 
+    # step lengths drawn from gamma distribution and turning angles from von mises distribution 
+    set.seed(1234)
+    all_steps <- random_steps(true_steps, n_control = n_random_steps,
+                              sl_distr = fit_distr(true_steps$sl_, 'gamma'),
+                              ta_distr = fit_distr(true_steps$ta_, 'vonmises'))
+    
+    # define filename 
+    output_filename <- paste0('all_steps_', random_data_method, '.RDS')
+  }else{print('Wrong pseudo-absence method specified. Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step')}
   
   ##### save output dataframe of all steps
+  # source: https://rstudio-education.github.io/hopr/dataio.html
+  saveRDS(all_steps, paste0(output_filepath, output_filename))
+  #write.csv(all_steps, output_filename)
   
-  write.csv(all_steps, output_filename)
-  
-  # # generate corresponding random pseudo-absence steps
-  # set.seed(1234)
-  # all_steps <- random_steps(true_steps, n_control = n_random_steps,
-  #                           sl_distr = fit_distr(true_steps$sl_, step_length_distribution),
-  #                           ta_distr = fit_distr(true_steps$ta_, turn_angle_distribution))
-  
-  return(all_steps)
 }
 
-# 
-# 
-# ############################# 5. write a function that will generate a fake path
-# 
-# generateFakePath <- function(true_fixes_dataset, true_step_dataset, starting_fixes_dataset, 
-#                              all_steps_dataset, step_distance, burst_number, loop_number){
-#   
-#   # create dataframe of starting point for burst of interest 
-#   fake_path <- data.frame(t_ = starting_fixes_dataset$t_[starting_fixes_dataset$burst_ == burst_number],  
-#                           x_ = starting_fixes_dataset$x_[starting_fixes_dataset$burst_ == burst_number], 
-#                           y_ = starting_fixes_dataset$y_[starting_fixes_dataset$burst_ == burst_number])
-#   
-#   # for all true steps from the burst of interest, generate a random step to get a random path of the same length
-#   for(i in 1:nrow(true_step_dataset[true_step_dataset$burst_ == burst_number,])){
-#     
-#     # transform starting point coordinates into a spatial object 
-#     # source: https://www.dpi.inpe.br/gilberto/tutorials/software/R-contrib/sp/html/SpatialPoints.html
-#     starting_point <- st_as_sf(fake_path[nrow(fake_path),2:3], coords = c('x_', 'y_'), 
-#                                crs = crs('EPSG:32733'))
-#     
-#     # create buffer around point with fixed distance = average step length from all observed steps
-#     # source: https://gis.stackexchange.com/questions/292327/creating-buffers-around-points-and-merging-with-spatialpolygonsdataframe-to-crea
-#     buffer_point <- st_buffer(starting_point, dist = set_distance)
-#     
-#     # convert buffer polygon into polyline and sample random point along line
-#     # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
-#     set.seed(i+100*(loop_number-1))
-#     new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
-#     
-#     # add coordinates to fake path data frame
-#     # source: https://rdrr.io/cran/sf/man/st_coordinates.html
-#     fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1], 
-#                                              x_ = st_coordinates(new_point)[[1]], 
-#                                              y_ = st_coordinates(new_point)[[2]]), 
-#                        make.row.names = F)
-#     
-#   }
-#   
-#   # add new column for information on the burst of interest in the new fake path dataset
-#   fake_path$burst_ <- burst_number
-#   
-#   # turn the list of random points into a track object
-#   fake_track <- make_track(fake_path, x_, y_, t_, burst_ = burst_)
-#   
-#   # transform the fake points dataset into steps
-#   fake_steps <- steps_by_burst(fake_track)
-#   
-#   # add columns to the new fake steps dataset for the case (F = false steps), 
-#   #     the corresponding step ID (to match with true steps), and the loop number 
-#   #     to differentiate between randomly generated steps
-#   fake_steps$case_ <- F
-#   fake_steps$step_id_ <- row.names(fake_steps)
-#   fake_steps$random_id_ <- loop_number
-#   
-#   # add the new fake steps to the larger dataset containing all steps 
-#   all_steps_dataset <- rbind(all_steps_dataset, fake_steps)
-#   
-#   return(all_steps_dataset)
-# }
-# 
-# 
-# ############### 6. loop the function for all bursts/paths in the weekly movement 
-# ########################################### and generate 20 random sets of paths
-# 
-# # generate 20 random sets of paths matching the full elephant movement of that week (all true separate paths included)
-# for(loop in 1:20){
-#   
-#   # for each true separate path generate a corresponding false path 
-#   for(burst in 1:nrow(starting_fixes)){
-#     
-#     # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
-#     all_steps <- generateFakePath(df_track, true_steps, starting_fixes, all_steps, set_distance, burst, loop) 
-#   }
-# }
-# 
-# ########################### 7. save output dataframe of all steps for that model 
-# 
-# write.csv(all_steps, 'data/elephant_etosha/elephant_steps/all_steps_LA2_w2027.csv')
