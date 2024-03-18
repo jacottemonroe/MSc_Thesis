@@ -10,8 +10,8 @@
 
 
 
-fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, full = T, 
-                        output_directory = 'output/ssf_models/', multicolinearity_check = F){
+fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method = 'random_path_custom_distr', 
+                        multicolinearity_check = F, full = T, output_directory = 'output/'){
   
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -20,7 +20,7 @@ fitSSFModel <- function(input_repository = 'output/elephant_etosha/', ID, week, 
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # read step dataset
-  step_dataset <- read.csv(paste0(input_repository, ID, '_', as.character(week), '_step_dataset.csv'))
+  step_dataset <- read.csv(paste0(input_directory, 'cov_resp_dataset_', random_data_method, '.csv'))
   
   # generate correlation matrix 
   if(multicolinearity_check == T){

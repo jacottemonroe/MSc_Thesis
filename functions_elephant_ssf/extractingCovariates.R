@@ -11,11 +11,11 @@
 # Output: saves covariates table as csv.
 
 
-loadAndExtractCovariates <- function(input_step_dataset_directory = 'data/elephant_etosha/', modis_image_directory, ID, week, ndvi_rate_lag = 7, 
-                                     random_data_method, output_directory = 'output/elephant_etosha/'){ 
+loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, 
+                                     random_data_method, output_directory = 'data/'){ 
   
   # load step dataset RDS 
-  step_dataset <- readRDS(paste0(input_step_dataset_directory, ID, '/', week, '/', 'all_steps_', random_data_method, '.RDS'))
+  step_dataset <- readRDS(paste0(input_directory, 'all_steps_', random_data_method, '.RDS'))
   
   # add empty columns for covariates 
   # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/
@@ -23,7 +23,8 @@ loadAndExtractCovariates <- function(input_step_dataset_directory = 'data/elepha
   step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
-  modis_images <- rast(list.files(modis_image_directory, pattern = glob2rx('2*.tif'), full.names = T))
+  modis_directory <- paste0(input_directory, 'modis_images_', random_data_method)
+  modis_images <- rast(list.files(modis_directory, pattern = glob2rx('2*.tif'), full.names = T))
   
   # add a time (date) attribute to the spatraster --> daily interval 
   # source: https://rdrr.io/github/rspatial/terra/man/time.html

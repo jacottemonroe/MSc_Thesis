@@ -15,7 +15,7 @@
 # library(dplyr)
 
 
-generateSteps <- function(track_dataset_subset_directory, track_dataset_full_directory, 
+generateSteps <- function(track_dataset_directory, 
                           ID, week, n_random_steps = 20, random_data_method = 'random_path_custom_distr', 
                           output_directory = 'data/elephant_etosha/'){
   
@@ -26,8 +26,8 @@ generateSteps <- function(track_dataset_subset_directory, track_dataset_full_dir
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # load track datasets 
-  track_dataset_subset <- readRDS(list.files(track_dataset_subset_directory, pattern = glob2rx('elephant_track_xyt.RDS'), full.names = T))
-  track_dataset_full <- readRDS(list.files(track_dataset_full_directory, pattern = glob2rx('elephant_full_track_xyt.RDS'), full.names = T))
+  track_dataset_subset <- readRDS(paste0(track_dataset_directory, 'elephant_track_xyt.RDS'))
+  track_dataset_full <- readRDS(paste0(track_dataset_directory, 'elephant_full_track_xyt.RDS'))
   
   
   ##### create observed dataset of steps 
@@ -139,7 +139,6 @@ generateSteps <- function(track_dataset_subset_directory, track_dataset_full_dir
   ##### save output dataframe of all steps
   # source: https://rstudio-education.github.io/hopr/dataio.html
   saveRDS(all_steps, paste0(output_filepath, output_filename))
-  #write.csv(all_steps, output_filename)
   
 }
 

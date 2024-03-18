@@ -8,8 +8,8 @@
 #         the map title, and the directory for output. All inputs are strings. 
 # Output: Map of filepaths on top of NDVI raster saved as png. 
 
-visualizePaths <- function(modis_filepath, step_dataset_filepath, ID, week, 
-                           title = 'Elephant Movement on NDVI', output_directory = 'output/elephant_etosha/'){
+visualizePaths <- function(input_filepath, ID, week, random_data_method, 
+                           title = 'Elephant Movement on NDVI', output_directory = 'output/'){
   
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -18,7 +18,7 @@ visualizePaths <- function(modis_filepath, step_dataset_filepath, ID, week,
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # read NDVI dataset
-  ndvi_data <- rast(modis_filepath)
+  ndvi_data <- rast(paste0(input_filepath, 'modis_images_', random_data_method, '/', 'mean_ndvi.tif'))
   names(ndvi_data) <- 'ndvi'
   
   # create NDVI basemap 
@@ -28,7 +28,7 @@ visualizePaths <- function(modis_filepath, step_dataset_filepath, ID, week,
     scale_fill_terrain_c(name = 'NDVI')
   
   # read step dataset
-  dat <- read_csv(step_dataset_filepath)
+  dat <- read.csv(paste0(input_filepath, 'cov_resp_dataset_', random_data_method, '.csv'))
   dat$random_id_ <- as.factor(dat$random_id_)
   
   # add title and theme to plot

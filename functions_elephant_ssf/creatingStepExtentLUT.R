@@ -12,10 +12,14 @@
 # Output: Look up table of step extents saved as csv. 
 
 
-createStepExtentLUT <- function(input_filename, elephant_ID, week_of_data, ndvi_rate_lag = 7, output_directory = 'data/step_extents/'){
+createStepExtentLUT <- function(input_filepath, ID, week, random_data_method = 'random_path_custom_distr', 
+                                ndvi_rate_lag = 7, output_directory = 'data/elephant_etosha/'){
+  
+  # get input filepath 
+  input_filename <- paste0(input_filepath, 'all_steps_', random_data_method, '.RDS')
   
   # read elephant step dataset
-  all_steps <- read.csv(input_filename)
+  all_steps <- readRDS(input_filename)
   
   # get start date of step
   all_steps$start_date <- as.Date(all_steps$t1_)
@@ -44,7 +48,13 @@ createStepExtentLUT <- function(input_filename, elephant_ID, week_of_data, ndvi_
                                                  'xmin' = min(step_extents$xmin), 'xmax' = max(step_extents$xmax), 
                                                  'ymin' = min(step_extents$ymin), 'ymax' = max(step_extents$ymax)))
   
+  # create output filepath 
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create data directory if it does not yet exist
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  
   # save table 
-  write.csv(step_extents, paste0(output_directory, elephant_ID, '_step_ex_w', as.character(week_of_data),'.csv'))
+  write.csv(step_extents, paste0(output_filepath, 'step_extents_LUT_', random_data_method, '.csv'))
   
 }

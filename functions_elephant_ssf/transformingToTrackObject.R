@@ -10,41 +10,30 @@
 # Output: the elephant data of interest as track object 
 
 
-transformToTrackObject <- function(file_name, ID, week = NULL, output_directory = 'data/elephant_etosha/'){
+transformToTrackObject <- function(file_name, ID, week, output_directory = 'data/'){
+  
+  # create data directory if it does not yet exist
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # get elephant dataset
   full_df <- read.csv(file_name, row.names = 1)
   
-  # get week of interest if specified, otherwise take whole dataset
-  if(!is.null(week)){
-    df <- full_df[full_df$week == week,]
-    
-    # create output filepath 
-    output_filepath <- paste0(output_directory, ID, '/', week, '/')
-    
-    output_filename <- 'elephant_track_xyt.RDS'
-    
-  }else{
-    df <- full_df
-    
-    # create output filepath 
-    output_filepath <- paste0(output_directory, ID, '/')
-    
-    output_filename <- 'elephant_full_track_xyt.RDS'
-  }
-  
-  # create data directory if it does not yet exist
-  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  # get data for week of interest 
+  subset_df <- full_df[full_df$week == week,]
   
   # change date_time format to remove time 
-  df$date_time <- as.POSIXct(df$date_time, tz = 'Africa/Maputo')
+  full_df$date_time <- as.POSIXct(full_df$date_time, tz = 'Africa/Maputo')
+  subset_df$date_time <- as.POSIXct(subset_df$date_time, tz = 'Africa/Maputo')
   
   # turn elephant data frame into track_xyt object for model building
   # 'burst_' is a fixed/mandatory column name if want to generate steps for multiple paths
-  df_track <- make_track(df, location.long, location.lat, date_time, week = week, burst_ = path)
+  full_track <- make_track(full_df, location.long, location.lat, date_time, week = week, burst_ = path)
+  subset_track <- make_track(subset_df, location.long, location.lat, date_time, week = week, burst_ = path)
   
   # save new track_xyt object as RDS 
-  saveRDS(df_track, paste0(output_filepath, output_filename))
+  saveRDS(full_track, paste0(output_filepath, 'elephant_full_track_xyt.RDS'))
+  saveRDS(subset_track, paste0(output_filepath, 'elephant_track_xyt.RDS'))
   
-  #return(df_track)
 }
