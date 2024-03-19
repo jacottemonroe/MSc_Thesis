@@ -20,7 +20,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # read step dataset
-  step_dataset <- read.csv(paste0(input_directory, 'cov_resp_dataset_', random_data_method, '.csv'))
+  step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, '.csv'))
   
   # generate correlation matrix 
   if(multicolinearity_check == T){
@@ -30,7 +30,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
     covariates <- step_dataset %>% select(contains(c('case_', 'ndvi')))
     
     # save matrix as png
-    png(filename = paste0(output_filepath, '6_a0_correlation_matrix.png'), width = 850, height = 350)
+    png(filename = paste0(output_filepath, '6_a1_correlation_matrix.png'), width = 850, height = 350)
     
     # source: # source: https://r-charts.com/correlation/ggpairs/?utm_content=cmp-true
     correlation_matrix <- ggpairs(covariates, columns = 2:ncol(covariates), aes(color = as.factor(case_), alpha = 0.5))    
