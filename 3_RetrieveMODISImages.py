@@ -195,7 +195,7 @@
     "## Script outputs: \n",
     "##       3_a1_modis_images (folder) > [daily_MODIS_NDVI_250m_date].tif (intermediate output) & 3_a2_modis_ndvi.tif (intermediate output)\n",
     "\n",
-    "\n",
+    " \n",
     "\n",
     "###########\n",
     "## Script set-up and loading necessary libraries \n",
