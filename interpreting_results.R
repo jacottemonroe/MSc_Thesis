@@ -43,7 +43,7 @@ for(i in 1:nrow(run_settings)){
   ## does the glm model have a significant coefficient? 
   # retrieve dataset
   full_df <- read.csv(paste0(run_filepath, '6_a3_glm_full_coefs_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b3_glm_50p_sd_coefs', pseudo_abs_method, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_b3_glm_50p_sd_coefs_', pseudo_abs_method, '.csv'))
   
   # exclude intercept 
   full_df <- full_df[full_df$X != '(Intercept)', ]
@@ -99,6 +99,8 @@ for(i in 1:nrow(run_settings)){
   summary_results <- rbind(summary_results, entry)
 }
 
+# results for running 13 elephants on week 2075 with three methods 
+write.csv(summary_results, 'output/summary_results_13E_w2075_3M.csv')
 
 # # create results data entry 
 # entry <- data.frame(ID = ID, week = week, #pseudo_abs_method = pseudo_abs_method, 
