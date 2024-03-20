@@ -50,5 +50,3 @@ loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
 print('Now visualizing the elephant paths...')
-
-
