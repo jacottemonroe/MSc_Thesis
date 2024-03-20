@@ -46,7 +46,9 @@ if(!('amt') %in% installed.packages()){install.packages('amt')}
 library(amt)
 
 # run function
-loadAndExtractCovariates(run_filepath, ID, week, lag, random_data_method = pseudo_abs_method, output_directory = 'data/')
+loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, output_directory = 'data/')
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
 print('Now visualizing the elephant paths...')
+
+

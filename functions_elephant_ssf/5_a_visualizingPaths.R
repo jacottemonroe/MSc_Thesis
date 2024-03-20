@@ -47,7 +47,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method,
   } 
   
   # save map as png
-  png(paste0(output_filepath, '5_a1_elephant_movement_map.png'))
+  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method,'.png'))
   print(mov_map)
   dev.off()
   

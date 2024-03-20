@@ -30,7 +30,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
     covariates <- step_dataset %>% select(contains(c('case_', 'ndvi')))
     
     # save matrix as png
-    png(filename = paste0(output_filepath, '6_a1_correlation_matrix.png'), width = 850, height = 350)
+    png(filename = paste0(output_filepath, '6_a1_correlation_matrix_', random_data_method, '.png'), width = 850, height = 350)
     
     # source: # source: https://r-charts.com/correlation/ggpairs/?utm_content=cmp-true
     correlation_matrix <- ggpairs(covariates, columns = 2:ncol(covariates), aes(color = as.factor(case_), alpha = 0.5))    
@@ -77,6 +77,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   # print information about the dataset and the model
   print(paste('Dataset elephant:', ID))
   print(paste('Week:', as.character(week)))
+  print(paste('Pseudo-absence method:', random_data_method))
   print(paste('Number of total observations:', as.character(nrow(step_dataset))))
   print(paste('Number of observations included in model:', clr_summary$n))
   print(paste('Sets of steps:', clr_summary$nevent))
@@ -100,10 +101,10 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   glm_vif <- data.frame(vif_results)
   
   # save model results as csv 
-  write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs.csv'))
-  write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests.csv'))
+  write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs_', random_data_method, '.csv'))
+  write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests_', random_data_method, '.csv'))
   
-  write.csv(glm_coef, paste0(output_filepath, output_number, '3_glm', model_type, 'coefs.csv'))
-  write.csv(glm_deviances, paste0(output_filepath, output_number, '4_glm', model_type, 'deviances.csv'))
-  write.csv(glm_vif, paste0(output_filepath, output_number, '5_glm', model_type, 'vif.csv'))
+  write.csv(glm_coef, paste0(output_filepath, output_number, '3_glm', model_type, 'coefs_', random_data_method, '.csv'))
+  write.csv(glm_deviances, paste0(output_filepath, output_number, '4_glm', model_type, 'deviances_', random_data_method, '.csv'))
+  write.csv(glm_vif, paste0(output_filepath, output_number, '5_glm', model_type, 'vif_', random_data_method, '.csv'))
 }

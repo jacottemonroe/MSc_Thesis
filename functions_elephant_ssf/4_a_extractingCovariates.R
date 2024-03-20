@@ -10,12 +10,12 @@
 #   
 # Output: saves covariates table as csv.
 
-
+ 
 loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, 
                                      random_data_method, output_directory = 'data/'){ 
   
   # load step dataset RDS 
-  step_dataset <- readRDS(paste0(input_directory, '2_a1_all_steps_', random_data_method, '.RDS'))
+  step_dataset <- readRDS(paste0(input_directory, '1_b1_all_steps_', random_data_method, '.RDS'))
   
   # add empty columns for covariates 
   # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/

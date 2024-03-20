@@ -16,7 +16,7 @@ createStepExtentsLUT <- function(input_filepath, ID, week, random_data_method = 
                                 ndvi_rate_lag = 7, output_directory = 'data/elephant_etosha/'){
   
   # get input filepath 
-  input_filename <- paste0(input_filepath, 'all_steps_', random_data_method, '.RDS')
+  input_filename <- paste0(input_filepath, '1_b1_all_steps_', random_data_method, '.RDS')
   
   # read elephant step dataset
   all_steps <- readRDS(input_filename)
