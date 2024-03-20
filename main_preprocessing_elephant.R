@@ -124,6 +124,12 @@ source('functions_preprocessing_elephant/resamplingElephant.R')
 source('functions_preprocessing_elephant/groupingElephant.R')
 source('functions_preprocessing_elephant/reprojectingElephantData.R')
 
+# create dataframe for pseudo-absence path generating method 
+method <- data.frame(pseudo_abs_method = c('random_path_custom_distr', 'random_path_buffer_point', 'random_step'))
+
+# create empty dataframe for storing run parameter settings 
+run_settings_table <- data.frame()
+
 # loop for each elephant dataset
 for (ID in elephant_IDs) {
   
@@ -141,8 +147,55 @@ for (ID in elephant_IDs) {
   
   # save preprocessed elephant dataset as csv
   write.csv(elephant_preprocessed, file = paste0('data/elephant_etosha/preprocessed_elephant_', ID, '.csv'))
+  
+  # create new dataframe with elephant ID and week numbers of data 
+  elephant_information <- data.frame(ID = ID, week = unique(elephant_preprocessed$week))
+  
+  # add the method dataframe as a new column to the information dataframe
+  run_settings_elephant <- merge(elephant_information, method)
+  
+  # arrange rows in order of oldest to most recent (by weeks)
+  run_settings_elephant <- run_settings_elephant[order(run_settings_elephant$week),]
+  
+  # bind the elephant dataset to the large run settings table 
+  run_settings_table <- rbind(run_settings_table, run_settings_elephant)
+  
 }
 
+# code to determine which weeks to run --> which weeks are most frequent in data? 
+t <- data.frame()
+for(i in 1:length(unique(run_settings_table$week))){
+  w <- unique(run_settings_table$week)[i]
+  e <- length(unique(run_settings_table$ID[run_settings_table$week == w]))
+  #print(paste('Week', w, 'appears in', length(e), 'datasets.'))
+  t <- rbind(t, data.frame(week = w, frq = e))
+}
+
+t <- t[order(-t$frq),]
+
+high_freq_weeks <- t[t$frq >= 10, ]
+high_freq_weeks <- high_freq_weeks[order(high_freq_weeks$week),]
+
+t2 <- t[order(t$week),]
+t3 <- as.vector(rep(t2$week, t2$frq))
+hist(t3)
+
+# create run settings table with all elephants for week 2075
+run_table <- data.frame()
+week_of_interest <- 2075
+for(ID in elephant_IDs){
+  d <- read.csv(paste0('data/elephant_etosha/preprocessed_elephant_', ID, '.csv'))
+  if(week_of_interest %in% d$week){
+    r <- data.frame(ID = ID, week = week_of_interest)
+    r <- merge(r, method)
+    run_table <- rbind(run_table, r)
+  }
+}
+
+# save run settings combination table 
+write.csv(run_table, 'data/run_settings.csv')
+
+c <- read.csv('data/run_settings.csv')
 
 
 
@@ -150,6 +203,70 @@ for (ID in elephant_IDs) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### leftover code ########
+
+# test 
+ID <- 'LA2'
+
+# clean data 
+elephant_clean <- cleanElephantDataset(elephant_data, ID)
+
+# reproject data 
+elephant_reprojected <- reprojectElephantData(elephant_clean)
+
+# resample data to time interval 
+elephant_resampled <- resampleElephantData(elephant_reprojected, interval, acceptable_NA_gap = 1, 'linear interpolation')
+
+# group data into periods (weeks)
+elephant_preprocessed <- groupElephantByPeriod(elephant_resampled, time_period, constant_step_size = F)
+
+# save preprocessed elephant dataset as csv
+write.csv(elephant_preprocessed, file = paste0('data/elephant_etosha/preprocessed_elephant_', ID, '.csv'))
+
+# retrieve all week numbers from the dataset of the elephant 
+elephant_run_settings <- data.frame(ID = 'LA2', week = unique(elephant_preprocessed$week))
+
+# create dataframe for pseudo-absence path generating method 
+method <- data.frame(pseudo_abs_method = c('random_path_custom_distr', 'random_path_buffer_point', 'random_step'))
+
+# join the method to the run settings table
+run_settings <- merge(elephant_run_settings, method)
+
+# arrange rows in order of oldest to most recent (by weeks)
+run_settings_ordered <- run_settings[order(run_settings$week),]
+
+second_eleph <- run_settings_ordered
+
+second_eleph$ID <- 'LA5'
+
+# bind datasets of elephants 
+
+run_settings <- rbind(run_settings_ordered, second_eleph)
+
+
+e <- data.frame()
+e <- rbind(e, run_settings_ordered)
 
 
 
