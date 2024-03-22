@@ -25,9 +25,9 @@ for(i in 1:nrow(run_settings)){
   run_filepath <- paste0('output/', ID, '/', week, '/')
   
   # create results data entry 
-  entry <- data.frame(ID = ID, week = week, #pseudo_abs_method = pseudo_abs_method, 
-                      VIF_full = NA, full_glm_sig_coef = NA, full_glm_deviance = NA, full_glm_sig = NA, full_clr_sig_coef = NA, full_clr_concord = NA, full_clr_concord_se = NA, 
-                      VIF_sub = NA, sub_glm_sig_coef = NA, sub_glm_deviance = NA, sub_glm_sig = NA, sub_clr_sig_coef = NA, sub_clr_concord = NA, sub_clr_concord_se = NA)
+  entry <- data.frame(ID = ID, week = week, pseudo_abs_method = pseudo_abs_method, 
+                      VIF_full = NA, full_glm_sig_coef = NA, full_glm_sig_coef_which = NA, full_glm_deviance = NA, full_glm_sig = NA, full_clr_sig_coef = NA, full_clr_sig_coef_which = NA, full_clr_concord = NA, full_clr_concord_se = NA, 
+                      VIF_sub = NA, sub_glm_sig_coef = NA, sub_glm_sig_coef_which = NA, sub_glm_deviance = NA, sub_glm_sig = NA, sub_clr_sig_coef = NA, sub_clr_sig_coef_which = NA, sub_clr_concord = NA, sub_clr_concord_se = NA)
   
   
   ## are the VIF values of the model acceptable? 
@@ -53,7 +53,10 @@ for(i in 1:nrow(run_settings)){
   if(any(full_df$Pr...z.. <=0.05)){entry$full_glm_sig_coef <- T}else{entry$full_glm_sig_coef <- F}
   if(any(sub_df$Pr...z.. <=0.05)){entry$sub_glm_sig_coef <- T}else{entry$sub_glm_sig_coef <- F}
   
-  
+  # select predictors that are significant with 95% confidence 
+  # entry$full_glm_sig_coef_which <- list(full_df$X[full_df$Pr...z.. < 0.05])
+  # entry$sub_glm_sig_coef_which <- list(sub_df$X[sub_df$Pr...z.. < 0.05])
+  # 
   ## how high is the deviance of the fitted model? is the model significant? 
   # retrieve dataset
   full_df <- read.csv(paste0(run_filepath, '6_a4_glm_full_deviances_', pseudo_abs_method, '.csv'))
@@ -83,7 +86,10 @@ for(i in 1:nrow(run_settings)){
   if(any(full_df$Pr...z.. <=0.05)){entry$full_clr_sig_coef <- T}else{entry$full_clr_sig_coef <- F}
   if(any(sub_df$Pr...z.. <=0.05)){entry$sub_clr_sig_coef <- T}else{entry$sub_clr_sig_coef <- F}
   
-  
+  # select predictors that are significant with 95% confidence 
+  # entry$full_clr_sig_coef_which <- list(full_df$X[full_df$Pr...z.. < 0.05])
+  # entry$sub_clr_sig_coef_which <- list(sub_df$X[sub_df$Pr...z.. < 0.05])
+  # 
   ## what is the concordance? how much does it vary by? 
   # retrieve dataset
   full_df <- read.csv(paste0(run_filepath, '6_a2_clr_full_tests_', pseudo_abs_method, '.csv'))
@@ -101,6 +107,23 @@ for(i in 1:nrow(run_settings)){
 
 # results for running 13 elephants on week 2075 with three methods 
 write.csv(summary_results, 'output/summary_results_13E_w2075_3M.csv')
+
+method_cd <- summary_results[summary_results$pseudo_abs_method == 'random_path_custom_distr' & summary_results$sub_clr_sig_coef == T,]
+method_bp <- summary_results[summary_results$pseudo_abs_method == 'random_path_buffer_point' & summary_results$sub_clr_sig_coef == T,]
+method_s <- summary_results[summary_results$pseudo_abs_method == 'random_step' & summary_results$sub_glm_clr_coef == T,]
+
+c_cd <- mean(method_cd$sub_clr_concord)
+c_bp <- mean(method_bp$sub_clr_concord)
+c_s <- mean(method_s$sub_clr_concord)
+
+sig_clr <- summary_results[summary_results$sub_clr_sig_coef ==T & summary_results$pseudo_abs_method == 'random_path_buffer_point',]
+c <- mean(sig_clr$sub_clr_concord)
+
+which_pred <- table(sig_clr$sub_clr_sig_coef_which)
+
+
+
+
 
 # # create results data entry 
 # entry <- data.frame(ID = ID, week = week, #pseudo_abs_method = pseudo_abs_method, 
