@@ -10,26 +10,13 @@ library(terra)
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # to plot timeseries
 library(ggplot2)
 
-m <- rast('data/LA14/2260/3_b1_modis_images_downscaling_random_path_custom_distr/2013_04_18.tif')
-m
-plot(m[[4]])
-
-m2 <- rast('data/modis/2300/2014_01_23.tif')
-m2
-plot(is.na(m2[[2]]))
-
-m3 <- rast('data/modis/8d/2300/2014_01_17.tif')
-m3
-plot(m3[[2]])
-
-l2 <- rast('data/LA26/2260/3_b2_landsat_images_downscaling_random_path_custom_distr/TL_TL/LC08_179074_20130504.tif')
-l2
-plot(is.na(l2[[4]]))
-
-
-library(ggplot2)
 library(tidyterra)
 
+
+
+###########
+## Read run settings 
+###########
 
 ## mosaic the landsat scenes together to create the large extent image
 # will need to loop through dates (could do this after creating the LUT?)
@@ -41,6 +28,13 @@ pseudo_abs_method <- 'random_path_custom_distr'
 
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
+
+
+
+
+###########
+## Stitch Landsat scenes back together 
+###########
 
 # define landsat filepath 
 landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
@@ -103,6 +97,176 @@ for(date in l_dates){
   writeRaster(l8_mosaic, paste0(landsat_filepath, 'LC08_179073_4_', date, '.tif'), overwrite = T)
 }
 
+# remove scene files since now have composite image
+list_files <- list.files(landsat_filepath)
+list_files <- list_files[grep('*3_4_2*', list_files, invert = T)]
+list_files
+file.remove(paste0(landsat_filepath, list_files))
+
+
+
+
+###########
+## create LUT to match each MODIS image to the closest Landsat image 
+###########
+
+modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_random_path_custom_distr/')
+
+# create LUT from Landsat and MODIS images in data folders
+# matches a Landsat image to each MODIS image (nearest Landsat image)
+source('functions_downscaling/creatingLUT.R')
+
+createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/')
+
+
+
+
+###########
+## create covariates and response dataset
+###########
+
+# load LUT
+LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
+
+LUT <- LUT[1,]
+LUT
+
+# read modis and landsat images 
+modis_250 <- rast(paste0(modis_filepath, LUT$modis_image))
+l_30 <- rast(paste0(landsat_filepath, LUT$closest_landsat_image))
+
+# rename layer names to corresponding bands 
+names(modis_250) <- c('B1', 'B2', 'NDVI')
+names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
+
+# upscale landsat 30m image to 250m
+# source: https://www.pmassicotte.com/posts/2022-04-28-changing-spatial-resolution-of-a-raster-with-terra/#resampling
+l_250 <- resample(l_30, modis_250, method = 'average')
+
+# all pixels with value 0 changed to NA (because originally masked pixels in GEE)
+l_250[l_250 == 0] <- NA
+
+# create dataset for running model 
+dataset <- l_250
+dataset$ndvi <- modis_250$NDVI
+
+# get all NA values in same place (if any)
+# source: https://stackoverflow.com/questions/73719011/mask-layer-of-a-raster-stack-using-other-layer-using-terra
+mask <- any(is.na(dataset))
+dataset <- mask(dataset, mask, maskvalues = T)
+
+# get dataframe of all band combinations
+# source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
+band_combinations <- expand.grid(bandA = names(dataset['B.']), bandB = names(dataset['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
+
+# calculate landsat band ratios 
+for(i in 1:nrow(band_combinations)){
+  # get band name from combination dataframe 
+  bandA <- band_combinations[i,1]
+  bandB <- band_combinations[i,2]
+  
+  # get band number 
+  # source: https://www.statology.org/r-extract-number-from-string/
+  bandA_number <- as.numeric(gsub("\\D", "", bandA))
+  bandB_number <- as.numeric(gsub("\\D", "", bandB))
+  
+  if(bandA_number>bandB_number){
+    # calculate ratio 
+    ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
+    
+    # add band ratio to dataset
+    layer_name <- paste0(bandA,'.',bandB)
+    dataset[[layer_name]] <- ratio
+  }
+}
+
+# save dataset
+saveRDS(dataset, paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset.RData'))
+
+
+
+
+
+
+
+
+
+################ set up cross validation strategy #############################
+
+# create grid object from an empty raster
+# source: https://gis.stackexchange.com/questions/431873/creating-regular-sampling-grid-with-specific-distance-between-points-using-r
+grid <- rast(extent = ext(dataset), crs = crs(dataset), nrow = 3, ncol = 3)
+values(grid) <- 1:9
+names(grid) <- 'grid_ID'
+
+# resample the grid raster to the resolution of the dataset
+grid <- resample(grid, dataset, method = 'average')
+
+# stack dataset and grid rasters to add the grid IDs to the dataset 
+dataset <- c(dataset, grid)
+
+# sample from the dataset raster 
+# source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/spatSample
+sample_points <- spatSample(dataset, size = 1000, method = 'regular', as.points = T) 
+
+# compare distribution of NDVI values between raster dataset and sampled points
+#hist(dataset$ndvi, breaks = 30)
+#hist(sample_points$ndvi, breaks = 30)
+
+# transform SpatVector object into sf object 
+if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
+library(sf)
+sample_points <- st_as_sf(sample_points, crs = st_crs_crs(dataset))
+sample_points
+
+# create a list of folds for cross-validation 
+# each list has the indices of points to include or exclude for each CV iteration
+# source: https://www.rdocumentation.org/packages/CAST/versions/0.2.1/topics/CreateSpacetimeFolds
+if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+library(CAST)
+
+cv_folds <- CreateSpacetimeFolds(sample_points, spacevar = 'grid_ID', k = 9)
+cv_folds
+
+
+
+
+
+###########
+## fit linear regression with k-fold cross validation 
+###########
+
+# fit model with full range of predictors 
+# check VIF 
+# save confusion matrix 
+# fit model with stepwise AIC 
+# check VIF 
+# save confusion matrix 
+# decide which predictors to remove
+
+
+
+
+
+
+
+
+# create downscaling model 
+source('functions_downscaling/generatingDownscalingModels.R')
+
+for(i in 1:nrow(LUT)){
+  generateDownscalingModels(paste0(path_modis, '/', LUT$modis_image[i]), LUT$modis_date[i], 
+                            paste0(path_landsat, '/', LUT$closest_landsat_image[i]), 
+                            check_multicolinearity = F, multicolinearity_threshold = 0.8, 
+                            fit_rf_regression = T, output_directory = 'output/models/2300/8d/')
+}
+
+
+
+
+
+
+
 list_images <- landsat_filenames_list[grep('20130504', landsat_filenames_list)]
 list_images
 t <- rast(paste0(landsat_filepath, 'LC08_179073_4_20130504.tif'))
@@ -110,7 +274,21 @@ t
 plot(t[[4]])
 
 
+m <- rast('data/LA14/2260/3_b1_modis_images_downscaling_random_path_custom_distr/2013_04_18.tif')
+m
+plot(m[[4]])
 
+m2 <- rast('data/modis/2300/2014_01_23.tif')
+m2
+plot(is.na(m2[[2]]))
+
+m3 <- rast('data/modis/8d/2300/2014_01_17.tif')
+m3
+plot(m3[[2]])
+
+l2 <- rast('data/LA26/2260/3_b2_landsat_images_downscaling_random_path_custom_distr/TL_TL/LC08_179074_20130504.tif')
+l2
+plot(is.na(l2[[4]]))
 
 tl <- rast(paste0('data/LA14/2260/3_b2_landsat_images_downscaling_random_path_custom_distr/', 'TL_TL/', landsat_filename))
 
@@ -159,6 +337,12 @@ for(i in 1:length(unique(dat$burst_))){
 png('data/LA14/2260/random_image.png')
 mov_map
 dev.off()
+
+
+
+
+
+
 
 
 
