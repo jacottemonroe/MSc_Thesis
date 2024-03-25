@@ -129,9 +129,10 @@ createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/'
 LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
 
 LUT <- LUT[1,]
-LUT
+
 
 # read modis and landsat images 
+library(terra)
 modis_250 <- rast(paste0(modis_filepath, LUT$modis_image))
 l_30 <- rast(paste0(landsat_filepath, LUT$closest_landsat_image))
 
@@ -139,12 +140,15 @@ l_30 <- rast(paste0(landsat_filepath, LUT$closest_landsat_image))
 names(modis_250) <- c('B1', 'B2', 'NDVI')
 names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
 
+# removing outlier pixel values --> negative NDVI or reflectance values 
+# all pixels with value 0 changed to NA (because originally masked pixels in GEE)
+# all modis ndvi pixels with value below 0 turned into NA
+l_30[l_30 <= 0] <- NA
+modis_250$NDVI[modis_250$NDVI < 0] <- 0
+
 # upscale landsat 30m image to 250m
 # source: https://www.pmassicotte.com/posts/2022-04-28-changing-spatial-resolution-of-a-raster-with-terra/#resampling
 l_250 <- resample(l_30, modis_250, method = 'average')
-
-# all pixels with value 0 changed to NA (because originally masked pixels in GEE)
-l_250[l_250 == 0] <- NA
 
 # create dataset for running model 
 dataset <- l_250
@@ -181,11 +185,11 @@ for(i in 1:nrow(band_combinations)){
 }
 
 # save dataset
-saveRDS(dataset, paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset.RData'))
+saveRDS(dataset, paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset_noNegs.RData'))
 
 
 
-
+#dataset <- readRDS(paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset_noNegs.RData'))
 
 
 
@@ -207,27 +211,32 @@ dataset <- c(dataset, grid)
 
 # sample from the dataset raster 
 # source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/spatSample
-sample_points <- spatSample(dataset, size = 1000, method = 'regular', as.points = T) 
+sample_points <- spatSample(dataset, size = 5000, method = 'regular', as.points = T) 
 
 # compare distribution of NDVI values between raster dataset and sampled points
-#hist(dataset$ndvi, breaks = 30)
-#hist(sample_points$ndvi, breaks = 30)
+# hist(dataset$ndvi, breaks = 30)
+hist(sample_points$ndvi, breaks = 30)
+max(sample_points$ndvi, na.rm = T)
+plot(dataset$ndvi)
+plot(sample_points, add = T)
+# dev.off()
 
 # transform SpatVector object into sf object 
 if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
 library(sf)
 sample_points <- st_as_sf(sample_points, crs = st_crs_crs(dataset))
-sample_points
+
+# split the points into training and test sets 
+# note: one index value/fold (ID = 9) is withheld for testing the trained model 
+# training_points <- sample_points[sample_points$grid_ID < 9,]
+# testing_points <- sample_points[sample_points$grid_ID == 9,]
 
 # create a list of folds for cross-validation 
 # each list has the indices of points to include or exclude for each CV iteration
 # source: https://www.rdocumentation.org/packages/CAST/versions/0.2.1/topics/CreateSpacetimeFolds
 if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
 library(CAST)
-
 cv_folds <- CreateSpacetimeFolds(sample_points, spacevar = 'grid_ID', k = 9)
-cv_folds
-
 
 
 
@@ -236,17 +245,157 @@ cv_folds
 ## fit linear regression with k-fold cross validation 
 ###########
 
+# retrieve covariates from sample points and store in a new dataframe 
+covs <- data.frame(sample_points)
+covs <- covs[, grep('B.*', colnames(covs))]
+
 # fit model with full range of predictors 
+# source: https://www.statology.org/k-fold-cross-validation-in-r/
+# source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
+if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
+library(caret)
+lr_model_trained <- train(x = covs, y = sample_points$ndvi, method = 'lm', 
+                          trControl = trainControl(method = 'cv', index = cv_folds$index))
+
+# look at model results 
+lr_model_trained
+lr_model_trained$results
+lr_model_trained$finalModel
+lr_model_trained$resample
+
+plot(varImp(lr_model_trained))
+
 # check VIF 
-# save confusion matrix 
-# fit model with stepwise AIC 
-# check VIF 
-# save confusion matrix 
+# source: https://stackoverflow.com/questions/63251868/variance-inflation-vif-for-glm-caret-model-in-r
+if(!('car') %in% installed.packages()){install.packages('car')} 
+library(car)
+v <- sort(vif(lr_model_trained$finalModel))
+v
+
+saveRDS(lr_model_trained, paste0(run_filepath, '3_c3_linear_model_full_temporary_noNegs_5k.RDS'))
+
+# predict the full MODIS NDVI image using the trained linear regression model 
+# covs_test <- data.frame(testing_points)
+# covs_test <- covs_test[, grep('B.*', colnames(covs_test))]
+dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
+
+dataset_predicted <- predict(dataset_covs, lr_model_trained)
+names(dataset_predicted) <- 'ndvi_pred'
+plot(dataset_predicted$ndvi_pred)
+hist(dataset_predicted$ndvi_pred)
+dataset_predicted[dataset_predicted < 0,] <- NA
+plot(dataset_predicted$ndvi_pred)
+hist(dataset_predicted$ndvi_pred)
+plot(is.na(dataset_predicted))
+
+ncol(dataset_predicted)
+num_obs <- ncol(dataset_predicted) * nrow(dataset_predicted)
+
+# source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
+error <- dataset_predicted$ndvi_pred - dataset$ndvi
+# source: https://rdrr.io/cran/terra/man/global.html#google_vignette
+mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
+rmse <- sqrt(mse)
+mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
+# source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
+r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
+
+plot(error)
+plot(abs(error))
+
+
+
+# apply forward feature selection
+# source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
+lr_model_ffs <- ffs(predictors = covs, response = sample_points$ndvi, method = 'lm', 
+                          trControl = trainControl(method = 'cv', index = cv_folds$index))
+
+# read results
+lr_model_ffs
+lr_model_ffs$results
+lr_model_ffs$finalModel
+lr_model_ffs$resample
+
+vif(lr_model_ffs$finalModel)
+
+plot(varImp(lr_model_ffs))
+
+saveRDS(lr_model_ffs, paste0(run_filepath, '3_c3_linear_model_ffs_temporary_noNegs_5k.RDS'))
+
+lr_model_ffs <- readRDS(paste0(run_filepath, '3_c3_linear_model_ffs_temporary.RDS'))
+
+# predict for whole image
+dataset_covs_ffs <- dataset[[names(dataset) %in% lr_model_ffs$selectedvars]]
+
+dataset_predicted_ffs <- predict(dataset_covs_ffs, lr_model_ffs)
+
+dataset_predicted_ffs
+names(dataset_predicted_ffs) <- 'ndvi_pred'
+plot(dataset_predicted_ffs)
+plot(dataset$ndvi)
+
+# see results 
+num_obs <- ncol(dataset_predicted_ffs) * nrow(dataset_predicted_ffs)
+error <- dataset_predicted_ffs$ndvi_pred - dataset$ndvi
+mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
+rmse <- sqrt(mse)
+mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
+r2 <- cor(values(dataset_predicted_ffs$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
+plot(error)
+plot(abs(error))
+
+
+
+
 # decide which predictors to remove
 
+# predict with landsat 30m image 
+l_30
+# get dataframe of all band combinations
+# source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
+band_combinations_30 <- expand.grid(bandA = names(l_30['B.']), bandB = names(l_30['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
+
+# calculate landsat band ratios 
+for(i in 1:nrow(band_combinations_30)){
+  # get band name from combination dataframe 
+  bandA <- band_combinations_30[i,1]
+  bandB <- band_combinations_30[i,2]
+  
+  # get band number 
+  # source: https://www.statology.org/r-extract-number-from-string/
+  bandA_number <- as.numeric(gsub("\\D", "", bandA))
+  bandB_number <- as.numeric(gsub("\\D", "", bandB))
+  
+  if(bandA_number>bandB_number){
+    # calculate ratio 
+    ratio <- (l_30[[bandA]]-l_30[[bandB]])/(l_30[[bandA]]+l_30[[bandB]])
+    
+    # add band ratio to dataset
+    layer_name <- paste0(bandA,'.',bandB)
+    l_30[[layer_name]] <- ratio
+  }
+}
+
+# save landsat 30 image with new bands
+saveRDS(l_30, paste0(run_filepath,'3_c4_', LUT$modis_date,'_l30.RData'))
 
 
+# predict MODIS at 30m
+l_30 <- l_30[[names(l_30) %in% lr_model_ffs$selectedvars]]
 
+modis_30 <- predict(l_30, lr_model_ffs)
+names(modis_30) <- 'ndvi_pred'
+
+plot(modis_30)
+
+# see results 
+m_30_250 <- resample(modis_30, modis_250)
+num_obs <- ncol(m_30_250) * nrow(m_30_250)
+error <- m_30_250$ndvi_pred - modis_250$NDVI
+mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
+rmse <- sqrt(mse)
+mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
+r2 <- cor(values(m_30_250$ndvi_pred), values(modis_250$NDVI), use="complete.obs", method = 'pearson')[[1]]
 
 
 
