@@ -5,9 +5,6 @@
 ## Input: folder names
 ## Output: LUT
 
-# Packages 
-if(!('terra') %in% installed.packages()){install.packages('terra')} # to read rasters
-library(terra)
 
 createLUT <- function(m_folder_name, l_folder_name, ID, week, output_directory = 'data/'){
   
@@ -21,7 +18,7 @@ createLUT <- function(m_folder_name, l_folder_name, ID, week, output_directory =
   # get all dates from file names 
   # source: https://stackoverflow.com/questions/17215789/extract-a-substring-according-to-a-pattern
   l_dates <- sub('.*3_4_', '', l_files)
-  l_dates <- sub('.tif', '', l_dates)
+  l_dates <- sub('_stitched.tif', '', l_dates)
   
   # convert items of list into date objects
   # source: https://stackoverflow.com/questions/70755258/convert-string-into-date-format-in-r

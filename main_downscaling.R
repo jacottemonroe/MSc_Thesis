@@ -36,73 +36,23 @@ run_filepath <- paste0('data/', ID, '/', week, '/')
 ## Stitch Landsat scenes back together 
 ###########
 
+# load function 
+source('functions_elephant_ssf/3_b_stitchingScenes.R')
+
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+
 # define landsat filepath 
 landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
 
-# list directories of scenes 
-scene_directories <- list.dirs(landsat_filepath, full.names = F)[-1]
+# list files in landsat directory 
+l_files <- list.files(landsat_filepath, pattern = glob2rx('*_stitched.tif'))
 
-# get filenames (from LUT?)
-landsat_filenames_list <- list.files(paste0(landsat_filepath, 'BL_BL'))
-
-# loop through the different landsat image dates 
-for(landsat_filename in landsat_filenames_list){
-  # loop through the directories to load the scenes for the corresponding image date and append them to a list
-  scenes <- list()
-  for(sc_folder in scene_directories){
-    # load scene to align 
-    sc <- rast(paste0(landsat_filepath, sc_folder, '/', landsat_filename))
-    scenes <- append(scenes, list(sc))
-  }
-  
-  # stitch the scenes together to make one large landsat 8 image
-  # source: # source: https://gis.stackexchange.com/questions/224781/merge-rasters-with-different-origins-in-r
-  # source: https://rdrr.io/cran/terra/man/merge.html
-  l8_mosaic <- do.call(merge, scenes)
-  
-  # save new image 
-  writeRaster(l8_mosaic, paste0(landsat_filepath, landsat_filename), overwrite = T)
-  
+# run function if stitched Landsat images don't already exist (only stitch once)
+if(length(l_files) == 0){
+  stitchScenes(landsat_filepath)
 }
-
-# remove scene folders and files since now have composite image
-# source: https://stackoverflow.com/questions/28097035/how-to-remove-a-directory-in-r
-unlink(paste0(landsat_filepath, scene_directories), recursive = T)
-
-# get all dates from file names 
-# source: https://stackoverflow.com/questions/17215789/extract-a-substring-according-to-a-pattern
-l_dates <- sub('.*_17.*_', '', landsat_filenames_list)
-l_dates <- unique(sub('.tif', '', l_dates))
-
-# select images for each date and mosaic them 
-for(date in l_dates){
-  # select file names containing the date 
-  # source: https://stackoverflow.com/questions/69759984/how-can-i-subset-a-list-in-r-by-extracting-the-elements-that-contain-a-string
-  list_images <- landsat_filenames_list[grep(date, landsat_filenames_list)]
-  
-  # create empty list to store the rasters
-  scenes <- list()
-  
-  for(image in list_images){
-    sc <- rast(paste0(landsat_filepath, image))
-    scenes <- append(scenes, list(sc))
-  }
-  
-  # stitch the scenes together to make one large landsat 8 image
-  # source: # source: https://gis.stackexchange.com/questions/224781/merge-rasters-with-different-origins-in-r
-  # source: https://rdrr.io/cran/terra/man/merge.html
-  l8_mosaic <- do.call(merge, scenes)
-  
-  # save new image 
-  writeRaster(l8_mosaic, paste0(landsat_filepath, 'LC08_179073_4_', date, '.tif'), overwrite = T)
-}
-
-# remove scene files since now have composite image
-list_files <- list.files(landsat_filepath)
-list_files <- list_files[grep('*3_4_2*', list_files, invert = T)]
-list_files
-file.remove(paste0(landsat_filepath, list_files))
-
 
 
 
@@ -110,86 +60,76 @@ file.remove(paste0(landsat_filepath, list_files))
 ## create LUT to match each MODIS image to the closest Landsat image 
 ###########
 
-modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_random_path_custom_distr/')
-
-# create LUT from Landsat and MODIS images in data folders
-# matches a Landsat image to each MODIS image (nearest Landsat image)
+# load function 
 source('functions_downscaling/creatingLUT.R')
 
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+
+# define modis filepath (landsat filepath defined above)
+modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
+
+# run function 
 createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/')
 
 
 
 
 ###########
-## create covariates and response dataset
+## create covariates and response dataset (combined Landsat bands at 250m with MODIS NDVI 250m)
 ###########
+
+# load function 
+source('functions_elephant_ssf/3_d_creatingCovariatesResponseSet.R')
+
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
 
 # load LUT
 LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
-
 LUT <- LUT[1,]
 
-
-# read modis and landsat images 
-library(terra)
-modis_250 <- rast(paste0(modis_filepath, LUT$modis_image))
-l_30 <- rast(paste0(landsat_filepath, LUT$closest_landsat_image))
-
-# rename layer names to corresponding bands 
-names(modis_250) <- c('B1', 'B2', 'NDVI')
-names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
-
-# removing outlier pixel values --> negative NDVI or reflectance values 
-# all pixels with value 0 changed to NA (because originally masked pixels in GEE)
-# all modis ndvi pixels with value below 0 turned into NA
-l_30[l_30 <= 0] <- NA
-modis_250$NDVI[modis_250$NDVI < 0] <- 0
-
-# upscale landsat 30m image to 250m
-# source: https://www.pmassicotte.com/posts/2022-04-28-changing-spatial-resolution-of-a-raster-with-terra/#resampling
-l_250 <- resample(l_30, modis_250, method = 'average')
-
-# create dataset for running model 
-dataset <- l_250
-dataset$ndvi <- modis_250$NDVI
-
-# get all NA values in same place (if any)
-# source: https://stackoverflow.com/questions/73719011/mask-layer-of-a-raster-stack-using-other-layer-using-terra
-mask <- any(is.na(dataset))
-dataset <- mask(dataset, mask, maskvalues = T)
-
-# get dataframe of all band combinations
-# source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
-band_combinations <- expand.grid(bandA = names(dataset['B.']), bandB = names(dataset['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
-
-# calculate landsat band ratios 
-for(i in 1:nrow(band_combinations)){
-  # get band name from combination dataframe 
-  bandA <- band_combinations[i,1]
-  bandB <- band_combinations[i,2]
-  
-  # get band number 
-  # source: https://www.statology.org/r-extract-number-from-string/
-  bandA_number <- as.numeric(gsub("\\D", "", bandA))
-  bandB_number <- as.numeric(gsub("\\D", "", bandB))
-  
-  if(bandA_number>bandB_number){
-    # calculate ratio 
-    ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
-    
-    # add band ratio to dataset
-    layer_name <- paste0(bandA,'.',bandB)
-    dataset[[layer_name]] <- ratio
-  }
+# run function for each image from the LUT
+for(i in 1:nrow(LUT)){
+  modis_date <- LUT$modis_date[i]
+  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, modis_date, output_filename_suffix = '_dataset_noNegs')
 }
 
-# save dataset
-saveRDS(dataset, paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset_noNegs.RData'))
+
+
+###########
+## sample points for training the model
+###########
+
+# load function 
+source('functions_elephant_ssf/3_e_samplingTrainingPoints.R')
+
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
+library(sf)
+if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+library(CAST)
+
+# run function for each image from the LUT
+for(i in 1:nrow(LUT)){
+  modis_date <- LUT$modis_date[i]
+  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_dataset_noNegs')
+}
+
+# extra (visualize sample points distribution vs dataset distribution)
+# hist(dataset$ndvi, breaks = 30)
+#hist(sample_points$ndvi, breaks = 30)
+#max(sample_points$ndvi, na.rm = T)
+#plot(dataset$ndvi)
+#plot(sample_points, add = T)
+# dev.off()
 
 
 
-#dataset <- readRDS(paste0(run_filepath,'3_c2_', LUT$modis_date,'_dataset_noNegs.RData'))
 
 
 
