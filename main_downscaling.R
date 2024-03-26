@@ -29,6 +29,13 @@ pseudo_abs_method <- 'random_path_custom_distr'
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
+# define landsat filepath 
+landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
+
+# define modis filepath 
+modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
+
+
 
 
 
@@ -42,9 +49,6 @@ source('functions_elephant_ssf/3_b_stitchingScenes.R')
 # necessary packages 
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
-
-# define landsat filepath 
-landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
 
 # list files in landsat directory 
 l_files <- list.files(landsat_filepath, pattern = glob2rx('*_stitched.tif'))
@@ -66,9 +70,6 @@ source('functions_downscaling/creatingLUT.R')
 # necessary packages 
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
-
-# define modis filepath (landsat filepath defined above)
-modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
 
 # run function 
 createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/')
@@ -94,7 +95,7 @@ LUT <- LUT[1,]
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, modis_date, output_filename_suffix = '_dataset_noNegs')
+  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, modis_date, output_filename_suffix = '_noNegs')
 }
 
 
@@ -117,7 +118,7 @@ library(CAST)
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_dataset_noNegs')
+  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs')
 }
 
 # extra (visualize sample points distribution vs dataset distribution)
@@ -131,61 +132,25 @@ for(i in 1:nrow(LUT)){
 
 
 
-
-
-
-
-################ set up cross validation strategy #############################
-
-# create grid object from an empty raster
-# source: https://gis.stackexchange.com/questions/431873/creating-regular-sampling-grid-with-specific-distance-between-points-using-r
-grid <- rast(extent = ext(dataset), crs = crs(dataset), nrow = 3, ncol = 3)
-values(grid) <- 1:9
-names(grid) <- 'grid_ID'
-
-# resample the grid raster to the resolution of the dataset
-grid <- resample(grid, dataset, method = 'average')
-
-# stack dataset and grid rasters to add the grid IDs to the dataset 
-dataset <- c(dataset, grid)
-
-# sample from the dataset raster 
-# source: https://www.rdocumentation.org/packages/terra/versions/1.7-71/topics/spatSample
-sample_points <- spatSample(dataset, size = 5000, method = 'regular', as.points = T) 
-
-# compare distribution of NDVI values between raster dataset and sampled points
-# hist(dataset$ndvi, breaks = 30)
-hist(sample_points$ndvi, breaks = 30)
-max(sample_points$ndvi, na.rm = T)
-plot(dataset$ndvi)
-plot(sample_points, add = T)
-# dev.off()
-
-# transform SpatVector object into sf object 
-if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
-library(sf)
-sample_points <- st_as_sf(sample_points, crs = st_crs_crs(dataset))
-
-# split the points into training and test sets 
-# note: one index value/fold (ID = 9) is withheld for testing the trained model 
-# training_points <- sample_points[sample_points$grid_ID < 9,]
-# testing_points <- sample_points[sample_points$grid_ID == 9,]
-
-# create a list of folds for cross-validation 
-# each list has the indices of points to include or exclude for each CV iteration
-# source: https://www.rdocumentation.org/packages/CAST/versions/0.2.1/topics/CreateSpacetimeFolds
-if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
-library(CAST)
-cv_folds <- CreateSpacetimeFolds(sample_points, spacevar = 'grid_ID', k = 9)
-
-
-
-
 ###########
-## fit linear regression with k-fold cross validation 
+## fit regressions with k-fold cross validation 
 ###########
+
+# load function 
+
+# necessary packages 
+if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
+library(caret)
+if(!('car') %in% installed.packages()){install.packages('car')} 
+library(car)
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+
+# run function 
 
 # retrieve covariates from sample points and store in a new dataframe 
+sample_points <- readRDS('data/LA14/2260/3_e1_2013-04-18_trainingPoints.RDS')
+cv_folds <- readRDS('data/LA14/2260/3_e2_2013-04-18_CVFolds.RDS')
 covs <- data.frame(sample_points)
 covs <- covs[, grep('B.*', colnames(covs))]
 
@@ -197,6 +162,75 @@ library(caret)
 lr_model_trained <- train(x = covs, y = sample_points$ndvi, method = 'lm', 
                           trControl = trainControl(method = 'cv', index = cv_folds$index))
 
+# fit cubist regression test 
+grid_setting <- expand.grid(committees = 1, neighbors = 0)
+grid_setting <- expand.grid(mtry = 5)
+
+# train the linear regression model on the sampling points 
+model <- train(x = covs, y = sample_points$ndvi, method = 'cubist', 
+                 trControl = trainControl(method = 'cv', index = cv_folds$index), 
+                 tuneGrid = grid_setting)
+
+model <- train(x = covs, y = sample_points$ndvi, method = 'ranger', 
+               trControl = trainControl(method = 'cv', index = cv_folds$index))
+
+if(!('randomForest') %in% installed.packages()){install.packages('randomForest')} # fit Random Forest regression 
+library(randomForest)
+model <- train(x = covs, y = sample_points$ndvi, method = 'rf', 
+               trControl = trainControl(method = 'cv', index = cv_folds$index))
+
+
+
+if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
+library(ranger)
+model <- ranger(x = covs, y = sample_points$ndvi, num.trees = 100,
+                importance = 'permutation', seed = 0xfedbeef)
+
+plot(is.na(dataset$B1))
+plot(sample_points$geometry[4898], add = T)
+dev.off()
+
+which(is.na(sample_points$B1))
+sample_points$geometry[4898]
+
+model$finalModel$importance.mode
+class(model)
+model$results
+model$finalModel
+model$finalModel$coefficients
+vif(model$finalModel)
+plot(varImp(model))
+lr_model_trained$resample
+
+# rf
+model$prediction.error
+model$r.squared
+model$forest$
+plot(model$variable.importance)
+
+#plot RF variable importances
+imp_df <- data.frame(variable = names(model$variable.importance), importance = unname(model$variable.importance))
+
+library(ggplot2)
+# source: https://stackoverflow.com/questions/49105358/plot-feature-importance-computed-by-ranger-function
+ggplot(imp_df, aes(x = reorder(variable, importance), y = importance, fill = importance)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  ylab("Variable Importance") +
+  xlab("") +
+  ggtitle("Variable Importance Random Forest") +
+  guides(fill = "none") +
+  scale_fill_gradient(low = "red", high = "blue")
+
+a <- data.frame(model$finalModel$coefficients)
+model$finalModel$coefficients
+
+b <- varImp(model)[1]
+b
+plot(varImp(model))
+
+
+
 # look at model results 
 lr_model_trained
 lr_model_trained$results
@@ -204,6 +238,35 @@ lr_model_trained$finalModel
 lr_model_trained$resample
 
 plot(varImp(lr_model_trained))
+
+dataset <- rast('data/LA14/2260/3_d1_2013-04-18_dataset_noNegs.tif')
+t <- data.frame(values(is.na(dataset)))
+t <- t[t == T,]
+t
+dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
+dataset_predicted <- predict(dataset_covs, model, na.action = na.omit)
+names(dataset_predicted) <- 'ndvi_pred'
+plot(dataset_predicted$ndvi_pred)
+plot(dataset$B2.B1)
+plot(is.na(dataset$B2.B1))
+dataset
+
+num_obs <- ncol(dataset_predicted) * nrow(dataset_predicted)
+
+# source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
+error <- dataset_predicted$ndvi_pred - dataset$ndvi
+# source: https://rdrr.io/cran/terra/man/global.html#google_vignette
+mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
+rmse <- sqrt(mse)
+mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
+# source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
+r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
+
+plot(error)
+plot(abs(error))
+
+
+
 
 # check VIF 
 # source: https://stackoverflow.com/questions/63251868/variance-inflation-vif-for-glm-caret-model-in-r
@@ -250,15 +313,20 @@ plot(abs(error))
 lr_model_ffs <- ffs(predictors = covs, response = sample_points$ndvi, method = 'lm', 
                           trControl = trainControl(method = 'cv', index = cv_folds$index))
 
+lr_model_ffs <- readRDS('data/LA14/2260/3_c3_linear_model_ffs_temporary_noNegs_5k.RDS')
+
 # read results
 lr_model_ffs
 lr_model_ffs$results
-lr_model_ffs$finalModel
+a <- data.frame(lr_model_ffs$results)
+b <- data.frame(lr_model_ffs$finalModel$coefficients)
 lr_model_ffs$resample
 
-vif(lr_model_ffs$finalModel)
+d <- t(data.frame(VIF = vif(lr_model_ffs$finalModel)))
+d
 
-plot(varImp(lr_model_ffs))
+c <- t(data.frame(varImp(lr_model_ffs)$importance))
+c
 
 saveRDS(lr_model_ffs, paste0(run_filepath, '3_c3_linear_model_ffs_temporary_noNegs_5k.RDS'))
 
