@@ -23,10 +23,13 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
   
   # removing outlier pixel values --> negative NDVI or reflectance values 
-  # all pixels with value 0 changed to NA (because originally masked pixels in GEE)
-  # all modis ndvi pixels with value below 0 turned into NA
-  l_30[l_30 <= 0] <- NA
+  # all pixels with value below 0 changed to 0 (threshold)
+  l_30[l_30 <= 0] <- 0
   modis_250$NDVI[modis_250$NDVI < 0] <- 0
+  
+  # since the landsat and modis images have slightly different extents --> set modis (larger) extent to landsat (smaller) extent
+  # this prevents having a boundary of NA values 
+  ext(modis_250) <- ext(l_30)
   
   # upscale landsat 30m image to 250m
   # source: https://www.pmassicotte.com/posts/2022-04-28-changing-spatial-resolution-of-a-raster-with-terra/#resampling
@@ -73,7 +76,7 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # save dataset
-  writeRaster(dataset, paste0(output_filepath,'3_d1_', modis_date, output_filename_suffix, '.tif'))
+  writeRaster(dataset, paste0(output_filepath,'3_d1_', modis_date, '_dataset', output_filename_suffix, '.tif'), overwrite = T)
   
   
 }
