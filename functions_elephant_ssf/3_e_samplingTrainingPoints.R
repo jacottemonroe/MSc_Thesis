@@ -18,7 +18,7 @@
 sampleTrainingPoints <- function(dataset_filepath, ID, week, modis_date, input_dataset_suffix = '', output_directory = 'data/'){
   
   # load the covariates/response dataset 
-  dataset <- rast(paste0(dataset_filepath, '3_c2_', modis_date, '_dataset', input_dataset_suffix, '.tif'))
+  dataset <- rast(paste0(dataset_filepath, '3_d1_', modis_date, '_dataset', input_dataset_suffix, '.tif'))
   
   # create grid object from an empty raster
   # source: https://gis.stackexchange.com/questions/431873/creating-regular-sampling-grid-with-specific-distance-between-points-using-r
