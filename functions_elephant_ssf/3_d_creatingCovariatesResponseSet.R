@@ -69,6 +69,14 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
     }
   }
   
+  # check if there are any NAs, if so, how many? 
+  # note: NA values could be created when dividing 0 by 0 
+  # source: https://stackoverflow.com/questions/71741391/how-to-count-nas-using-terras-global-function
+  print(global(dataset, fun="isNA"))
+  
+  # replace NAs with 0 --> even though this may create some errors if there aren't a lot of NAs it should be fine
+  dataset[is.na(dataset)] <- 0
+  
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
   
