@@ -137,6 +137,7 @@ for(i in 1:nrow(LUT)){
 ###########
 
 # load function 
+source('functions_elephant_ssf/3_f_fittingRegressions.R')
 
 # necessary packages 
 if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
@@ -145,8 +146,23 @@ if(!('car') %in% installed.packages()){install.packages('car')}
 library(car)
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
+if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
+library(ranger)
 
 # run function 
+for(i in 1:nrow(LUT)){
+  modis_date <- LUT$modis_date[i]
+  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs')
+}
+
+
+
+
+
+
+
+
+
 
 # retrieve covariates from sample points and store in a new dataframe 
 sample_points <- readRDS('data/LA14/2260/3_e1_2013-04-18_trainingPoints.RDS')
@@ -159,12 +175,18 @@ covs <- covs[, grep('B.*', colnames(covs))]
 # source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
 if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
 library(caret)
+grid_setting <- expand.grid(intercept = T)
 lr_model_trained <- train(x = covs, y = sample_points$ndvi, method = 'lm', 
-                          trControl = trainControl(method = 'cv', index = cv_folds$index))
+                          trControl = trainControl(method = 'cv', index = cv_folds$index, tuneGrid = grid_setting))
+
+lr_model_trained
 
 # fit cubist regression test 
 grid_setting <- expand.grid(committees = 1, neighbors = 0)
-grid_setting <- expand.grid(mtry = 5)
+# set to default apart from mtry 
+# source: https://cran.r-project.org/web/packages/ranger/ranger.pdf
+# source: https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument
+grid_setting <- expand.grid(mtry = 1:10, splitrule = 'variance', min.node.size = 5)
 
 # train the linear regression model on the sampling points 
 model <- train(x = covs, y = sample_points$ndvi, method = 'cubist', 
@@ -172,27 +194,11 @@ model <- train(x = covs, y = sample_points$ndvi, method = 'cubist',
                  tuneGrid = grid_setting)
 
 model <- train(x = covs, y = sample_points$ndvi, method = 'ranger', 
-               trControl = trainControl(method = 'cv', index = cv_folds$index))
-
-if(!('randomForest') %in% installed.packages()){install.packages('randomForest')} # fit Random Forest regression 
-library(randomForest)
-model <- train(x = covs, y = sample_points$ndvi, method = 'rf', 
-               trControl = trainControl(method = 'cv', index = cv_folds$index))
+               trControl = trainControl(method = 'cv', index = cv_folds$index), 
+               tuneGrid = grid_setting, num.trees = 100, importance = 'permutation')
 
 
-
-if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
-library(ranger)
-model <- ranger(x = covs, y = sample_points$ndvi, num.trees = 100,
-                importance = 'permutation', seed = 0xfedbeef)
-
-plot(is.na(dataset$B1))
-plot(sample_points$geometry[4898], add = T)
-dev.off()
-
-which(is.na(sample_points$B1))
-sample_points$geometry[4898]
-
+model
 model$finalModel$importance.mode
 class(model)
 model$results
@@ -200,6 +206,7 @@ model$finalModel
 model$finalModel$coefficients
 vif(model$finalModel)
 plot(varImp(model))
+model$resample
 lr_model_trained$resample
 
 # rf
@@ -208,19 +215,7 @@ model$r.squared
 model$forest$
 plot(model$variable.importance)
 
-#plot RF variable importances
-imp_df <- data.frame(variable = names(model$variable.importance), importance = unname(model$variable.importance))
 
-library(ggplot2)
-# source: https://stackoverflow.com/questions/49105358/plot-feature-importance-computed-by-ranger-function
-ggplot(imp_df, aes(x = reorder(variable, importance), y = importance, fill = importance)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  coord_flip() +
-  ylab("Variable Importance") +
-  xlab("") +
-  ggtitle("Variable Importance Random Forest") +
-  guides(fill = "none") +
-  scale_fill_gradient(low = "red", high = "blue")
 
 a <- data.frame(model$finalModel$coefficients)
 model$finalModel$coefficients
@@ -238,18 +233,14 @@ lr_model_trained$finalModel
 lr_model_trained$resample
 
 plot(varImp(lr_model_trained))
+vif(lr_model_trained$finalModel)
 
 dataset <- rast('data/LA14/2260/3_d1_2013-04-18_dataset_noNegs.tif')
-t <- data.frame(values(is.na(dataset)))
-t <- t[t == T,]
-t
 dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
 dataset_predicted <- predict(dataset_covs, model, na.action = na.omit)
 names(dataset_predicted) <- 'ndvi_pred'
 plot(dataset_predicted$ndvi_pred)
-plot(dataset$B2.B1)
-plot(is.na(dataset$B2.B1))
-dataset
+plot(dataset_predicted$ndvi_pred < 0)
 
 num_obs <- ncol(dataset_predicted) * nrow(dataset_predicted)
 
@@ -263,8 +254,30 @@ mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
 r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
 
 plot(error)
+plot(error < 0)
 plot(abs(error))
 
+c <- data.frame(MSE = mse, RMSE = rmse, MAE = mae)
+c <- cbind(c, a)
+d <- merge(c, a)
+a <- data.frame(summary(error))[,3]
+b <- data.frame(summary(abs(error)))[,3]
+e <- data.frame(error = a, abs_error = b)
+
+a <- dataset$ndvi
+b <- data.frame(error = data.frame(summary(a))[,3])
+c <- separate(b, c('Label', 'Value'), sep = ":")
+names(b)
+class(b)
+b
+class(a)
+e <- data.frame(summary(a))[,3]
+c <- data.frame('Label' = sub(':.*', '', e), 'Value' = as.numeric(sub('.*:', '', e)))
+
+d <- unname(summary(a))
+d <- data.frame('title' = d)
+
+values(summary(error))
 
 
 

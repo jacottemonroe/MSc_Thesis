@@ -7,7 +7,7 @@
 ## It is also possible to run a forward feature selection to select the optimal model. 
 ## Each model is trained on the sampled points and validated through a 9-fold cross-validation. 
 ## The full image is then predicted and the R², RMSE, and MAE are calculated. 
-## Necessary packages: caret, car, terra
+## Necessary packages: caret, car, terra, ranger
 ## Inputs: The filepath to the correct directory, elephant ID, week of interest, date of interest, 
 ##          any suffix to add after input dataset name, optional subset of predictors to include as covariates (as vector of string elements), 
 ##          if there should be feature selection (boolean), the type of regression model to fit (lm, cubist, or rf), the output directory to store outputs
@@ -47,21 +47,39 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
   
   # check which grid settings to specify depending on the model name 
   if(regression_type == 'lm'){
-    grid_setting <- NULL
+    grid_setting <- expand.grid(intercept = T)
+    
   }else if(regression_type == 'cubist'){
     # source: https://pierreroudier.github.io/teaching/20171014-DSM-Masterclass-Hamilton/2017-10-09-dsm-with-covariates.html
     grid_setting <- expand.grid(committees = 1, neighbors = 0)
-  }
+    
+  }else if(regression_type == 'ranger'){
+    # set ranger parameters to default apart from mtry 
+    # source: https://cran.r-project.org/web/packages/ranger/ranger.pdf
+    # source: https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument
+    grid_setting <- expand.grid(mtry = 1:28, splitrule = 'variance', min.node.size = 5)
+    
+  }else{print('Specified regression model type is not valid for this function. Try: lm, cubist, or ranger')}
   
-  # train the linear regression model on the sampling points 
+  # train the regression model on the sampling points 
   if(feature_selection == F){
     # fit model with full range of specified predictors (no feature selection)
     # source: https://www.statology.org/k-fold-cross-validation-in-r/
     # source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
-    model <- train(x = covs, y = sample_points$ndvi, method = regression_type, 
-                   trControl = trainControl(method = 'cv', index = cv_folds$index), 
-                   tuneGrid = grid_setting)
+    if(regression_type == 'ranger'){
+      model <- train(x = covs, y = sample_points$ndvi, method = regression_type, 
+                     trControl = trainControl(method = 'cv', index = cv_folds$index), 
+                     tuneGrid = grid_setting, num.trees = 100, importance = 'permutation')
+    }else{
+      model <- train(x = covs, y = sample_points$ndvi, method = regression_type, 
+                     trControl = trainControl(method = 'cv', index = cv_folds$index), 
+                     tuneGrid = grid_setting)
+    }
+    
     model_type <- 'full'
+    
+    final_model <- model$finalModel
+    
   }else{
     # fit model with forward feature selection
     # source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
@@ -70,16 +88,20 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
                         tuneGrid = grid_setting)
     
     model_type <- 'ffs'
+    
+    final_model <- model$finalModel$coefficients
   }
   
   # store and save results
   print(model)
   saveRDS(model, paste0(output_filepath, '3_f1_', modis_date, '_', regression_type, '_', model_type, '_model.RDS'))
   write.csv(data.frame(model$results), paste0(output_filepath, '3_f2_', modis_date, '_', regression_type, '_', model_type, '_results.csv'))
-  write.csv(data.frame(model$finalModel$coefficients), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_coefs.csv'))
+  write.csv(data.frame(final_model), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_finalModel.csv'))
   write.csv(t(data.frame(varImp(model)$importance)), paste0(output_filepath, '3_f4_', modis_date, '_', regression_type, '_', model_type, '_importances.csv'))
-  write.csv(t(data.frame(VIF = sort(vif(lr_model_ffs$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif.csv'))
-  
+  if(regression_type == 'lm'){
+    write.csv(t(data.frame(VIF = sort(vif(lr_model_ffs$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif.csv'))
+  }
+
   ## MODEL TESTING 
   
   # load covariates/response dataset 
@@ -107,15 +129,21 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
   r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
   
   results <- data.frame(MSE = mse, RMSE = rmse, MAE = mae, R2 = r2)
+  errors <- data.frame(summary(error))[,3]
+  abs_errors <- data.frame(summary(abs(error)))[,3]
+
+  # source: https://stackoverflow.com/questions/41056639/r-get-value-from-summary
+  summary_errors <- data.frame('Label' = sub(':.*', '', errors), 'Error' = as.numeric(sub('.*:', '', errors)), 
+                               'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
   
   # save outputs 
-  writeRaster(dataset_predicted, paste0(output_filepath, '3_f6_', modis_date, '_', regression_type, '_', model_type, '_NDVI_250m.tif'))
-  write.csv(results, paste0(output_filepath, '3_f7_', modis_date, '_', regression_type, '_', model_type, '_NDVI_250m_results.csv'))
-  png(paste0(output_filepath, '3_f8_', modis_date, '_', regression_type, '_', model_type, '_NDVI_250m_errors.png'))
-  par(mfrow = c(2, 2))
+  writeRaster(dataset_predicted, paste0(output_filepath, '3_f6_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m.tif'))
+  write.csv(results, paste0(output_filepath, '3_f7_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_results.csv'))
+  write.csv(summary_errors, paste0(output_filepath, '3_f8_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_error_summary.csv'))
+  png(paste0(output_filepath, '3_f9_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_errors.png'))
+  par(mfrow = c(3, 1))
   plot(error)
+  plot(error < 0)
   plot(abs(error))
   dev.off()
 }
-
-
