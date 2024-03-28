@@ -24,8 +24,8 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   
   # removing outlier pixel values --> negative NDVI or reflectance values 
   # all pixels with value below 0 changed to 0 (threshold)
-  l_30[l_30 <= 0] <- 0
-  modis_250$NDVI[modis_250$NDVI < 0] <- 0
+  l_30[l_30 <= 0] <- NA
+  modis_250$NDVI[modis_250$NDVI < 0] <- NA
   
   # since the landsat and modis images have slightly different extents --> set modis (larger) extent to landsat (smaller) extent
   # this prevents having a boundary of NA values 
