@@ -148,8 +148,10 @@ if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
 if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
 library(ranger)
+if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+library(CAST)
 
-# run function 
+# run function to generate full models
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
   fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
@@ -160,6 +162,16 @@ for(i in 1:nrow(LUT)){
                 subset_predictors = NULL, feature_selection = F, regression_type = 'ranger')
 }
 
+# run function to generate FFS models 
+for(i in 1:nrow(LUT)){
+  modis_date <- LUT$modis_date[i]
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = T, regression_type = 'lm')
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
+}
 
 
 

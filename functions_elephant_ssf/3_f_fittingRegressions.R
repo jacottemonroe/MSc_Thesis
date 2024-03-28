@@ -7,7 +7,7 @@
 ## It is also possible to run a forward feature selection to select the optimal model. 
 ## Each model is trained on the sampled points and validated through a 9-fold cross-validation. 
 ## The full image is then predicted and the R², RMSE, and MAE are calculated. 
-## Necessary packages: caret, car, terra, ranger
+## Necessary packages: caret, car (for vif), terra, ranger, CAST (for ffs)
 ## Inputs: The filepath to the correct directory, elephant ID, week of interest, date of interest, 
 ##          any suffix to add after input dataset name, optional subset of predictors to include as covariates (as vector of string elements), 
 ##          if there should be feature selection (boolean), the type of regression model to fit (lm, cubist, or rf), the output directory to store outputs
