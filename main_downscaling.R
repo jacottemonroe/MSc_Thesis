@@ -35,6 +35,10 @@ landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pse
 # define modis filepath 
 modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
 
+# load LUT
+LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
+LUT <- LUT[1,]
+
 
 
 
@@ -87,10 +91,6 @@ source('functions_elephant_ssf/3_d_creatingCovariatesResponseSet.R')
 # necessary packages 
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
-
-# load LUT
-LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
-LUT <- LUT[1,]
 
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
@@ -152,7 +152,12 @@ library(ranger)
 # run function 
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs')
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = F, regression_type = 'lm')
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = F, regression_type = 'cubist')
+  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+                subset_predictors = NULL, feature_selection = F, regression_type = 'ranger')
 }
 
 
