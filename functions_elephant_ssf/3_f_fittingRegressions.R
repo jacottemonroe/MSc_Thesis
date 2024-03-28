@@ -70,42 +70,55 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
       model <- train(x = covs, y = sample_points$ndvi, method = regression_type, 
                      trControl = trainControl(method = 'cv', index = cv_folds$index), 
                      tuneGrid = grid_setting, num.trees = 100, importance = 'permutation')
+      
+      #final_model <- model$finalModel
+      
     }else{
       model <- train(x = covs, y = sample_points$ndvi, method = regression_type, 
                      trControl = trainControl(method = 'cv', index = cv_folds$index), 
                      tuneGrid = grid_setting)
+      
+      #final_model <- model$finalModel$coefficients
     }
     
     model_type <- 'full'
     
-    final_model <- model$finalModel
-    
   }else{
-    # fit model with forward feature selection
-    # source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
-    model <- ffs(predictors = covs, response = sample_points$ndvi, method = regression_type, 
-                        trControl = trainControl(method = 'cv', index = cv_folds$index), 
-                        tuneGrid = grid_setting)
+    if(regression_type == 'ranger'){
+      # fit model with forward feature selection
+      # source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
+      model <- ffs(predictors = covs, response = sample_points$ndvi, method = regression_type, 
+                     trControl = trainControl(method = 'cv', index = cv_folds$index), 
+                     tuneGrid = grid_setting, num.trees = 100, importance = 'permutation')
+      
+      #final_model <- model$finalModel
+      
+    }else{
+      model <- ffs(predictors = covs, response = sample_points$ndvi, method = regression_type, 
+                     trControl = trainControl(method = 'cv', index = cv_folds$index), 
+                     tuneGrid = grid_setting)
+      
+      #final_model <- model$finalModel$coefficients
+    }
     
     model_type <- 'ffs'
-    
-    final_model <- model$finalModel$coefficients
+
   }
   
   # store and save results
   print(model)
   saveRDS(model, paste0(output_filepath, '3_f1_', modis_date, '_', regression_type, '_', model_type, '_model.RDS'))
   write.csv(data.frame(model$results), paste0(output_filepath, '3_f2_', modis_date, '_', regression_type, '_', model_type, '_results.csv'))
-  write.csv(data.frame(final_model), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_finalModel.csv'))
+  #write.csv(data.frame(final_model), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_finalModel.csv'))
   write.csv(t(data.frame(varImp(model)$importance)), paste0(output_filepath, '3_f4_', modis_date, '_', regression_type, '_', model_type, '_importances.csv'))
   if(regression_type == 'lm'){
-    write.csv(t(data.frame(VIF = sort(vif(lr_model_ffs$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif.csv'))
+    write.csv(t(data.frame(VIF = sort(vif(model$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif.csv'))
   }
 
   ## MODEL TESTING 
   
   # load covariates/response dataset 
-  dataset <- rast(paste0(input_filepath,'3_d1_', modis_date, input_dataset_suffix, '.tif'))
+  dataset <- rast(paste0(input_filepath,'3_d1_', modis_date, '_dataset', input_dataset_suffix, '.tif'))
   
   # retrieve the dataset covariates to match those used in training the model
   dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
