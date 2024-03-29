@@ -164,10 +164,10 @@ for(i in 1:nrow(LUT)){
 # run function to generate FFS models 
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = T, regression_type = 'lm')
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
+  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+                feature_selection = T, regression_type = 'lm')
+  #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+   #             subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
   # note: can't run FFS with RF --> takes too long
   #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
    #             subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
@@ -176,206 +176,104 @@ for(i in 1:nrow(LUT)){
 
 
 
-# retrieve covariates from sample points and store in a new dataframe 
-sample_points <- readRDS('data/LA14/2260/3_e1_2013-04-18_trainingPoints.RDS')
-cv_folds <- readRDS('data/LA14/2260/3_e2_2013-04-18_CVFolds.RDS')
-covs <- data.frame(sample_points)
-covs <- covs[, grep('B.*', colnames(covs))]
-
-# fit model with full range of predictors 
-# source: https://www.statology.org/k-fold-cross-validation-in-r/
-# source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
-if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
-library(caret)
-grid_setting <- expand.grid(intercept = T)
-lr_model_trained <- train(x = covs, y = sample_points$ndvi, method = 'lm', 
-                          trControl = trainControl(method = 'cv', index = cv_folds$index, tuneGrid = grid_setting))
-
-lr_model_trained
-
-# fit cubist regression test 
-grid_setting <- expand.grid(committees = 1, neighbors = 0)
-# set to default apart from mtry 
-# source: https://cran.r-project.org/web/packages/ranger/ranger.pdf
-# source: https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument
-grid_setting <- expand.grid(mtry = 1:10, splitrule = 'variance', min.node.size = 5)
-
-# train the linear regression model on the sampling points 
-model <- train(x = covs, y = sample_points$ndvi, method = 'cubist', 
-                 trControl = trainControl(method = 'cv', index = cv_folds$index), 
-                 tuneGrid = grid_setting)
-
-model <- train(x = covs, y = sample_points$ndvi, method = 'ranger', 
-               trControl = trainControl(method = 'cv', index = cv_folds$index), 
-               tuneGrid = grid_setting, num.trees = 100, importance = 'permutation')
+###########
+## result analysis and interpretation 
+###########
 
 
-model
-model$finalModel$importance.mode
-class(model)
-model$results
-model$finalModel
-model$finalModel$coefficients
-vif(model$finalModel)
-plot(varImp(model))
-model$resample
-lr_model_trained$resample
+# plot MAE, RMSE, R² over time for each model type 
+# each row is a date, each is a model type 
+# one plot per performance metric 
 
-# rf
-model$prediction.error
-model$r.squared
-model$forest$
-plot(model$variable.importance)
+# create empty dataframe to store metrics 
+results_df <- data.frame()
 
+for(i in 1:nrow(LUT)){
+  
+  # get run date
+  modis_date <- LUT$modis_date[i]
+  
+  # select model result files for date
+  #model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f7_', modis_date, '_*')))
+  model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*')))
+  
+  # create empty dataframe to store metrics for date
+  entry <- data.frame(date = modis_date)
+  
+  for(file in model_results_files){
+    
+    # read results file 
+    item <- read.csv(paste0(run_filepath, file), row.names = 1)
+    
+    # for when running the trained model metrics (not for prediction metrics)
+    item <- item[item$RMSE == min(item$RMSE),c('RMSE', 'Rsquared', 'MAE')]
+    
+    # retrieve model name and rename columns 
+    # source: https://www.digitalocean.com/community/tutorials/sub-and-gsub-function-r
+    #model <- sub(paste0('3_f7_', modis_date, '_'), '', sub('_predNDVI_250m_results.csv', '', file))
+    model <- sub(paste0('3_f2_', modis_date, '_'), '', sub('_results.csv', '', file))
+    names(item) <- c(paste0(model, '.', 'RMSE'), paste0(model, '.', 'R2'), paste0(model, '.', 'MAE'))
+    
+    # attach results to dataframe 
+    entry <- cbind(entry, item)
+  }
+  results_df <- rbind(results_df, entry)
+}
 
+# save summary table 
+# for cv metrics: '3_g1_summary_metrics_CV.csv'
+# for prediction metrics: '3_g2_summary_metrics_prediction.csv'
+write.csv(results_df, paste0(run_filepath, '3_g1_summary_metrics_CV.csv'))
 
-a <- data.frame(model$finalModel$coefficients)
-model$finalModel$coefficients
+d <- results_df
 
-b <- varImp(model)[1]
-b
-plot(varImp(model))
-
-
-
-# look at model results 
-lr_model_trained
-lr_model_trained$results
-lr_model_trained$finalModel
-lr_model_trained$resample
-
-plot(varImp(lr_model_trained))
-vif(lr_model_trained$finalModel)
-
-dataset <- rast('data/LA14/2260/3_d1_2013-04-18_dataset_noNegs.tif')
-dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
-dataset_predicted <- predict(dataset_covs, model, na.action = na.omit)
-names(dataset_predicted) <- 'ndvi_pred'
-plot(dataset_predicted$ndvi_pred)
-plot(dataset_predicted$ndvi_pred < 0)
-
-num_obs <- ncol(dataset_predicted) * nrow(dataset_predicted)
-
-# source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
-error <- dataset_predicted$ndvi_pred - dataset$ndvi
-# source: https://rdrr.io/cran/terra/man/global.html#google_vignette
-mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
-rmse <- sqrt(mse)
-mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
-# source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
-r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
-
-plot(error)
-plot(error < 0)
-plot(abs(error))
-
-c <- data.frame(MSE = mse, RMSE = rmse, MAE = mae)
-c <- cbind(c, a)
-d <- merge(c, a)
-a <- data.frame(summary(error))[,3]
-b <- data.frame(summary(abs(error)))[,3]
-e <- data.frame(error = a, abs_error = b)
-
-a <- dataset$ndvi
-b <- data.frame(error = data.frame(summary(a))[,3])
-c <- separate(b, c('Label', 'Value'), sep = ":")
-names(b)
-class(b)
-b
-class(a)
-e <- data.frame(summary(a))[,3]
-c <- data.frame('Label' = sub(':.*', '', e), 'Value' = as.numeric(sub('.*:', '', e)))
-
-d <- unname(summary(a))
-d <- data.frame('title' = d)
-
-values(summary(error))
+# # normalize RMSE
+# rmse_df <- d[,c('lm_full.RMSE', 'lm_ffs.RMSE', 'cubist_full.RMSE', 'ranger_full.RMSE')]
+# norm_rmse <- data.frame()
+# for(r in 1:nrow(rmse_df)){
+#   #max_value <- max(rmse_df[r,])
+#   #min_value <- min(rmse_df[r,])
+#   mean_value <- unname(rowMeans(rmse_df[1,]))
+#   #n <- data.frame(day = d$date[r], rmse_df[r,]/(max_value - min_value))
+#   n <- data.frame(day = d$date[r], rmse_df[r,]/mean_value)
+#   norm_rmse <- rbind(norm_rmse, n)
+# }
 
 
 
-# check VIF 
-# source: https://stackoverflow.com/questions/63251868/variance-inflation-vif-for-glm-caret-model-in-r
-if(!('car') %in% installed.packages()){install.packages('car')} 
-library(car)
-v <- sort(vif(lr_model_trained$finalModel))
-v
+library(ggplot2)
 
-saveRDS(lr_model_trained, paste0(run_filepath, '3_c3_linear_model_full_temporary_noNegs_5k.RDS'))
-
-# predict the full MODIS NDVI image using the trained linear regression model 
-# covs_test <- data.frame(testing_points)
-# covs_test <- covs_test[, grep('B.*', colnames(covs_test))]
-dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
-
-dataset_predicted <- predict(dataset_covs, lr_model_trained)
-names(dataset_predicted) <- 'ndvi_pred'
-plot(dataset_predicted$ndvi_pred)
-hist(dataset_predicted$ndvi_pred)
-dataset_predicted[dataset_predicted < 0,] <- NA
-plot(dataset_predicted$ndvi_pred)
-hist(dataset_predicted$ndvi_pred)
-plot(is.na(dataset_predicted))
-
-ncol(dataset_predicted)
-num_obs <- ncol(dataset_predicted) * nrow(dataset_predicted)
-
-# source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
-error <- dataset_predicted$ndvi_pred - dataset$ndvi
-# source: https://rdrr.io/cran/terra/man/global.html#google_vignette
-mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
-rmse <- sqrt(mse)
-mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
-# source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
-r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
-
-plot(error)
-plot(abs(error))
+# source: https://www.datanovia.com/en/blog/how-to-create-a-ggplot-with-multiple-lines/
+# source: http://www.sthda.com/english/wiki/ggplot2-title-main-axis-and-legend-titles
+ggplot(data = d, aes(x = date)) + 
+  geom_line(aes(y = lm_full.RMSE, color = 'lm_full')) + 
+  geom_line(aes(y = lm_ffs.RMSE, color = 'lm_ffs')) + 
+  geom_line(aes(y = cubist_full.RMSE, color = 'cubist_full')) + 
+  geom_line(aes(y = ranger_full.RMSE, color = 'rf_full')) + 
+  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  labs(title="Comparing Model RMSE of LA14 over week 2260",
+       x ="Date", y = "RMSE") + 
+  theme_minimal()
+ggplot(data = d, aes(x = date)) + 
+  geom_line(aes(y = lm_full.MAE, color = 'lm_full')) + 
+  geom_line(aes(y = lm_ffs.MAE, color = 'lm_ffs')) + 
+  geom_line(aes(y = cubist_full.MAE, color = 'cubist_full')) + 
+  geom_line(aes(y = ranger_full.MAE, color = 'rf_full')) + 
+  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  labs(title="Comparing Model MAE of LA14 over week 2260",
+       x ="Date", y = "MAE") + 
+  theme_minimal()
+ggplot(data = d, aes(x = date)) + 
+  geom_line(aes(y = lm_full.R2, color = 'lm_full')) + 
+  geom_line(aes(y = lm_ffs.R2, color = 'lm_ffs')) + 
+  geom_line(aes(y = cubist_full.R2, color = 'cubist_full')) + 
+  geom_line(aes(y = ranger_full.R2, color = 'rf_full')) + 
+  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  labs(title="Comparing Model R2 of LA14 over week 2260",
+       x ="Date", y = "R2") + 
+  theme_minimal()
 
 
-
-# apply forward feature selection
-# source: https://cran.r-hub.io/web/packages/CAST/vignettes/CAST-intro.html
-lr_model_ffs <- ffs(predictors = covs, response = sample_points$ndvi, method = 'lm', 
-                          trControl = trainControl(method = 'cv', index = cv_folds$index))
-
-lr_model_ffs <- readRDS('data/LA14/2260/3_c3_linear_model_ffs_temporary_noNegs_5k.RDS')
-
-# read results
-lr_model_ffs
-lr_model_ffs$results
-a <- data.frame(lr_model_ffs$results)
-b <- data.frame(lr_model_ffs$finalModel$coefficients)
-lr_model_ffs$resample
-
-d <- t(data.frame(VIF = vif(lr_model_ffs$finalModel)))
-d
-
-c <- t(data.frame(varImp(lr_model_ffs)$importance))
-c
-
-saveRDS(lr_model_ffs, paste0(run_filepath, '3_c3_linear_model_ffs_temporary_noNegs_5k.RDS'))
-
-lr_model_ffs <- readRDS(paste0(run_filepath, '3_c3_linear_model_ffs_temporary.RDS'))
-
-# predict for whole image
-dataset_covs_ffs <- dataset[[names(dataset) %in% lr_model_ffs$selectedvars]]
-
-dataset_predicted_ffs <- predict(dataset_covs_ffs, lr_model_ffs)
-
-dataset_predicted_ffs
-names(dataset_predicted_ffs) <- 'ndvi_pred'
-plot(dataset_predicted_ffs)
-plot(dataset$ndvi)
-
-# see results 
-num_obs <- ncol(dataset_predicted_ffs) * nrow(dataset_predicted_ffs)
-error <- dataset_predicted_ffs$ndvi_pred - dataset$ndvi
-mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
-rmse <- sqrt(mse)
-mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
-r2 <- cor(values(dataset_predicted_ffs$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')[[1]]
-plot(error)
-plot(abs(error))
 
 
 
