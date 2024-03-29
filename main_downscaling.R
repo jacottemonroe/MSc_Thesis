@@ -37,7 +37,7 @@ modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_
 
 # load LUT
 LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
-LUT <- LUT[1,]
+LUT <- LUT[2:14,]
 
 
 
@@ -94,8 +94,7 @@ library(terra)
 
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
-  modis_date <- LUT$modis_date[i]
-  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, modis_date, output_filename_suffix = '_noNegs')
+  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, LUT[i,])
 }
 
 
@@ -118,7 +117,7 @@ library(CAST)
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs')
+  sampleTrainingPoints(run_filepath, ID, week, modis_date)
 }
 
 # extra (visualize sample points distribution vs dataset distribution)
@@ -154,12 +153,12 @@ library(CAST)
 # run function to generate full models
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = F, regression_type = 'lm')
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = F, regression_type = 'cubist')
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = F, regression_type = 'ranger')
+  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+                feature_selection = F, regression_type = 'lm')
+  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+                feature_selection = F, regression_type = 'cubist')
+  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+                feature_selection = F, regression_type = 'ranger')
 }
 
 # run function to generate FFS models 
@@ -169,14 +168,10 @@ for(i in 1:nrow(LUT)){
                 subset_predictors = NULL, feature_selection = T, regression_type = 'lm')
   fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
                 subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
-  fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-                subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
+  # note: can't run FFS with RF --> takes too long
+  #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
+   #             subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
 }
-
-
-
-
-
 
 
 

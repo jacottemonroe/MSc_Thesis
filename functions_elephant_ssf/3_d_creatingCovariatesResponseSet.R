@@ -11,12 +11,15 @@
 
 
 
-createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, week, mods_date, 
+createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, week, LUT_entry, 
                                             output_directory = 'data/', output_filename_suffix = ''){
   
+  # define modis date 
+  modis_date <- LUT_entry$modis_date
+  
   # read modis and landsat images 
-  modis_250 <- rast(paste0(modis_filepath, LUT$modis_image))
-  l_30 <- rast(paste0(landsat_filepath, LUT$closest_landsat_image))
+  modis_250 <- rast(paste0(modis_filepath, LUT_entry$modis_image))
+  l_30 <- rast(paste0(landsat_filepath, LUT_entry$closest_landsat_image))
   
   # rename layer names to corresponding bands 
   names(modis_250) <- c('B1', 'B2', 'NDVI')
