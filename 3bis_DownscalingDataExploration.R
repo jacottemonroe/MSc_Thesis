@@ -44,14 +44,18 @@ LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
 # create empty dataframe to store metrics 
 results_df <- data.frame()
 
+suffix = ''  #'_selection'
+w <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*', suffix, '.csv')))
+sub('_results', '', sub(paste0('3_f2_', modis_date, '_'), '', sub('.csv', '', w[1])))
+
 for(i in 1:nrow(LUT)){
   
   # get run date
   modis_date <- LUT$modis_date[i]
   
   # select model result files for date
-  #model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f7_', modis_date, '_*')))
-  model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*')))
+  model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f7_', modis_date, '_*', suffix, '.csv')))
+  #model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*', suffix, '.csv')))
   
   # create empty dataframe to store metrics for date
   entry <- data.frame(date = modis_date)
@@ -62,12 +66,14 @@ for(i in 1:nrow(LUT)){
     item <- read.csv(paste0(run_filepath, file), row.names = 1)
     
     # for when running the trained model metrics (not for prediction metrics)
-    item <- item[item$RMSE == min(item$RMSE),c('RMSE', 'Rsquared', 'MAE')]
+    #item <- item[item$RMSE == min(item$RMSE),c('RMSE', 'Rsquared', 'MAE')]
+    item <- item[,c('RMSE', 'R2', 'MAE')]
     
     # retrieve model name and rename columns 
     # source: https://www.digitalocean.com/community/tutorials/sub-and-gsub-function-r
+    #model <- sub('_results', '', sub(paste0('3_f2_', modis_date, '_'), '', sub('.csv', '', file)))
     #model <- sub(paste0('3_f7_', modis_date, '_'), '', sub('_predNDVI_250m_results.csv', '', file))
-    model <- sub(paste0('3_f2_', modis_date, '_'), '', sub('_results.csv', '', file))
+    model <- sub('_predNDVI_250m_results', '', sub(paste0('3_f7_', modis_date, '_'), '', sub('.csv', '', file)))
     names(item) <- c(paste0(model, '.', 'RMSE'), paste0(model, '.', 'R2'), paste0(model, '.', 'MAE'))
     
     # attach results to dataframe 
@@ -103,7 +109,8 @@ ggplot(data = d, aes(x = date)) +
   geom_line(aes(y = lm_ffs.RMSE, color = 'lm_ffs')) + 
   geom_line(aes(y = cubist_full.RMSE, color = 'cubist_full')) + 
   geom_line(aes(y = ranger_full.RMSE, color = 'rf_full')) + 
-  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  geom_line(aes(y = ranger_full_selection.RMSE, color = 'rf_select_features')) + # temporary line for testing random forest with selected features (also added a color)
+  scale_color_manual(values = c("red", "orange", 'green', 'blue', 'magenta2')) + 
   labs(title="Comparing Model RMSE of LA14 over week 2260",
        x ="Date", y = "RMSE") + 
   theme_minimal()
@@ -112,7 +119,8 @@ ggplot(data = d, aes(x = date)) +
   geom_line(aes(y = lm_ffs.MAE, color = 'lm_ffs')) + 
   geom_line(aes(y = cubist_full.MAE, color = 'cubist_full')) + 
   geom_line(aes(y = ranger_full.MAE, color = 'rf_full')) + 
-  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  geom_line(aes(y = ranger_full_selection.MAE, color = 'rf_select_features')) + # temporary line for testing random forest with selected features (also added a color)
+  scale_color_manual(values = c("red", "orange", 'green', 'blue', 'magenta2')) + 
   labs(title="Comparing Model MAE of LA14 over week 2260",
        x ="Date", y = "MAE") + 
   theme_minimal()
@@ -121,7 +129,8 @@ ggplot(data = d, aes(x = date)) +
   geom_line(aes(y = lm_ffs.R2, color = 'lm_ffs')) + 
   geom_line(aes(y = cubist_full.R2, color = 'cubist_full')) + 
   geom_line(aes(y = ranger_full.R2, color = 'rf_full')) + 
-  scale_color_manual(values = c("red", "orange", 'green', 'blue')) + 
+  geom_line(aes(y = ranger_full_selection.R2, color = 'rf_select_features')) + # temporary line for testing random forest with selected features (also added a color)
+  scale_color_manual(values = c("red", "orange", 'green', 'blue', 'magenta2')) + 
   labs(title="Comparing Model R2 of LA14 over week 2260",
        x ="Date", y = "R2") + 
   theme_minimal()
@@ -137,7 +146,8 @@ ggplot(data = d, aes(x = date)) +
 
 
 
-
+a <- read.csv(paste0(run_filepath, '3_f4_2013-04-18_ranger_full_importances_selection.csv'), row.names = 1)
+a$finalModel$num.independent.variables
 
 
 # plot variable importance frequency 
@@ -145,7 +155,7 @@ ggplot(data = d, aes(x = date)) +
 # then look at who has the highest number of who is most frequently in top ranks 
 
 dfp <- data.frame()
-f4_files <- list.files(run_filepath, pattern = glob2rx('3_f4_*_full_importances.csv'), full.names = T)
+f4_files <- list.files(run_filepath, pattern = glob2rx('3_f4_*_full_importances_selection.csv'), full.names = T)
 for(f in f4_files){
   a <- read.csv(f, header = F)
   a <- a[,2:ncol(a)]
@@ -254,3 +264,45 @@ ggplot(data = v, aes(x = Preds)) +
 #   entry <- data.frame(date = date, vif)
 #   vif_ts_ffs <- rbind.fill(vif_ts_ffs, entry)
 # }
+
+
+
+# create time series of difference in mean abs error between RF full and RF selection 
+# or create a graph of many boxplots --> pair of box plots per date 
+# create df where each row is set of stats + one column to specify model type 
+# take abs error 
+list_rf <- list.files(run_filepath, pattern = glob2rx('3_*_ranger_full_*error_summary*.csv'), full.names = F)
+#list_rf
+#f <- list_rf[1]
+df <- data.frame()
+for(f in list_rf){
+  a <- read.csv(paste0(run_filepath, f), row.names = 1)
+  a <- a[-4,c('Label', 'Abs.Error.')]
+  colnames(a) <- c('Label', 'AbsError')
+  a$Label <- gsub(' ', '', a$Label)
+  a$AbsError[a$AbsError > 0.035] <- 0.035
+  a <- a$AbsError
+  # source: https://www.endmemo.com/r/gsub.php
+  # source: https://www.digitalocean.com/community/tutorials/sub-and-gsub-function-r
+  d <- sub('3_f8_', '', sub('_ranger.*csv', '', f))
+  m <- sub('.*_ranger_', '', sub('_predNDVI.*summary', '', sub('.csv', '', f)))
+  e <- data.frame(Date = d, Model = m, t(a))
+  df <- rbind(df, e)
+}
+colnames(df) <- c('Date', 'Model', 'Min', 'Q1', 'Median', 'Q3', 'Max')
+
+ggplot(df,aes(x=Date, ymin=Min,lower=Q1,middle=Median,upper=Q3,ymax=Max,fill=Model))+
+  geom_boxplot(stat="identity") + 
+  ylab('Absolute Error') + 
+  ggtitle('Absolute Error of Predicted MODIS 250m', subtitle = 'Comparing two Random Forest Models')
+
+f <- list_rf[1]
+a <- read.csv(paste0(run_filepath, f), row.names = 1)
+a <- a[-4,c('Label', 'Abs.Error.')]
+colnames(a) <- c('Label', 'AbsError')
+a$Label <- gsub(' ', '', a$Label)
+a[a$Label == 'Max.', a$Abs.Error. > 0.07] <- 0.07
+a[a$Label == 'Max.', a$Abs.Error. > 0.07]
+a[a$Label == "Max.", a$AbsError]
+a$AbsError[a$AbsError > 0.07]
+class(a[5,1])
