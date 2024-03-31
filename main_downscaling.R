@@ -212,6 +212,11 @@ sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image))
 sub('_stitched.tif', '', e1$closest_landsat_image)
 print(paste0('3_d2_', sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image)), '_prediction_covariates.tif'))
 
+band_combinations <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
+for(i in band_combinations){print(class(i))}
+bc1 <- band_combinations[[1]]
+bc1[1]
+
 
 # decide which predictors to remove
 

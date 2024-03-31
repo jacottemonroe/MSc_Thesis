@@ -117,29 +117,21 @@ createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID
   mask <- any(is.na(l_30))
   l_30 <- mask(l_30, mask, maskvalues = T)
   
-  # get dataframe of all band combinations
-  # source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
-  band_combinations <- expand.grid(bandA = names(l_30['B.']), bandB = names(l_30['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
+  # define list of band combinations that want to generate 
+  band_combinations <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
   
   # calculate landsat band ratios 
-  for(i in 1:nrow(band_combinations)){
-    # get band name from combination dataframe 
-    bandA <- band_combinations[i,1]
-    bandB <- band_combinations[i,2]
+  for(bands in band_combinations){
+    # get bands 
+    bandA <- bands[1]
+    bandB <- bands[2]
     
-    # get band number 
-    # source: https://www.statology.org/r-extract-number-from-string/
-    bandA_number <- as.numeric(gsub("\\D", "", bandA))
-    bandB_number <- as.numeric(gsub("\\D", "", bandB))
+    # calculate band ratio 
+    ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
     
-    if(bandA_number>bandB_number){
-      # calculate ratio 
-      ratio <- (l_30[[bandA]]-l_30[[bandB]])/(l_30[[bandA]]+l_30[[bandB]])
-      
-      # add band ratio to dataset
-      layer_name <- paste0(bandA,'.',bandB)
-      l_30[[layer_name]] <- ratio
-    }
+    # add band ratio to dataset
+    layer_name <- paste0(bandA,'.',bandB)
+    l_30[[layer_name]] <- ratio
   }
   
   # check if there are any NAs, if so, how many? 
