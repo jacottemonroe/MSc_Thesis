@@ -237,6 +237,32 @@ for (i in 1:nrow(LUT)) {
 }
 
 
+LUT_entry <- LUT[1,]
+input_filepath <- run_filepath
+input_suffix <- suffix
+
+# retrieve landsat date from LUT
+l_name <- LUT_entry$closest_landsat_image
+l_date <- sub('LC.*4_', '', sub('_stitched.tif', '', l_name))
+
+# load Landsat covariate raster 
+l_30 <- rast(paste0(input_filepath, '3_d2_', l_date, '_prediction_covariates.tif'))
+
+# define date and name of downscaling model
+m_date <- LUT_entry$modis_date
+
+# load downscaling model 
+model <- readRDS(paste0(input_filepath, '3_f1_', m_date, '_', model_type, '_model', input_suffix, '.RDS'))
+
+# check that covariates match 
+if(!identical(names(l_30), model$finalModel$xNames)){stop('The covariates are not matching! 
+    Make sure that the prediction covariate raster has the same predictors as the ones used to train the model')}
+
+class(names(l_30))
+class(model$finalModel$xNames)
+!identical(names(l_30), model$finalModel$xNames)
+
+
 
 # # run for each entry of the look up table 
 # e <- LUT[1,]

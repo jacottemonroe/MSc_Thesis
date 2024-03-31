@@ -26,7 +26,7 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   model <- readRDS(paste0(input_filepath, '3_f1_', m_date, '_', model_type, '_model', input_suffix, '.RDS'))
   
   # check that covariates match 
-  if(identical(names(l_30), model$finalModel$xNames)){stop('The covariates are not matching! 
+  if(!identical(names(l_30), model$finalModel$xNames)){stop('The covariates are not matching! 
     Make sure that the prediction covariate raster has the same predictors as the ones used to train the model')}
   
   # predict MODIS 30m using the selected Landsat 30m dataset and model
