@@ -275,7 +275,128 @@ ggplot(data = d, aes(x = date)) +
 
 
 
+# plot variable frequency 
+# read the variable importances and attribute a rank to each variable from most to least important 
+# then look at who has the highest number of who is most frequently in top ranks 
 
+dfp <- data.frame()
+f4_files <- list.files(run_filepath, pattern = glob2rx('3_f4_*_full_importances.csv'), full.names = T)
+for(f in f4_files){
+  a <- read.csv(f, header = F)
+  a <- a[,2:ncol(a)]
+  b <- data.frame(predictor = t(a[1,]), importances = t(a[2,]))
+  names(b) <- c('predictors', 'importances')
+  b <- b[order(as.numeric(b[,2]), decreasing = T),]
+  dfp <- rbind(dfp, b$predictors)
+}
+
+t0 <- data.frame()
+for(i in 1:ncol(dfp)){
+  t <- data.frame(table(dfp[,i])*i)
+  t0 <- rbind(t0, t)
+}
+
+# source: https://www.geeksforgeeks.org/how-to-use-aggregate-function-in-r/
+t0a <- aggregate(t0$Freq, list(t0$Var1), FUN = sum)
+names(t0a) <- c('variable', 'redundancy')
+t0a <- t0a[order(t0a$redundancy, decreasing = F),]
+
+# plot
+# source: https://stackoverflow.com/questions/49105358/plot-feature-importance-computed-by-ranger-function
+ggplot(t0a, aes(x = reorder(variable, redundancy), y = redundancy, fill = redundancy)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  ylab("Redundancy mark") +
+  xlab("") +
+  ggtitle("Variable redundancy for all models") +
+  guides(fill = "none") +
+  scale_fill_gradient(low = "blue", high = "red")
+
+
+# look at VIF  
+a <- readRDS(paste0(run_filepath, '3_f1_2013-04-18'))
+
+
+
+
+
+vif_files_list <- list.files(run_filepath, pattern = glob2rx('3_*_full_vif.csv'), full.names = F)
+# v_file <- vif_files_list[1]
+par(mfrow = c(4,4))
+for(f in vif_files_list){
+  v <- read.csv(paste0(run_filepath, f), header = F, row.names = 1)
+  rownames(v) <- c('1', '2')
+  v <- data.frame(Preds = t(v[1,]), VIF = t(v[2,]))
+  colnames(v) <- c('Preds', 'VIF')
+  v$VIF <- as.numeric(v$VIF)
+  d <- sub('3_f5_', '', sub('_lm_full_vif.csv', '', f))
+  
+  geom_bar(aes(y = VIF, fill = VIF), stat = 'identity') + 
+    # source: https://stackoverflow.com/questions/57177608/how-to-add-dashed-horizontal-line-with-label-in-ggplot
+    geom_hline(yintercept = 10, linetype = 'dashed') + 
+    # source: https://stackoverflow.com/questions/57119146/how-to-fix-continuous-value-supplied-to-discrete-scale-in-with-scale-color-bre
+    # source: https://stackoverflow.com/questions/39625749/set-levels-in-scale-fill-distiller
+    scale_fill_distiller(palette = "RdYlGn", trans = 'log10') +  #limits = c(0, 10)) + 
+    # source: https://stackoverflow.com/questions/25685185/limit-ggplot2-axes-without-removing-data-outside-limits-zoom
+    # source: https://www.geeksforgeeks.org/zoom-into-ggplot2-plot-without-removing-data-in-r/
+    coord_flip(ylim = c(0, 5000)) + 
+    ggtitle('Log10 VIF of Predictors from Full Linear Model', subtitle = d)
+}
+
+
+v <- read.csv(paste0(run_filepath, vif_files_list[1]), header = F, row.names = 1)
+rownames(v) <- c('1', '2')
+v <- data.frame(Preds = t(v[1,]), VIF = t(v[2,]))
+colnames(v) <- c('Preds', 'VIF')
+v$VIF <- as.numeric(v$VIF)
+class(v$VIF)
+d <- sub('3_f5_', '', sub('_lm_full_vif.csv', '', v_file))
+
+library("RColorBrewer")
+ggplot(data = v, aes(x = Preds)) + 
+  geom_bar(aes(y = VIF, fill = VIF), stat = 'identity') + 
+  # source: https://stackoverflow.com/questions/57177608/how-to-add-dashed-horizontal-line-with-label-in-ggplot
+  geom_hline(yintercept = 10, linetype = 'dashed') + 
+  # source: https://stackoverflow.com/questions/57119146/how-to-fix-continuous-value-supplied-to-discrete-scale-in-with-scale-color-bre
+  # source: https://stackoverflow.com/questions/39625749/set-levels-in-scale-fill-distiller
+  scale_fill_distiller(palette = "RdYlGn", trans = 'log10') +  #limits = c(0, 10)) + 
+  # source: https://stackoverflow.com/questions/25685185/limit-ggplot2-axes-without-removing-data-outside-limits-zoom
+  # source: https://www.geeksforgeeks.org/zoom-into-ggplot2-plot-without-removing-data-in-r/
+  coord_flip(ylim = c(0, 5000)) + 
+  ggtitle('Log10 VIF of Predictors from Full Linear Model', subtitle = d)
+
+
+
+
+vif_ts <- data.frame()
+for(f in vif_files_list){
+  date <- sub('3_f5_', '', sub('_lm_full_vif.csv', '', f))
+  vif <- read.csv(paste0(run_filepath, f), row.names = 1)
+  entry <- data.frame(date = date, vif)
+  vif_ts <- rbind(vif_ts, entry)
+}
+
+row.names(vif_ts) <- 1:nrow(vif_ts)
+
+# plot VIF 
+# source: https://www.geeksforgeeks.org/draw-multiple-time-series-in-same-plot-in-r/
+if(!('reshape2') %in% installed.packages()){install.packages('reshape2')} # to plot timeseries
+library(reshape2)
+# Convert sample_data from wide form to long form
+vif_ts <- melt(vif_ts, id.vars = "date")
+ggplot(vif_ts, aes(x = date, y = value, group = variable)) + geom_line()
+# source: https://www.statology.org/r-geom_path-each-group-consists-of-only-one-observation/
+ggplot(vif_ts, aes(x = date, group = 1)) + geom_line(aes(y = B2.B1))
+
+
+vif_files_list_ffs <- list.files(run_filepath, pattern = glob2rx('3_*_ffs_vif.csv'), full.names = F)
+vif_ts_ffs <- data.frame()
+for(f in vif_files_list_ffs){
+  date <- sub('3_f5_', '', sub('_lm_ffs_vif.csv', '', f))
+  vif <- read.csv(paste0(run_filepath, f), row.names = 1)
+  entry <- data.frame(date = date, vif)
+  vif_ts_ffs <- rbind.fill(vif_ts_ffs, entry)
+}
 
 
 # decide which predictors to remove
