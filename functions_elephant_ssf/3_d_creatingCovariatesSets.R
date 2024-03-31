@@ -92,3 +92,72 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   
 }
 
+
+
+
+
+createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID, week, 
+                                        output_directory = 'data/'){
+  
+  # # define date 
+  # l_date <- sub('LC08_179073_4_', '', sub('_stitched.tif', '', LUT_entry$closest_landsat_image))
+  # 
+  # read modis and landsat images 
+  l_30 <- rast(paste0(landsat_filepath, landsat_filename))
+  
+  # rename layer names to corresponding bands 
+  names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
+  
+  # removing outlier pixel values --> negative NDVI or reflectance values 
+  # all pixels with value below 0 changed to 0 (threshold)
+  l_30[l_30 <= 0] <- NA
+  
+  # get all NA values in same place (if any)
+  # source: https://stackoverflow.com/questions/73719011/mask-layer-of-a-raster-stack-using-other-layer-using-terra
+  mask <- any(is.na(l_30))
+  l_30 <- mask(l_30, mask, maskvalues = T)
+  
+  # get dataframe of all band combinations
+  # source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
+  band_combinations <- expand.grid(bandA = names(l_30['B.']), bandB = names(l_30['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
+  
+  # calculate landsat band ratios 
+  for(i in 1:nrow(band_combinations)){
+    # get band name from combination dataframe 
+    bandA <- band_combinations[i,1]
+    bandB <- band_combinations[i,2]
+    
+    # get band number 
+    # source: https://www.statology.org/r-extract-number-from-string/
+    bandA_number <- as.numeric(gsub("\\D", "", bandA))
+    bandB_number <- as.numeric(gsub("\\D", "", bandB))
+    
+    if(bandA_number>bandB_number){
+      # calculate ratio 
+      ratio <- (l_30[[bandA]]-l_30[[bandB]])/(l_30[[bandA]]+l_30[[bandB]])
+      
+      # add band ratio to dataset
+      layer_name <- paste0(bandA,'.',bandB)
+      l_30[[layer_name]] <- ratio
+    }
+  }
+  
+  # check if there are any NAs, if so, how many? 
+  # note: NA values could be created when dividing 0 by 0 
+  # source: https://stackoverflow.com/questions/71741391/how-to-count-nas-using-terras-global-function
+  print(global(l_30, fun="isNA"))
+  
+  # replace NAs with 0 --> even though this may create some errors if there aren't a lot of NAs it should be fine
+  l_30[is.na(l_30)] <- 0
+  
+  # create output filepath 
+  output_filepath <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create data directory if it does not yet exist
+  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  
+  # save dataset
+  writeRaster(l_30, paste0(output_filepath,'3_d2_', sub('LC08_179073_4_', '', sub('_stitched.tif', '', landsat_filename)),
+                           '_prediction_covariates.tif'), overwrite = T)
+
+}

@@ -185,8 +185,32 @@ for(i in 1:nrow(LUT)){
 
 
 
+###########
+## Predict MODIS 30m
+###########
+
+# load function 
+source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
+
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+
+# get list of landsat image names 
+landsat_image_list <- unique(LUT$closest_landsat_image)
+
+# run function for each landsat image 
+for(file in landsat_image_list){
+  createPredictionCovariatesSet(landsat_filepath, file, ID, week)
+}
 
 
+
+e1 <- LUT[1,]
+e1
+sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image))
+sub('_stitched.tif', '', e1$closest_landsat_image)
+print(paste0('3_d2_', sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image)), '_prediction_covariates.tif'))
 
 
 # decide which predictors to remove
