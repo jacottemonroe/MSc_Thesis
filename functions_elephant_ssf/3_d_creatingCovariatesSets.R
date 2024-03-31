@@ -127,7 +127,7 @@ createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID
     bandB <- bands[2]
     
     # calculate band ratio 
-    ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
+    ratio <- (l_30[[bandA]]-l_30[[bandB]])/(l_30[[bandA]]+l_30[[bandB]])
     
     # add band ratio to dataset
     layer_name <- paste0(bandA,'.',bandB)
