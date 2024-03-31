@@ -155,7 +155,7 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_suffix = '
   write.csv(results, paste0(output_filepath, '3_f7_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_results', output_suffix, '.csv'))
   write.csv(summary_errors, paste0(output_filepath, '3_f8_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_error_summary', output_suffix, '.csv'))
   png(paste0(output_filepath, '3_f9_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_errors', output_suffix, '.png'))
-  par(mfrow = c(3, 1))
+  par(mfrow = c(1, 3))
   plot(error)
   plot(error < 0)
   plot(abs(error))

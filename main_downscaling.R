@@ -191,7 +191,7 @@ for(i in 1:nrow(LUT)){
 
 
 ###########
-## Predict MODIS 30m
+## Create covariate (Landsat8) raster for predicting MODIS 30m
 ###########
 
 # load function 
@@ -213,6 +213,114 @@ for(file in landsat_image_list){
 }
 
 
+
+###########
+## Predict MODIS 30m
+###########
+
+# load function 
+source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+
+# necessary packages
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
+
+# specify model type and suffix if any 
+model_type <- 'ranger_full'
+suffix <- '_selection'
+
+# run the function for each entry from LUT 
+for (i in 1:nrow(LUT)) {
+  entry <- LUT[i,]
+  predictDownscaledModis(run_filepath, modis_filepath, ID, week, entry, model_type, 
+                         input_suffix = suffix, output_suffix = suffix)
+}
+
+
+
+# # run for each entry of the look up table 
+# e <- LUT[1,]
+# 
+# # define model type to use and any suffix to the dataset
+# model_type <- 'ranger_full'
+# suffix <- '_selection'
+# 
+# # retrieve landsat date from LUT
+# l_name <- e$closest_landsat_image
+# l_date <- sub('LC.*4_', '', sub('_stitched.tif', '', l_name))
+# 
+# # define filename of landsat 30m covariate dataset
+# l_file <- paste0('3_d2_', l_date, '_prediction_covariates.tif')
+# 
+# # load Landsat covariate raster 
+# l_30 <- rast(paste0(run_filepath, l_file))
+# 
+# # define date and name of downscaling model
+# m_date <- e$modis_date
+# dmodel_file <- paste0('3_f1_', m_date, '_', model_type, '_model', suffix, '.RDS')
+# 
+# # load downscaling model 
+# dmodel <- readRDS(paste0(run_filepath, dmodel_file))
+# 
+# # check that covariates match 
+# l_30_names <- names(l_30)
+# dmodel_names <- dmodel$finalModel$xNames
+# if(any(names(l_30) != dmodel$finalModel$xNames)){print('The covariates are not matching! 
+#     Make sure that the prediction covariate raster has the same predictors are the ones used to train the model')
+# }else{print('All good! The covariates match!')}
+# 
+# identical(names(l_30), dmodel$finalModel$xNames)
+# n <- names(l_30)
+# n <- append(n, 'B10')
+# identical(n, dmodel$finalModel$xNames)
+# 
+# # predict 
+# modis_30 <- predict(l_30, dmodel)
+# names(modis_30) <- 'ndvi_pred'
+# modis_30
+# plot(modis_30)
+# 
+# 
+# plot(l_30$B5.B4)
+# 
+# # load modis 250m 
+# modis_250 <- rast(paste0(modis_filepath,e$modis_image))[[3]]
+# #plot(modis_250[[3]])
+# 
+# # upscale predicted modis raster to 250m for comparison 
+# mpred <- resample(modis_30, modis_250)
+# 
+# # compare modis 30m with modis 250m
+# num_obs <- ncol(mpred) * nrow(mpred)
+# 
+# # source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
+# error <- mpred$ndvi_pred - modis_250
+# 
+# # source: https://rdrr.io/cran/terra/man/global.html#google_vignette
+# mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
+# rmse <- sqrt(mse)
+# mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
+# 
+# # source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
+# r2 <- cor(values(mpred$ndvi_pred), values(modis_250), use="complete.obs", method = 'pearson')[[1]]
+# 
+# results <- data.frame(MSE = mse, RMSE = rmse, MAE = mae, R2 = r2)
+# errors <- data.frame(summary(error))[,3]
+# abs_errors <- data.frame(summary(abs(error)))[,3]
+# 
+# # source: https://stackoverflow.com/questions/41056639/r-get-value-from-summary
+# summary_errors <- data.frame('Label' = sub(':.*', '', errors), 'Error' = as.numeric(sub('.*:', '', errors)), 
+#                              'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
+# 
+# # plot errors
+# plot(error)
+# plot(error < 0)
+# plot(abs(error))
+
+# plot outliers 
+plot(abs(error) > 0.05)
+
+e$
 
 e1 <- LUT[1,]
 e1
