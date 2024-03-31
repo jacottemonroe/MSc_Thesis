@@ -22,8 +22,9 @@
 ##      3_f8: the error and absolute error between the predicted image and original dataset (as png)
 
 
-fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_suffix = '', 
-                                subset_predictors = NULL, feature_selection = F, regression_type = 'lm', output_directory = 'data/'){
+fitRegression <- function(input_filepath, ID, week, modis_date, input_suffix = '', 
+                          subset_predictors = NULL, feature_selection = F, regression_type = 'lm', 
+                          output_directory = 'data/', output_suffix = ''){
   
   # define output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -34,8 +35,8 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
   ## MODEL TRAINING
   
   # load sampled points and the cross-validation folds 
-  sample_points <- readRDS(paste0(input_filepath, '3_e1_', modis_date, '_trainingPoints.RDS'))
-  cv_folds <- readRDS(paste0(input_filepath, '3_e2_', modis_date, '_CVFolds.RDS'))
+  sample_points <- readRDS(paste0(input_filepath, '3_e1_', modis_date, '_trainingPoints', intput_suffix, '.RDS'))
+  cv_folds <- readRDS(paste0(input_filepath, '3_e2_', modis_date, '_CVFolds', input_suffix, '.RDS'))
   
   # retrieve covariates from sample points and store in a new dataframe
   covs <- data.frame(sample_points)
@@ -57,7 +58,7 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
     # set ranger parameters to default apart from mtry 
     # source: https://cran.r-project.org/web/packages/ranger/ranger.pdf
     # source: https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument
-    grid_setting <- expand.grid(mtry = 1:28, splitrule = 'variance', min.node.size = 5)
+    grid_setting <- expand.grid(mtry = 1:length(colnames(covs)), splitrule = 'variance', min.node.size = 5)
     
   }else{print('Specified regression model type is not valid for this function. Try: lm, cubist, or ranger')}
   
@@ -107,18 +108,18 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
   
   # store and save results
   print(model)
-  saveRDS(model, paste0(output_filepath, '3_f1_', modis_date, '_', regression_type, '_', model_type, '_model.RDS'))
-  write.csv(data.frame(model$results), paste0(output_filepath, '3_f2_', modis_date, '_', regression_type, '_', model_type, '_results.csv'))
-  #write.csv(data.frame(final_model), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_finalModel.csv'))
-  write.csv(t(data.frame(varImp(model)$importance)), paste0(output_filepath, '3_f4_', modis_date, '_', regression_type, '_', model_type, '_importances.csv'))
+  saveRDS(model, paste0(output_filepath, '3_f1_', modis_date, '_', regression_type, '_', model_type, '_model', output_suffix, '.RDS'))
+  write.csv(data.frame(model$results), paste0(output_filepath, '3_f2_', modis_date, '_', regression_type, '_', model_type, '_results', output_suffix, '.csv'))
+  #write.csv(data.frame(final_model), paste0(output_filepath, '3_f3_', modis_date, '_', regression_type, '_', model_type, '_finalModel', output_suffix, '.csv'))
+  write.csv(t(data.frame(varImp(model)$importance)), paste0(output_filepath, '3_f4_', modis_date, '_', regression_type, '_', model_type, '_importances', output_suffix, '.csv'))
   if(regression_type == 'lm'){
-    write.csv(t(data.frame(VIF = sort(vif(model$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif.csv'))
+    write.csv(t(data.frame(VIF = sort(vif(model$finalModel)))), paste0(output_filepath, '3_f5_', modis_date, '_', regression_type, '_', model_type, '_vif', output_suffix, '.csv'))
   }
 
   ## MODEL TESTING 
   
   # load covariates/response dataset 
-  dataset <- rast(paste0(input_filepath,'3_d1_', modis_date, '_dataset', input_dataset_suffix, '.tif'))
+  dataset <- rast(paste0(input_filepath,'3_d1_', modis_date, '_dataset', input_suffix, '.tif'))
   
   # retrieve the dataset covariates to match those used in training the model
   dataset_covs <- dataset[[names(dataset) %in% colnames(covs)]]
@@ -150,10 +151,10 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_dataset_su
                                'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
   
   # save outputs 
-  writeRaster(dataset_predicted, paste0(output_filepath, '3_f6_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m.tif'))
-  write.csv(results, paste0(output_filepath, '3_f7_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_results.csv'))
-  write.csv(summary_errors, paste0(output_filepath, '3_f8_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_error_summary.csv'))
-  png(paste0(output_filepath, '3_f9_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_errors.png'))
+  writeRaster(dataset_predicted, paste0(output_filepath, '3_f6_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m', output_suffix, '.tif'))
+  write.csv(results, paste0(output_filepath, '3_f7_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_results', output_suffix, '.csv'))
+  write.csv(summary_errors, paste0(output_filepath, '3_f8_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_error_summary', output_suffix, '.csv'))
+  png(paste0(output_filepath, '3_f9_', modis_date, '_', regression_type, '_', model_type, '_predNDVI_250m_errors', output_suffix, '.png'))
   par(mfrow = c(3, 1))
   plot(error)
   plot(error < 0)

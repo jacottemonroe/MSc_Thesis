@@ -15,10 +15,10 @@
 
 
 
-sampleTrainingPoints <- function(dataset_filepath, ID, week, modis_date, input_dataset_suffix = '', output_directory = 'data/'){
+sampleTrainingPoints <- function(dataset_filepath, ID, week, modis_date, input_suffix = '', output_directory = 'data/', output_suffix = ''){
   
   # load the covariates/response dataset 
-  dataset <- rast(paste0(dataset_filepath, '3_d1_', modis_date, '_dataset', input_dataset_suffix, '.tif'))
+  dataset <- rast(paste0(dataset_filepath, '3_d1_', modis_date, '_dataset', input_suffix, '.tif'))
   
   # create grid object from an empty raster
   # source: https://gis.stackexchange.com/questions/431873/creating-regular-sampling-grid-with-specific-distance-between-points-using-r
@@ -46,7 +46,7 @@ sampleTrainingPoints <- function(dataset_filepath, ID, week, modis_date, input_d
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # save sampled points as RDS
-  saveRDS(sample_points, paste0(output_filepath, '3_e1_', modis_date, '_trainingPoints.RDS'))
+  saveRDS(sample_points, paste0(output_filepath, '3_e1_', modis_date, '_trainingPoints', output_suffix, '.RDS'))
   
   # create a list of folds for cross-validation 
   # each list has the indices of points to include or exclude for each CV iteration
@@ -54,5 +54,5 @@ sampleTrainingPoints <- function(dataset_filepath, ID, week, modis_date, input_d
   cv_folds <- CreateSpacetimeFolds(sample_points, spacevar = 'grid_ID', k = 9)
   
   # save list of folds 
-  saveRDS(cv_folds, paste0(output_filepath, '3_e2_', modis_date, '_CVFolds.RDS'))
+  saveRDS(cv_folds, paste0(output_filepath, '3_e2_', modis_date, '_CVFolds', output_suffix, '.RDS'))
 }

@@ -86,15 +86,19 @@ createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/'
 ###########
 
 # load function 
-source('functions_elephant_ssf/3_d_creatingCovariatesResponseSet.R')
+source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
 
 # necessary packages 
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
 
+# define band combinations that want for band ratios 
+b_ratios <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
+
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
-  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, LUT[i,])
+  createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, LUT[i,], 
+                              band_combinations = b_ratios, output_filename_suffix = '_selection')
 }
 
 
@@ -117,7 +121,7 @@ library(CAST)
 # run function for each image from the LUT
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  sampleTrainingPoints(run_filepath, ID, week, modis_date)
+  sampleTrainingPoints(run_filepath, ID, week, modis_date, input_suffix = '_selection', output_suffix = '_selection')
 }
 
 # extra (visualize sample points distribution vs dataset distribution)
@@ -153,25 +157,26 @@ library(CAST)
 # run function to generate full models
 for(i in 1:nrow(LUT)){
   modis_date <- LUT$modis_date[i]
-  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
-                feature_selection = F, regression_type = 'lm')
-  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
-                feature_selection = F, regression_type = 'cubist')
-  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
-                feature_selection = F, regression_type = 'ranger')
+  # fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+  #               feature_selection = F, regression_type = 'lm')
+  # fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
+  #               feature_selection = F, regression_type = 'cubist')
+  fitRegression(run_filepath, ID, week, modis_date, input_suffix = '_selection', subset_predictors = NULL, 
+                feature_selection = F, regression_type = 'ranger', output_suffix = '_selection')
 }
 
-# run function to generate FFS models 
-for(i in 1:nrow(LUT)){
-  modis_date <- LUT$modis_date[i]
-  fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL, 
-                feature_selection = T, regression_type = 'lm')
-  #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-   #             subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
-  # note: can't run FFS with RF --> takes too long
-  #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs', 
-   #             subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
-}
+
+# # run function to generate FFS models
+# for(i in 1:nrow(LUT)){
+#   modis_date <- LUT$modis_date[i]
+#   fitRegression(run_filepath, ID, week, modis_date, subset_predictors = NULL,
+#                 feature_selection = T, regression_type = 'lm')
+#   #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs',
+#    #             subset_predictors = NULL, feature_selection = T, regression_type = 'cubist')
+#   # note: can't run FFS with RF --> takes too long
+#   #fitRegression(run_filepath, ID, week, modis_date, input_dataset_suffix = '_noNegs',
+#    #             subset_predictors = NULL, feature_selection = T, regression_type = 'ranger')
+# }
 
 
 
@@ -199,9 +204,12 @@ library(terra)
 # get list of landsat image names 
 landsat_image_list <- unique(LUT$closest_landsat_image)
 
+# define band combinations that want for band ratios 
+b_ratios <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
+
 # run function for each landsat image 
 for(file in landsat_image_list){
-  createPredictionCovariatesSet(landsat_filepath, file, ID, week)
+  createPredictionCovariatesSet(landsat_filepath, file, ID, week, b_ratios)
 }
 
 

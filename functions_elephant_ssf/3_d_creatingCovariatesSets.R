@@ -11,7 +11,7 @@
 
 
 
-createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, week, LUT_entry, 
+createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, week, LUT_entry, band_combinations = NULL,
                                             output_directory = 'data/', output_filename_suffix = ''){
   
   # define modis date 
@@ -47,23 +47,39 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   mask <- any(is.na(dataset))
   dataset <- mask(dataset, mask, maskvalues = T)
   
-  # get dataframe of all band combinations
-  # source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
-  band_combinations <- expand.grid(bandA = names(dataset['B.']), bandB = names(dataset['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
-  
-  # calculate landsat band ratios 
-  for(i in 1:nrow(band_combinations)){
-    # get band name from combination dataframe 
-    bandA <- band_combinations[i,1]
-    bandB <- band_combinations[i,2]
+  if(is.null(band_combinations)){
+    # get dataframe of all band combinations
+    # source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
+    band_combinations <- expand.grid(bandA = names(dataset['B.']), bandB = names(dataset['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
     
-    # get band number 
-    # source: https://www.statology.org/r-extract-number-from-string/
-    bandA_number <- as.numeric(gsub("\\D", "", bandA))
-    bandB_number <- as.numeric(gsub("\\D", "", bandB))
-    
-    if(bandA_number>bandB_number){
-      # calculate ratio 
+    # calculate landsat band ratios 
+    for(i in 1:nrow(band_combinations)){
+      # get band name from combination dataframe 
+      bandA <- band_combinations[i,1]
+      bandB <- band_combinations[i,2]
+      
+      # get band number 
+      # source: https://www.statology.org/r-extract-number-from-string/
+      bandA_number <- as.numeric(gsub("\\D", "", bandA))
+      bandB_number <- as.numeric(gsub("\\D", "", bandB))
+      
+      if(bandA_number>bandB_number){
+        # calculate ratio 
+        ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
+        
+        # add band ratio to dataset
+        layer_name <- paste0(bandA,'.',bandB)
+        dataset[[layer_name]] <- ratio
+      }
+    }
+  }else{
+    # calculate landsat band ratios specified in list 
+    for(bands in band_combinations){
+      # get bands 
+      bandA <- bands[1]
+      bandB <- bands[2]
+      
+      # calculate band ratio 
       ratio <- (dataset[[bandA]]-dataset[[bandB]])/(dataset[[bandA]]+dataset[[bandB]])
       
       # add band ratio to dataset
@@ -96,7 +112,7 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
 
 
 
-createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID, week, 
+createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID, week, band_combinations,
                                         output_directory = 'data/'){
   
   # # define date 
@@ -116,9 +132,6 @@ createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID
   # source: https://stackoverflow.com/questions/73719011/mask-layer-of-a-raster-stack-using-other-layer-using-terra
   mask <- any(is.na(l_30))
   l_30 <- mask(l_30, mask, maskvalues = T)
-  
-  # define list of band combinations that want to generate 
-  band_combinations <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
   
   # calculate landsat band ratios 
   for(bands in band_combinations){
