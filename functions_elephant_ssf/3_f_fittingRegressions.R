@@ -35,7 +35,7 @@ fitRegression <- function(input_filepath, ID, week, modis_date, input_suffix = '
   ## MODEL TRAINING
   
   # load sampled points and the cross-validation folds 
-  sample_points <- readRDS(paste0(input_filepath, '3_e1_', modis_date, '_trainingPoints', intput_suffix, '.RDS'))
+  sample_points <- readRDS(paste0(input_filepath, '3_e1_', modis_date, '_trainingPoints', input_suffix, '.RDS'))
   cv_folds <- readRDS(paste0(input_filepath, '3_e2_', modis_date, '_CVFolds', input_suffix, '.RDS'))
   
   # retrieve covariates from sample points and store in a new dataframe
