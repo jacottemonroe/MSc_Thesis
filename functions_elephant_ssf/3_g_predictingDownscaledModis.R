@@ -76,9 +76,9 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
                                'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
   
   # save outputs 
-  write.csv(results, paste0(output_filepath, '3_g2_', modis_date, '_', model_type, '_predNDVI_30m_results', output_suffix, '.csv'))
-  write.csv(summary_errors, paste0(output_filepath, '3_g3_', modis_date, '_', model_type, '_predNDVI_30m_error_summary', output_suffix, '.csv'))
-  png(paste0(output_filepath, '3_g3_', modis_date, '_', model_type, '_predNDVI_30m_errors', output_suffix, '.png'))
+  write.csv(results, paste0(output_filepath, '3_g2_', m_date, '_', model_type, '_predNDVI_30m_results', output_suffix, '.csv'))
+  write.csv(summary_errors, paste0(output_filepath, '3_g3_', m_date, '_', model_type, '_predNDVI_30m_error_summary', output_suffix, '.csv'))
+  png(paste0(output_filepath, '3_g4_', m_date, '_', model_type, '_predNDVI_30m_errors', output_suffix, '.png'))
   par(mfrow = c(1, 3))
   plot(error)
   plot(error < 0)
