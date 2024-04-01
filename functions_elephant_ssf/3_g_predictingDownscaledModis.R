@@ -64,7 +64,8 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
   
   # source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
-  r2 <- cor(values(modis_250_pred), values(modis_250), use="complete.obs", method = 'pearson')[[1]]
+  r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')^2
+  r2 <- r2[[1]]
   
   # store results in dataframes 
   results <- data.frame(MSE = mse, RMSE = rmse, MAE = mae, R2 = r2)
