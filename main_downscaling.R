@@ -242,178 +242,83 @@ for (i in 1:nrow(LUT)) {
 }
 
 
-LUT_entry <- LUT[1,]
-input_filepath <- run_filepath
-input_suffix <- suffix
 
-# retrieve landsat date from LUT
-l_name <- LUT_entry$closest_landsat_image
-l_date <- sub('LC.*4_', '', sub('_stitched.tif', '', l_name))
 
-# load Landsat covariate raster 
-l_30 <- rast(paste0(input_filepath, '3_d2_', l_date, '_prediction_covariates.tif'))
+###########
+## Create mean MODIS NDVI 30m raster 
+###########
 
-# define date and name of downscaling model
-m_date <- LUT_entry$modis_date
+# load function 
+source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
 
-# load downscaling model 
-model <- readRDS(paste0(input_filepath, '3_f1_', m_date, '_', model_type, '_model', input_suffix, '.RDS'))
+# necessary packages 
+if(!('terra') %in% installed.packages()){install.packages('terra')}
+library(terra)
 
-# check that covariates match 
-if(!identical(names(l_30), model$finalModel$xNames)){stop('The covariates are not matching! 
-    Make sure that the prediction covariate raster has the same predictors as the ones used to train the model')}
+# define modis 30 filepath 
+modis_30_filepath <- paste0(run_filepath, '3_g1_downscaled_modis_images_30m_ranger_full_selection/')
 
-class(names(l_30))
-class(model$finalModel$xNames)
-!identical(names(l_30), model$finalModel$xNames)
+# run function 
+createMeanRaster(modis_30_filepath)
 
 
 
-# # run for each entry of the look up table 
-# e <- LUT[1,]
-# 
-# # define model type to use and any suffix to the dataset
-# model_type <- 'ranger_full'
-# suffix <- '_selection'
-# 
-# # retrieve landsat date from LUT
-# l_name <- e$closest_landsat_image
-# l_date <- sub('LC.*4_', '', sub('_stitched.tif', '', l_name))
-# 
-# # define filename of landsat 30m covariate dataset
-# l_file <- paste0('3_d2_', l_date, '_prediction_covariates.tif')
-# 
-# # load Landsat covariate raster 
-# l_30 <- rast(paste0(run_filepath, l_file))
-# 
-# # define date and name of downscaling model
-# m_date <- e$modis_date
-# dmodel_file <- paste0('3_f1_', m_date, '_', model_type, '_model', suffix, '.RDS')
-# 
-# # load downscaling model 
-# dmodel <- readRDS(paste0(run_filepath, dmodel_file))
-# 
-# # check that covariates match 
-# l_30_names <- names(l_30)
-# dmodel_names <- dmodel$finalModel$xNames
-# if(any(names(l_30) != dmodel$finalModel$xNames)){print('The covariates are not matching! 
-#     Make sure that the prediction covariate raster has the same predictors are the ones used to train the model')
-# }else{print('All good! The covariates match!')}
-# 
-# identical(names(l_30), dmodel$finalModel$xNames)
-# n <- names(l_30)
-# n <- append(n, 'B10')
-# identical(n, dmodel$finalModel$xNames)
-# 
-# # predict 
-# modis_30 <- predict(l_30, dmodel)
-# names(modis_30) <- 'ndvi_pred'
-# modis_30
-# plot(modis_30)
-# 
-# 
-# plot(l_30$B5.B4)
-# 
-# # load modis 250m 
-# modis_250 <- rast(paste0(modis_filepath,e$modis_image))[[3]]
-# #plot(modis_250[[3]])
-# 
-# # upscale predicted modis raster to 250m for comparison 
-# mpred <- resample(modis_30, modis_250)
-# 
-# # compare modis 30m with modis 250m
-# num_obs <- ncol(mpred) * nrow(mpred)
-# 
-# # source: https://gis.stackexchange.com/questions/4802/rmse-between-two-rasters-step-by-step
-# error <- mpred$ndvi_pred - modis_250
-# 
-# # source: https://rdrr.io/cran/terra/man/global.html#google_vignette
-# mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
-# rmse <- sqrt(mse)
-# mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
-# 
-# # source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
-# r2 <- cor(values(mpred$ndvi_pred), values(modis_250), use="complete.obs", method = 'pearson')[[1]]
-# 
-# results <- data.frame(MSE = mse, RMSE = rmse, MAE = mae, R2 = r2)
-# errors <- data.frame(summary(error))[,3]
-# abs_errors <- data.frame(summary(abs(error)))[,3]
-# 
-# # source: https://stackoverflow.com/questions/41056639/r-get-value-from-summary
-# summary_errors <- data.frame('Label' = sub(':.*', '', errors), 'Error' = as.numeric(sub('.*:', '', errors)), 
-#                              'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
-# 
-# # plot errors
-# plot(error)
-# plot(error < 0)
-# plot(abs(error))
-
-# plot outliers 
-plot(abs(error) > 0.05)
-
-e$
-
-e1 <- LUT[1,]
-e1
-sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image))
-sub('_stitched.tif', '', e1$closest_landsat_image)
-print(paste0('3_d2_', sub('LC08_179073_4_', '', sub('_stitched.tif', '', e1$closest_landsat_image)), '_prediction_covariates.tif'))
-
-band_combinations <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
-for(i in band_combinations){print(class(i))}
-bc1 <- band_combinations[[1]]
-bc1[1]
 
 
-# decide which predictors to remove
-
-# predict with landsat 30m image 
-l_30
-# get dataframe of all band combinations
-# source: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/expand.grid
-band_combinations_30 <- expand.grid(bandA = names(l_30['B.']), bandB = names(l_30['B.']), KEEP.OUT.ATTRS = F, stringsAsFactors = F)
-
-# calculate landsat band ratios 
-for(i in 1:nrow(band_combinations_30)){
-  # get band name from combination dataframe 
-  bandA <- band_combinations_30[i,1]
-  bandB <- band_combinations_30[i,2]
-  
-  # get band number 
-  # source: https://www.statology.org/r-extract-number-from-string/
-  bandA_number <- as.numeric(gsub("\\D", "", bandA))
-  bandB_number <- as.numeric(gsub("\\D", "", bandB))
-  
-  if(bandA_number>bandB_number){
-    # calculate ratio 
-    ratio <- (l_30[[bandA]]-l_30[[bandB]])/(l_30[[bandA]]+l_30[[bandB]])
-    
-    # add band ratio to dataset
-    layer_name <- paste0(bandA,'.',bandB)
-    l_30[[layer_name]] <- ratio
-  }
-}
-
-# save landsat 30 image with new bands
-saveRDS(l_30, paste0(run_filepath,'3_c4_', LUT$modis_date,'_l30.RData'))
 
 
-# predict MODIS at 30m
-l_30 <- l_30[[names(l_30) %in% lr_model_ffs$selectedvars]]
 
-modis_30 <- predict(l_30, lr_model_ffs)
-names(modis_30) <- 'ndvi_pred'
 
-plot(modis_30)
 
-# see results 
-m_30_250 <- resample(modis_30, modis_250)
-num_obs <- ncol(m_30_250) * nrow(m_30_250)
-error <- m_30_250$ndvi_pred - modis_250$NDVI
-mse <- global(error**2, 'sum', na.rm = T)[[1]]/num_obs
-rmse <- sqrt(mse)
-mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
-r2 <- cor(values(m_30_250$ndvi_pred), values(modis_250$NDVI), use="complete.obs", method = 'pearson')[[1]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -504,11 +409,6 @@ for(i in 1:length(unique(dat$burst_))){
 png('data/LA14/2260/random_image.png')
 mov_map
 dev.off()
-
-
-
-
-
 
 
 

@@ -89,3 +89,19 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   plot(abs(error))
   dev.off()
 }
+
+
+
+# Function that creates a mean raster from all images in directory 
+
+createMeanRaster <- function(modis_filepath, output_filename = 'mean_ndvi.tif'){
+  
+  # load all MODIS images into one stacked raster 
+  modis_raster <- rast(list.files(modis_filepath, full.names = T))
+  
+  # average all raster layers into one layer
+  mean_raster <- mean(modis_raster)
+  
+  # save raster 
+  writeRaster(mean_raster, paste0(modis_filepath, output_filename), overwrite = T)
+}
