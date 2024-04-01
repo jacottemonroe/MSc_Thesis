@@ -35,7 +35,7 @@ downscaling_model <- run_settings[[5]]
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
-
+print(paste('Now extracting covariates for elephant', ID, 'of week', week, '...'))
 
 ###########
 ## Extract covariates or each step from the MODIS images 
@@ -57,4 +57,3 @@ loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs
                          downscaling = downscaling_setting, downscaling_model = downscaling_model, output_directory = 'data/')
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
-print('Now visualizing the elephant paths...')

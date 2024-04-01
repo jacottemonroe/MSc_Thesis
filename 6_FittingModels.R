@@ -45,6 +45,8 @@ downscaling_setting <- run_settings[[4]]
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
+print(paste('Now fitting models for elephant', ID, 'of week', week, '...'))
+
 
 
 ###########

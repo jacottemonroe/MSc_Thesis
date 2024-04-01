@@ -31,7 +31,7 @@ downscaling_model <- run_settings[[5]]
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
-
+print(paste('Now visualizing the movement paths for elephant', ID, 'of week', week, '...'))
 
 ###########
 ## Map elephant paths
@@ -52,4 +52,3 @@ visualizePaths(run_filepath, ID, week, pseudo_abs_method, downscaling= downscali
                downscaling_model = downscaling_model, title = "Elephant Movement on Mean NDVI", output_directory = 'output/')
 
 print(paste('(DONE) Visualizing the movement paths for elephant', ID, 'of week', week))
-print('Now fitting models...')
