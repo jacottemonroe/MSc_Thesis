@@ -22,10 +22,10 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   if(downscaling == 'NULL'){
     suffix <- ''
     
-  }else if(downscaling == 'T'){
+  }else if(downscaling == T){
     suffix <- '_downscaling_modis_30m'
     
-  }else if(downscaling == 'F'){
+  }else if(downscaling == F){
     suffix <- '_downscaling_modis_250m'
 
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}

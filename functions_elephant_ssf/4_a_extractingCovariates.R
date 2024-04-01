@@ -30,12 +30,12 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
     
     output_suffix <- ''
     
-  }else if(downscaling == 'T'){
+  }else if(downscaling == T){
     modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
     
     output_suffix <- '_downscaling_modis_30m'
 
-  }else if(downscaling == 'F'){
+  }else if(downscaling == F){
     modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method, '/')
     
     output_suffix <- '_downscaling_modis_250m'
