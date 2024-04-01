@@ -64,6 +64,7 @@ if(length(l_files) == 0){
 
 
 
+
 ###########
 ## create LUT to match each MODIS image to the closest Landsat image 
 ###########
@@ -190,6 +191,7 @@ for(i in 1:nrow(LUT)){
 
 
 
+
 ###########
 ## Create covariate (Landsat8) raster for predicting MODIS 30m
 ###########
@@ -214,6 +216,7 @@ for(file in landsat_image_list){
 
 
 
+
 ###########
 ## Predict MODIS 30m
 ###########
@@ -224,6 +227,8 @@ source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
 # necessary packages
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
+if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
+library(ggplot2)
 
 # specify model type and suffix if any 
 model_type <- 'ranger_full'
