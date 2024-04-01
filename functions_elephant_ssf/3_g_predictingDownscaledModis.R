@@ -36,13 +36,13 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   names(modis_30) <- 'ndvi_pred'
   
   # define output filepath 
-  output_filepath <- paste0(output_directory, ID, '/', week, '/', '3_g1_downscaled_modis_images_30m_', model_type, output_suffix, '/')
+  output_filepath1 <- paste0(output_directory, ID, '/', week, '/', '3_g1_downscaled_modis_images_30m_', model_type, output_suffix, '/')
   
   # create output filepath if it does not yet exist
-  if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
+  if(!dir.exists(output_filepath1)){dir.create(output_filepath1, recursive = T)}
   
   # save predicted raster
-  writeRaster(modis_30, paste0(output_filepath, LUT_entry$modis_image))
+  writeRaster(modis_30, paste0(output_filepath1, LUT_entry$modis_image), overwrite = T)
               
   # load modis 250m 
   modis_250 <- rast(paste0(modis_filepath, LUT_entry$modis_image))[[3]]
@@ -75,10 +75,16 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   summary_errors <- data.frame('Label' = sub(':.*', '', errors), 'Error' = as.numeric(sub('.*:', '', errors)), 
                                'Abs(Error)' = as.numeric(sub('.*:', '', abs_errors)))
   
+  # define output filepath 
+  output_filepath2 <- paste0(output_directory, ID, '/', week, '/')
+  
+  # create output filepath if it does not yet exist
+  if(!dir.exists(output_filepath2)){dir.create(output_filepath2, recursive = T)}
+  
   # save outputs 
-  write.csv(results, paste0(output_filepath, '3_g2_', m_date, '_', model_type, '_predNDVI_30m_results', output_suffix, '.csv'))
-  write.csv(summary_errors, paste0(output_filepath, '3_g3_', m_date, '_', model_type, '_predNDVI_30m_error_summary', output_suffix, '.csv'))
-  png(paste0(output_filepath, '3_g4_', m_date, '_', model_type, '_predNDVI_30m_errors', output_suffix, '.png'))
+  write.csv(results, paste0(output_filepath2, '3_g2_', m_date, '_', model_type, '_predNDVI_30m_results', output_suffix, '.csv'))
+  write.csv(summary_errors, paste0(output_filepath2, '3_g3_', m_date, '_', model_type, '_predNDVI_30m_error_summary', output_suffix, '.csv'))
+  png(paste0(output_filepath2, '3_g4_', m_date, '_', model_type, '_predNDVI_30m_errors', output_suffix, '.png'))
   par(mfrow = c(1, 3))
   plot(error)
   plot(error < 0)
