@@ -46,6 +46,9 @@ if(!('amt') %in% installed.packages()){install.packages('amt')}
 library(amt)
 
 # run function
+# Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
+#         MODIS 250m retrieved through downscaling JN script (downscaling == F), MODIS 30m generated through downscaling in R (downscaling == T).
+# Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
 loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, output_directory = 'data/')
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))

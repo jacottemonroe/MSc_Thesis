@@ -32,9 +32,6 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   # predict MODIS 30m using the selected Landsat 30m dataset and model
   modis_30 <- predict(l_30, model)
   
-  # change layer name of predicted raster
-  names(modis_30) <- 'ndvi_pred'
-  
   # define output filepath 
   output_filepath1 <- paste0(output_directory, ID, '/', week, '/', '3_g1_downscaled_modis_images_30m_', model_type, output_suffix, '/')
   
@@ -45,7 +42,7 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   writeRaster(modis_30, paste0(output_filepath1, LUT_entry$modis_image), overwrite = T)
               
   # load modis 250m 
-  modis_250 <- rast(paste0(modis_filepath, LUT_entry$modis_image))[[3]]
+  modis_250 <- rast(paste0(modis_filepath, LUT_entry$modis_image))
   
   # upscale predicted modis raster to 250m for comparison 
   modis_250_pred <- resample(modis_30, modis_250)
@@ -64,7 +61,7 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   mae <- global(abs(error), 'sum', na.rm = T)[[1]]/num_obs
   
   # source: https://stackoverflow.com/questions/63335671/correct-way-of-determining-r2-between-two-rasters-in-r#:~:text=R2%20%3D%20r%20*%20r.,of%202%20to%20get%20R2.
-  r2 <- cor(values(dataset_predicted$ndvi_pred), values(dataset$ndvi), use="complete.obs", method = 'pearson')^2
+  r2 <- cor(values(modis_250_pred), values(modis_250), use="complete.obs", method = 'pearson')^2
   r2 <- r2[[1]]
   
   # store results in dataframes 

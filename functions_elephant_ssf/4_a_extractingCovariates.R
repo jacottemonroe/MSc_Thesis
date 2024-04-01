@@ -3,8 +3,10 @@
 ## Function SSF script 
 
 # Function that loads the NDVI data (rasters), retrieves and stores the covariates in a table for each step.
-# 
-# Input: filename of elephant step dataset, directory name where NDVI data stored, 
+# Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
+#         MODIS 250m retrieved through downscaling JN script (downscaling = F), MODIS 30m generated through downscaling in R (downscaling = T).
+# Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
+# Input: filename of elephant step dataset, directory name where NDVI data stored,
 #   specified lag (covariate calculated from two images, specify lag between two images), 
 #   output data frame filename.
 #   
@@ -12,7 +14,7 @@
 
  
 loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, 
-                                     random_data_method, output_directory = 'data/'){ 
+                                     random_data_method, downscaling = NULL, downscaling_model = 'ranger_full_selection', output_directory = 'data/'){ 
   
   # load step dataset RDS 
   step_dataset <- readRDS(paste0(input_directory, '1_b1_all_steps_', random_data_method, '.RDS'))
@@ -23,7 +25,14 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
-  modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method)
+  if(is.null(downscaling)){
+    modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method)
+  }else if(downscaling == F){
+    modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method)
+  }else if(downscaling == T){
+    modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model)
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+
   modis_images <- rast(list.files(modis_directory, pattern = glob2rx('2*.tif'), full.names = T))
   
   # add a time (date) attribute to the spatraster --> daily interval 

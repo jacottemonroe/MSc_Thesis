@@ -22,7 +22,7 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
   l_30 <- rast(paste0(landsat_filepath, LUT_entry$closest_landsat_image))
   
   # rename layer names to corresponding bands 
-  names(modis_250) <- c('B1', 'B2', 'NDVI')
+  names(modis_250) <- 'NDVI'
   names(l_30) <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7')
   
   # removing outlier pixel values --> negative NDVI or reflectance values 
