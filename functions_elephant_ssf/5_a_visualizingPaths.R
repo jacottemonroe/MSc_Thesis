@@ -3,12 +3,15 @@
 
 ## Visualization function of paths on mean MODIS NDVI
 
-# Function takes filenames of step dataset and MODIS mean NDVI (mean week value)
+# Function takes filenames of step dataset and MODIS mean NDVI (mean week value).
+# Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
+#         MODIS 250m retrieved through downscaling JN script (downscaling = F), MODIS 30m generated through downscaling in R (downscaling = T).
+# Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
 # Input: filepaths for modis and step dataset, elephant ID and week of interest, 
 #         the map title, and the directory for output. All inputs are strings. 
 # Output: Map of filepaths on top of NDVI raster saved as png. 
 
-visualizePaths <- function(input_filepath, ID, week, random_data_method, 
+visualizePaths <- function(input_filepath, ID, week, random_data_method, downscaling= 'NULL', downscaling_model = 'ranger_full_selection',
                            title = 'Elephant Movement on NDVI', output_directory = 'output/'){
   
   # create output filepath 
@@ -17,8 +20,26 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method,
   # create data directory if it does not yet exist
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
+  # define data directory and output suffix
+  if(downscaling == 'NULL'){
+    modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
+    
+    output_suffix <- ''
+    
+  }else if(downscaling == 'T'){
+    modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+    
+    output_suffix <- '_downscaling_modis_30m'
+    
+  }else if(downscaling == 'F'){
+    modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
+    
+    output_suffix <- '_downscaling_modis_250m'
+    
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
   # read NDVI dataset
-  ndvi_data <- rast(paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/', 'mean_ndvi.tif'))
+  ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
   names(ndvi_data) <- 'ndvi'
   
   # create NDVI basemap 
@@ -47,7 +68,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method,
   } 
   
   # save map as png
-  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method,'.png'))
+  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, output_suffix,'.png'))
   print(mov_map)
   dev.off()
   

@@ -24,6 +24,10 @@ week <- run_settings[[2]]
 # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
 pseudo_abs_method <- run_settings[[3]]
 
+# set downscaling parameters 
+downscaling_setting <- run_settings[[4]]
+downscaling_model <- run_settings[[5]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -44,7 +48,8 @@ if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')} # fo
 library(tidyterra)
 
 # run function 
-visualizePaths(run_filepath, ID, week, pseudo_abs_method, title = "Elephant Movement on Mean NDVI", output_directory = 'output/')
+visualizePaths(run_filepath, ID, week, pseudo_abs_method, downscaling= downscaling_setting, 
+               downscaling_model = downscaling_model, title = "Elephant Movement on Mean NDVI", output_directory = 'output/')
 
 print(paste('(DONE) Visualizing the movement paths for elephant', ID, 'of week', week))
 print('Now fitting models...')

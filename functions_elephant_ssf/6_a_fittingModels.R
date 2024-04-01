@@ -10,7 +10,7 @@
 
 
 
-fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method = 'random_path_custom_distr', 
+fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method = 'random_path_custom_distr', downscaling = 'NULL',
                         multicolinearity_check = F, full = T, output_directory = 'output/'){
   
   # create output filepath 
@@ -19,8 +19,19 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   # create data directory if it does not yet exist
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
+  if(downscaling == 'NULL'){
+    suffix <- ''
+    
+  }else if(downscaling == 'T'){
+    suffix <- '_downscaling_modis_30m'
+    
+  }else if(downscaling == 'F'){
+    suffix <- '_downscaling_modis_250m'
+
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
   # read step dataset
-  step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, '.csv'))
+  step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
   
   # generate correlation matrix 
   if(multicolinearity_check == T){
@@ -30,7 +41,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
     covariates <- step_dataset %>% select(contains(c('case_', 'ndvi')))
     
     # save matrix as png
-    png(filename = paste0(output_filepath, '6_a1_correlation_matrix_', random_data_method, '.png'), width = 850, height = 350)
+    png(filename = paste0(output_filepath, '6_a1_correlation_matrix_', random_data_method, suffix, '.png'), width = 850, height = 350)
     
     # source: # source: https://r-charts.com/correlation/ggpairs/?utm_content=cmp-true
     correlation_matrix <- ggpairs(covariates, columns = 2:ncol(covariates), aes(color = as.factor(case_), alpha = 0.5))    
@@ -101,10 +112,10 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   glm_vif <- data.frame(vif_results)
   
   # save model results as csv 
-  write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs_', random_data_method, '.csv'))
-  write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests_', random_data_method, '.csv'))
+  write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs_', random_data_method, suffix, '.csv'))
+  write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests_', random_data_method, suffix, '.csv'))
   
-  write.csv(glm_coef, paste0(output_filepath, output_number, '3_glm', model_type, 'coefs_', random_data_method, '.csv'))
-  write.csv(glm_deviances, paste0(output_filepath, output_number, '4_glm', model_type, 'deviances_', random_data_method, '.csv'))
-  write.csv(glm_vif, paste0(output_filepath, output_number, '5_glm', model_type, 'vif_', random_data_method, '.csv'))
+  write.csv(glm_coef, paste0(output_filepath, output_number, '3_glm', model_type, 'coefs_', random_data_method, suffix, '.csv'))
+  write.csv(glm_deviances, paste0(output_filepath, output_number, '4_glm', model_type, 'deviances_', random_data_method, suffix, '.csv'))
+  write.csv(glm_vif, paste0(output_filepath, output_number, '5_glm', model_type, 'vif_', random_data_method, suffix, '.csv'))
 }

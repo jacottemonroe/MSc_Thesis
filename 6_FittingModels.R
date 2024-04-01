@@ -39,6 +39,9 @@ week <- run_settings[[2]]
 # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
 pseudo_abs_method <- run_settings[[3]]
 
+# set downscaling parameter
+downscaling_setting <- run_settings[[4]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -63,7 +66,7 @@ if(!('car') %in% installed.packages()){install.packages('car')}
 library(car) # needed to run vif()
 
 # run function
-fitSSFModel(run_filepath, ID, week, pseudo_abs_method, multicolinearity_check = T, full = T, 'output/')
+fitSSFModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, multicolinearity_check = T, full = T, 'output/')
 
 
 
@@ -71,7 +74,7 @@ fitSSFModel(run_filepath, ID, week, pseudo_abs_method, multicolinearity_check = 
 ## Fit models on dataset with subset of predictors and save model outputs
 ###########
 # run function
-fitSSFModel(run_filepath, ID, week, pseudo_abs_method, multicolinearity_check = F, full = F, 'output/')
+fitSSFModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, multicolinearity_check = F, full = F, 'output/')
 
 print(paste('(DONE) Fitting models for elephant', ID, 'of week', week))
 print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week', week))

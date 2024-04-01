@@ -28,6 +28,10 @@ week <- run_settings[[2]]
 # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
 pseudo_abs_method <- run_settings[[3]]
 
+# set downscaling parameter 
+downscaling_setting <- run_settings[[4]]
+downscaling_model <- run_settings[[5]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -49,7 +53,8 @@ library(amt)
 # Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
 #         MODIS 250m retrieved through downscaling JN script (downscaling == F), MODIS 30m generated through downscaling in R (downscaling == T).
 # Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
-loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, output_directory = 'data/')
+loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, 
+                         downscaling = downscaling_setting, downscaling_model = downscaling_model, output_directory = 'data/')
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
 print('Now visualizing the elephant paths...')

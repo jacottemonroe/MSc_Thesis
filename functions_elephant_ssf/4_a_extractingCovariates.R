@@ -14,7 +14,7 @@
 
  
 loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, 
-                                     random_data_method, downscaling = NULL, downscaling_model = 'ranger_full_selection', output_directory = 'data/'){ 
+                                     random_data_method, downscaling = 'NULL', downscaling_model = 'ranger_full_selection', output_directory = 'data/'){ 
   
   # load step dataset RDS 
   step_dataset <- readRDS(paste0(input_directory, '1_b1_all_steps_', random_data_method, '.RDS'))
@@ -25,12 +25,21 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
-  if(is.null(downscaling)){
-    modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method)
-  }else if(downscaling == F){
-    modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method)
-  }else if(downscaling == T){
-    modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model)
+  if(downscaling == 'NULL'){
+    modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method, '/')
+    
+    output_suffix <- ''
+    
+  }else if(downscaling == 'T'){
+    modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+    
+    output_suffix <- '_downscaling_modis_30m'
+
+  }else if(downscaling == 'F'){
+    modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method, '/')
+    
+    output_suffix <- '_downscaling_modis_250m'
+    
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
 
   modis_images <- rast(list.files(modis_directory, pattern = glob2rx('2*.tif'), full.names = T))
@@ -89,5 +98,5 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   
   # save this dataframe for now since took so long to generate 
   #write.csv(step_dataset, paste0('output/elephant_etosha/LA2_', as.character(w), '_step_dataset.csv'))
-  write.csv(step_dataset, paste0(output_filepath, '4_a1_cov_resp_dataset_', random_data_method, '.csv'))
+  write.csv(step_dataset, paste0(output_filepath, '4_a1_cov_resp_dataset_', random_data_method, output_suffix, '.csv'))
 }
