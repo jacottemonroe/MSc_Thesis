@@ -20,21 +20,21 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # create data directory if it does not yet exist
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
-  # define data directory and output suffix
+  # define data directory and suffix
   if(downscaling == 'NULL'){
     modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
     
-    output_suffix <- ''
+    suffix <- ''
     
   }else if(downscaling == T){
     modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
     
-    output_suffix <- '_downscaling_modis_30m'
+    suffix <- '_downscaling_modis_30m'
     
   }else if(downscaling == F){
     modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
     
-    output_suffix <- '_downscaling_modis_250m'
+    suffix <- '_downscaling_modis_250m'
     
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
   
@@ -49,7 +49,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
     scale_fill_terrain_c(name = 'NDVI')
   
   # read step dataset
-  dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, '.csv'))
+  dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
   dat$random_id_ <- as.factor(dat$random_id_)
   
   # add title and theme to plot
@@ -68,7 +68,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   } 
   
   # save map as png
-  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, output_suffix,'.png'))
+  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.png'))
   print(mov_map)
   dev.off()
   

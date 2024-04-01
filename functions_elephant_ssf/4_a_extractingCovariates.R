@@ -44,6 +44,9 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
 
   modis_images <- rast(list.files(modis_directory, pattern = glob2rx('2*.tif'), full.names = T))
   
+  # rename the raster layers as the dates using the filenames 
+  names(modis_images) <- sub('/.*/', '', sub('.tif', '', sources(modis_images)))
+  
   # add a time (date) attribute to the spatraster --> daily interval 
   # source: https://rdrr.io/github/rspatial/terra/man/time.html
   # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
