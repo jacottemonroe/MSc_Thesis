@@ -54,9 +54,10 @@ for(i in 1:nrow(run_settings)){
   if(any(sub_df$Pr...z.. <=0.05)){entry$sub_glm_sig_coef <- T}else{entry$sub_glm_sig_coef <- F}
   
   # select predictors that are significant with 95% confidence 
-  # entry$full_glm_sig_coef_which <- list(full_df$X[full_df$Pr...z.. < 0.05])
-  # entry$sub_glm_sig_coef_which <- list(sub_df$X[sub_df$Pr...z.. < 0.05])
-  # 
+  # source: https://sparkbyexamples.com/r-programming/r-merge-vector-to-string/
+  entry$full_glm_sig_coef_which <- paste(full_df$X[full_df$Pr...z.. < 0.05], collapse = '; ')
+  entry$sub_glm_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. < 0.05], collapse = '; ')
+
   ## how high is the deviance of the fitted model? is the model significant? 
   # retrieve dataset
   full_df <- read.csv(paste0(run_filepath, '6_a4_glm_full_deviances_', pseudo_abs_method, '.csv'))
@@ -87,9 +88,10 @@ for(i in 1:nrow(run_settings)){
   if(any(sub_df$Pr...z.. <=0.05)){entry$sub_clr_sig_coef <- T}else{entry$sub_clr_sig_coef <- F}
   
   # select predictors that are significant with 95% confidence 
-  # entry$full_clr_sig_coef_which <- list(full_df$X[full_df$Pr...z.. < 0.05])
-  # entry$sub_clr_sig_coef_which <- list(sub_df$X[sub_df$Pr...z.. < 0.05])
-  # 
+  # source: https://sparkbyexamples.com/r-programming/r-merge-vector-to-string/
+  entry$full_clr_sig_coef_which <- paste(full_df$X[full_df$Pr...z.. < 0.05], collapse = '; ')
+  entry$sub_clr_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. < 0.05], collapse = '; ')
+
   ## what is the concordance? how much does it vary by? 
   # retrieve dataset
   full_df <- read.csv(paste0(run_filepath, '6_a2_clr_full_tests_', pseudo_abs_method, '.csv'))
@@ -107,6 +109,55 @@ for(i in 1:nrow(run_settings)){
 
 # results for running 13 elephants on week 2075 with three methods 
 write.csv(summary_results, 'output/summary_results_13E_w2075_3M.csv')
+
+
+
+
+#### inspecting all runs 
+
+# select method type 
+m <- summary_results[summary_results$pseudo_abs_method == 'random_step',]
+
+print(paste('Total number of model:', nrow(m)))
+print(paste('Number of full models with VIF <5:', sum(m$VIF_full == T)))
+print(paste('Number of subset models with VIF <5:', sum(m$VIF_sub == T)))
+
+mf <- m[m$VIF_full == T,]
+ms <- m[m$VIF_sub == T,]
+
+print(paste('Number of full models with significant GLM (based on deviance):', sum(mf$full_glm_sig == T)))
+print(paste('Number of subset models with significant GLM (based on deviance):', sum(ms$sub_glm_sig == T)))
+
+print(paste('Number of full models with significant CLR coef:', sum(mf$full_clr_sig_coef == T)))
+print(paste('Number of subset models with significant CLR coef:', sum(ms$sub_clr_sig_coef == T)))
+
+mfg <- mf[mf$full_glm_sig == T,]
+msg <- ms[ms$sub_glm_sig == T,]
+
+print(paste('Number of full models with significant GLM coef:', sum(mfg$full_glm_sig_coef == T)))
+print(paste('Number of subset models with significant GLM coef:', sum(msg$sub_glm_sig_coef == T)))
+
+mf <- mf[mf$full_clr_sig_coef == T,]
+ms <- ms[ms$sub_clr_sig_coef == T,]
+
+mfg <- mfg[mfg$full_glm_sig_coef == T,]
+msg <- msg[msg$sub_glm_sig_coef == T,]
+
+print(paste('Significant GLM predictors in full models:', mfg$full_glm_sig_coef_which))
+print(paste('Significant GLM predictors in subset models:', msg$sub_glm_sig_coef_which))
+
+print(paste('Significant CLR predictors in full models:', mf$full_clr_sig_coef_which))
+print(paste('Significant CLR predictors in subset models:', ms$sub_clr_sig_coef_which))
+
+print(paste('CLR concordance of full models:', 'MIN:', min(mf$full_clr_concord), 
+            'MEAN:', mean(mf$full_clr_concord), 'MAX', max(mf$full_clr_concord)))
+print(paste('CLR concordance of subset models:', 'MIN:', min(ms$sub_clr_concord), 
+            'MEAN:', mean(ms$sub_clr_concord), 'MAX', max(ms$sub_clr_concord)))
+
+
+
+
+
 
 method_cd <- summary_results[summary_results$pseudo_abs_method == 'random_path_custom_distr' & summary_results$sub_clr_sig_coef == T,]
 method_bp <- summary_results[summary_results$pseudo_abs_method == 'random_path_buffer_point' & summary_results$sub_clr_sig_coef == T,]
