@@ -78,6 +78,10 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
                      family = binomial(link = 'logit'), data = step_dataset)
   }
   
+  # save model 
+  saveRDS(clr_model, paste0(output_filepath, output_number, '0_clr', model_type, 'model_', random_data_method, suffix, '.RDS'))
+  saveRDS(glm_model, paste0(output_filepath, output_number, '0_glm', model_type, 'model_', random_data_method, suffix, '.RDS'))
+  
   # get model summaries
   clr_summary <- summary(clr_model)
   glm_summary <- summary(glm_model)

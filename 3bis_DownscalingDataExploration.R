@@ -12,6 +12,138 @@ library(terra)
 
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # to plot timeseries
 library(ggplot2)
+if(!('gridExtra') %in% installed.packages()){install.packages('gridExtra')} # to plot timeseries
+library(gridExtra)
+
+
+run_table <- read.csv('data/run_settings_downscaling_temp.csv', row.names = 1)
+#run_table <- run_table[1,]
+
+for(i in 1:nrow(run_table)){
+  # define elephant ID
+  ID <- run_table$ID[i]
+  
+  # define week to test 
+  week <- run_table$week[i]
+  
+  # define run filepath 
+  run_filepath <- paste0('data/', ID, '/', week, '/')
+  
+  # load LUT
+  LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
+  
+  # create empty dataframe to store metrics and error summaries
+  results_df <- data.frame()
+  errors_df <- data.frame()
+  
+  suffix = '_selection'
+  
+  for(i in 1:nrow(LUT)){
+    
+    # get run date
+    modis_date <- LUT$modis_date[i]
+    
+    # select model result files and error summaries for date
+    model_results_files <- list.files(run_filepath, pattern = glob2rx(paste0('3_*_', modis_date, '_ranger_full_*results', suffix, '.csv')))
+    error_summary_files <- list.files(run_filepath, pattern = glob2rx('3_*_ranger_full_*error_summary_selection.csv'))
+    
+    # create empty dataframe to store metrics for date
+    entry <- data.frame(date = modis_date)
+
+    for(file in model_results_files){
+
+      # read results file
+      item <- read.csv(paste0(run_filepath, file), row.names = 1)
+
+      # make names consistent between different files and select 3 metrics of interest
+      # note: have to retrieve min because one dataset has multiple values (take row with lowest RMSE = optimal model)
+      colnames(item) <- sub('Rsquared', 'R2', colnames(item))
+      item <- item[item$RMSE == min(item$RMSE), c('RMSE', 'R2', 'MAE')]
+
+      # retrieve model name and rename columns
+      # source: https://www.digitalocean.com/community/tutorials/sub-and-gsub-function-r
+      model <- sub('.csv', '', sub('_results_selection', '', sub(paste0('3_.._', modis_date, '_'), '', file)))
+      names(item) <- c(paste0(model, '.', 'RMSE'), paste0(model, '.', 'R2'), paste0(model, '.', 'MAE'))
+
+      # attach results to dataframe
+      entry <- cbind(entry, item)
+    }
+    results_df <- rbind(results_df, entry)
+  }
+    
+  for(file in error_summary_files){
+    
+    # read error summary file 
+    item <- read.csv(paste0(run_filepath, file), row.names = 1)
+    
+    # adapt table for consistency and retrieve relevant information 
+    item$Label <- gsub(' ', '', item$Label)
+    item <- item[item$Label %in% c('Min.', '1stQu.', 'Median', '3rdQu.', 'Max.'),c('Label', 'Abs.Error.')]
+    colnames(item) <- c('Label', 'AbsError')
+    item <- item$AbsError
+    
+    # retrieve item date and model type 
+    # source: https://www.endmemo.com/r/gsub.php
+    # source: https://www.digitalocean.com/community/tutorials/sub-and-gsub-function-r
+    date <- sub('3_.._', '', sub('_ranger.*csv', '', file))
+    model <- sub('.*_ranger_full_', '', sub('_error_summary_selection', '', sub('.csv', '', file)))
+    entry <- data.frame(Date = date, Model = model, t(item))
+    errors_df <- rbind(errors_df, entry)
+  }
+  colnames(errors_df) <- c('Date', 'Model', 'Min', 'Q1', 'Median', 'Q3', 'Max')
+  
+  # save summary tables 
+  write.csv(results_df, paste0(run_filepath, '3_h1_RF_metrics_comparison_table.csv'))
+  write.csv(errors_df, paste0(run_filepath, '3_h2_RF_absolute_error_comparison_table.csv'))
+  
+  # create plots for metrics and absolute error
+  # source: https://stackoverflow.com/questions/1249548/side-by-side-plots-with-ggplot2
+  plot_rmse <- ggplot(data = results_df, aes(x = date)) + 
+    geom_line(aes(y = ranger_full.RMSE, color = 'Trained Cross Validation'), show.legend = FALSE) + 
+    geom_line(aes(y = ranger_full_predNDVI_250m.RMSE, color = 'Prediction 250m'), show.legend = FALSE) +
+    geom_line(aes(y = ranger_full_predNDVI_30m.RMSE, color = 'Prediction 30m'), show.legend = FALSE) +
+    scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+    labs(x ="Date", y = "RMSE") + 
+    theme_minimal()
+  
+  plot_mae <- ggplot(data = results_df, aes(x = date)) + 
+    geom_line(aes(y = ranger_full.MAE, color = 'Trained Cross Validation'), show.legend = FALSE) + 
+    geom_line(aes(y = ranger_full_predNDVI_250m.MAE, color = 'Prediction 250m'), show.legend = FALSE) +
+    geom_line(aes(y = ranger_full_predNDVI_30m.MAE, color = 'Prediction 30m'), show.legend = FALSE) +
+    scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+    labs(x ="Date", y = "MAE") + 
+    theme_minimal()
+  
+  plot_r2 <- ggplot(data = results_df, aes(x = date)) + 
+    geom_line(aes(y = ranger_full.R2, color = 'Trained Cross Validation')) + 
+    geom_line(aes(y = (ranger_full_predNDVI_250m.R2)**2, color = 'Prediction 250m')) +
+    geom_line(aes(y = (ranger_full_predNDVI_30m.R2)**2, color = 'Prediction 30m')) +
+    scale_color_manual(name = 'Legend', values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+    labs(x ="Date", y = "R²") + 
+    theme_minimal()
+  
+  plot_abs_error <- ggplot(errors_df, aes(x=Date, ymin=Min, lower=Q1, middle=Median, upper=Q3, ymax=Max, fill=Model))+
+    geom_boxplot(stat="identity") + 
+    ylab('Absolute Error') + 
+    # source: https://stackoverflow.com/questions/32505298/explain-ggplot2-warning-removed-k-rows-containing-missing-values
+    coord_cartesian(ylim=c(0,max(errors_df$Q3) + 0.01)) + 
+    # source: https://stackoverflow.com/questions/8320462/ggplot2-how-to-adjust-fill-colour-in-a-boxplot-and-change-legend-text
+    scale_fill_manual(values = c('#1E88E5', '#FFC107'), labels = c('Prediction 250m', 'Prediction 30m')) + 
+    theme_minimal()
+  
+  # save the plots side by side 
+  # source: https://stackoverflow.com/questions/34838870/grid-arrange-from-gridextras-exiting-with-only-grobs-allowed-in-glist-afte
+  png(paste0(run_filepath, '3_h3_results_plot.png'), width = 950)
+  grid.arrange(plot_rmse, plot_mae, plot_r2, plot_abs_error, nrow=2, top = paste0('Metrics & Absolute Error RF ', ID, ' w', week),
+               layout_matrix = rbind(c(1,2,3),4))
+  dev.off()
+}
+
+
+
+
+
+
 
 # enter settings
 ID <- 'LA14'
@@ -33,6 +165,7 @@ LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
 
 
 
+
 ###########
 ## result analysis and interpretation 
 ###########
@@ -49,11 +182,11 @@ results_df <- data.frame()
 
 suffix = '_selection'
 #w <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*', suffix, '.csv')))
-w <- list.files(r, pattern = glob2rx(paste0('3_g2_', m, '_*', suffix, '.csv')))
-w <- list.files(run_filepath, pattern = glob2rx(paste0('3_*_', m, '_ranger_full_*results', suffix, '.csv')))
-w
-#sub('_predNDVI_30m_results', '', sub(paste0('3_g2_', m, '_'), '', sub('.csv', '', w[1])))
-sub('.csv', '', sub('_results_selection', '', sub(paste0('3_.._', m, '_'), '', w[1])))
+# w <- list.files(r, pattern = glob2rx(paste0('3_g2_', m, '_*', suffix, '.csv')))
+# w <- list.files(run_filepath, pattern = glob2rx(paste0('3_*_', m, '_ranger_full_*results', suffix, '.csv')))
+# w
+# #sub('_predNDVI_30m_results', '', sub(paste0('3_g2_', m, '_'), '', sub('.csv', '', w[1])))
+# sub('.csv', '', sub('_results_selection', '', sub(paste0('3_.._', m, '_'), '', w[1])))
 
 for(i in 1:nrow(LUT)){
   
@@ -100,7 +233,7 @@ for(i in 1:nrow(LUT)){
 # save summary table 
 # for cv metrics: '3_g1_summary_metrics_CV.csv'
 # for prediction metrics: '3_g2_summary_metrics_prediction.csv'
-write.csv(results_df, paste0(run_filepath, '3_g1_summary_metrics_CV.csv'))
+write.csv(results_df, paste0(run_filepath, '3_g1_RF_metrics_comparison_table.csv'))
 
 d <- results_df
 
@@ -151,34 +284,37 @@ d <- results_df
 #   theme_minimal()
 
 
+# plot metrics side by side 
+# source: https://stackoverflow.com/questions/1249548/side-by-side-plots-with-ggplot2
 
-
-ggplot(data = d, aes(x = date)) + 
+plot_rmse <- ggplot(data = d, aes(x = date)) + 
   geom_line(aes(y = ranger_full.RMSE, color = 'Cross Validation')) + 
   geom_line(aes(y = ranger_full_predNDVI_250m.RMSE, color = 'Prediction 250m')) +
   geom_line(aes(y = ranger_full_predNDVI_30m.RMSE, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("red", 'green', 'blue')) + 
+  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
   labs(title="Comparing RF Model RMSE of LA14 over week 2260",
        x ="Date", y = "RMSE") + 
   theme_minimal()
-ggplot(data = d, aes(x = date)) + 
+
+plot_mae <- ggplot(data = d, aes(x = date)) + 
   geom_line(aes(y = ranger_full.MAE, color = 'Cross Validation')) + 
   geom_line(aes(y = ranger_full_predNDVI_250m.MAE, color = 'Prediction 250m')) +
   geom_line(aes(y = ranger_full_predNDVI_30m.MAE, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("red", 'green', 'blue')) + 
+  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
   labs(title="Comparing RF Model MAE of LA14 over week 2260",
        x ="Date", y = "MAE") + 
   theme_minimal()
-ggplot(data = d, aes(x = date)) + 
+
+plot_r2 <- ggplot(data = d, aes(x = date)) + 
   geom_line(aes(y = ranger_full.R2, color = 'Cross Validation')) + 
   geom_line(aes(y = (ranger_full_predNDVI_250m.R2)**2, color = 'Prediction 250m')) +
   geom_line(aes(y = (ranger_full_predNDVI_30m.R2)**2, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("red", 'green', 'blue')) + 
+  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
   labs(title="Comparing RF Model R2 of LA14 over week 2260",
        x ="Date", y = "R2") + 
   theme_minimal()
 
-
+grid.arrange(plot_rmse, plot_mae, plot_r2, ncol=2, title = paste0('Metrics & Absolute Error RF LA', ID, ' w', week))
 
 
 
@@ -313,14 +449,14 @@ ggplot(data = v, aes(x = Preds)) +
 list_rf <- list.files(run_filepath, pattern = glob2rx('3_*_ranger_full_*error_summary_selection.csv'), full.names = F)
 list_rf
 
-f <- list_rf[22]
-f
-sub('.*_ranger_full_', '', sub('_error_summary_selection', '', sub('.csv', '', f)))
-
-a <- read.csv(paste0(run_filepath, f), row.names = 1)
-a$Label <- gsub(' ', '', a$Label)
-a <- a[a$Label %in% c('Min.', '1stQu.', 'Median', '3rdQu.', 'Max.'),c('Label', 'Abs.Error.')]
-colnames(a) <- c('Label', 'AbsError')
+# f <- list_rf[22]
+# f
+# sub('.*_ranger_full_', '', sub('_error_summary_selection', '', sub('.csv', '', f)))
+# 
+# a <- read.csv(paste0(run_filepath, f), row.names = 1)
+# a$Label <- gsub(' ', '', a$Label)
+# a <- a[a$Label %in% c('Min.', '1stQu.', 'Median', '3rdQu.', 'Max.'),c('Label', 'Abs.Error.')]
+# colnames(a) <- c('Label', 'AbsError')
 
 #list_rf
 #f <- list_rf[1]
@@ -349,4 +485,4 @@ ggplot(df,aes(x=Date, ymin=Min,lower=Q1,middle=Median,upper=Q3,ymax=Max,fill=Mod
   ylab('Absolute Error') + 
   # source: https://stackoverflow.com/questions/32505298/explain-ggplot2-warning-removed-k-rows-containing-missing-values
   coord_cartesian(ylim=c(0,threshold_value)) + 
-  ggtitle('Absolute Error of Predicted MODIS Image Using Random Forest', subtitle = 'Comparing MODIS predicted at 250m and 30m')
+  ggtitle('Predicted MODIS Absolute Error')

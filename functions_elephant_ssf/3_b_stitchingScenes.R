@@ -6,10 +6,10 @@
 ## Input: Landsat file containing the scenes, the date of images to stitch together 
 ## Output: A final Landsat scene for the relevant date. 
 
-stitchScenes <- function(landsat_filepath){
+stitchScenes <- function(input_directory = 'data/'){
   
   # define landsat filepath 
-  landsat_filepath <- paste0(input_directory, ID, '/', week, '/', '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
+  landsat_filepath <- paste0(input_directory, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
   
   # list directories of scenes 
   scene_directories <- list.dirs(landsat_filepath, full.names = F)[-1]

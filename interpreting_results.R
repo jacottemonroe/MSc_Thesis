@@ -246,3 +246,43 @@ which_pred <- table(sig_clr$sub_clr_sig_coef_which)
 # entry$full_clr_concord_se <- full_df$concordance[4]
 # entry$sub_clr_concord <- sub_df$concordance[1]
 # entry$sub_clr_concord_se <- sub_df$concordance[4]
+
+
+
+
+
+##################### plot model (s curve plot)
+# tutorial: https://www.theanalysisfactor.com/r-glm-plotting/
+
+# retrieve dataset 
+dat <- read.csv('data/LA14/2260/4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m.csv', row.names = 1)
+cov <- dat[,c('ndvi_50', 'ndvi_sd', 'ndvi_rate_50', 'ndvi_rate_sd')]
+# retrieve model 
+model <- readRDS(paste0('output/LA14/2260/6_b0_glm_50p_sd_model_random_path_custom_distr_downscaling_modis_250m.RDS'))
+summary(model)
+
+# create dataframe of values 
+dat_new <- data.frame(ndvi_50 = seq(min(dat$ndvi_50), max(dat$ndvi_50), length.out = 60), 
+                      ndvi_sd = seq(min(dat$ndvi_sd), max(dat$ndvi_sd), length.out = 60), 
+                      ndvi_rate_50 = seq(min(dat$ndvi_rate_50), max(dat$ndvi_rate_50), length.out = 60), 
+                      ndvi_rate_sd = seq(min(dat$ndvi_rate_sd), max(dat$ndvi_rate_sd), length.out = 60))
+
+# set axis for plotting 
+xvalues <- seq(min(dat_new), max(dat_new), length.out = 60)
+yvalues <- predict(model, newdata = dat_new, type = 'response')
+
+# create s curve plot
+plot(xvalues, yvalues)
+plot(x=seq(20, 65, by=5), predict( mlogit, 
+                                   newdata=data.frame(Drug="Y", Environment="H", Ethnicity="White",
+                                                      Age=seq(20, 65, by=5) ), type="response" ) )
+
+# plot model 
+plot(xvalues, yvalues)
+
+plot(mtcars$disp, mtcars$vs, pch = 16, xlab = "DISPLACEMENT (cubic inches)", ylab = "VS")
+
+
+
+
+

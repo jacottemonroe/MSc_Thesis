@@ -4,13 +4,285 @@
 ## Run main steps and functions
 
 # Packages 
-if(!('terra') %in% installed.packages()){install.packages('terra')} # to read rasters
+if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
+if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
+library(sf)
+if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+library(CAST)
+if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
+library(caret)
+if(!('car') %in% installed.packages()){install.packages('car')} 
+library(car)
+if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
+library(ranger)
 
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # to plot timeseries
 library(ggplot2)
 
 library(tidyterra)
+
+
+
+
+# read run settings 
+run_table <- read.csv('data/run_settings_downscaling.csv', row.names = 1) #[-4,]
+#row.names(run_table) <- 1:nrow(run_table)
+
+# ID <- run_table$ID[i]
+# week <- run_table$week[i]
+# pseudo_abs_method <- run_table$pseudo_abs_method[i]
+
+for(i in 1:nrow(run_table)){
+  
+  ###########
+  ## Read run settings 
+  ###########
+  
+  ## mosaic the landsat scenes together to create the large extent image
+  # will need to loop through dates (could do this after creating the LUT?)
+  
+  # enter settings
+  ID <- run_table$ID[i]
+  week <- run_table$week[i]
+  pseudo_abs_method <- run_table$pseudo_abs_method[i]
+  
+  # define run filepath 
+  run_filepath <- paste0('data/', ID, '/', week, '/')
+  
+  # define landsat filepath 
+  landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
+  
+  # define modis filepath 
+  modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
+  
+  # suffix 
+  suffix <- '_selection'
+  
+  
+  print(paste('(START) Starting to run', ID, week))
+  
+  
+  ###########
+  ## Stitch Landsat scenes back together 
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_b_stitchingScenes.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  
+  # list files in landsat directory 
+  l_files <- list.files(landsat_filepath, pattern = glob2rx('*_stitched.tif'))
+  
+  # run function if stitched Landsat images don't already exist (only stitch once)
+  if(length(l_files) == 0){
+    stitchScenes(run_filepath)
+  }
+  
+  
+  print(paste('(DONE) Stitching scenes for', ID, week))
+  
+  
+  ###########
+  ## create LUT to match each MODIS image to the closest Landsat image 
+  ###########
+  
+  # load function 
+  source('functions_downscaling/creatingLUT.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  
+  # run function 
+  createLUT(modis_filepath, landsat_filepath, ID, week, output_directory = 'data/')
+  
+  
+  # load LUT
+  LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
+  
+  
+  print(paste('(DONE) Creating LUT for', ID, week))
+  
+  
+  
+  
+  ###########
+  ## create covariates and response dataset (combined Landsat bands at 250m with MODIS NDVI 250m)
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  
+  # define band combinations that want for band ratios 
+  b_ratios <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
+  
+  # run function for each image from the LUT
+  for(i in 1:nrow(LUT)){
+    createCovariatesResponseSet(modis_filepath, landsat_filepath, ID, week, LUT[i,], 
+                                band_combinations = b_ratios, output_filename_suffix = suffix)
+  }
+  
+  
+  print(paste('(DONE) Creating covariate training set for', ID, week))
+  
+  
+  
+  ###########
+  ## sample points for training the model
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_e_samplingTrainingPoints.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  # if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
+  # library(sf)
+  # if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+  # library(CAST)
+  
+  # run function for each image from the LUT
+  for(i in 1:nrow(LUT)){
+    modis_date <- LUT$modis_date[i]
+    sampleTrainingPoints(run_filepath, ID, week, modis_date, input_suffix = suffix, output_suffix = suffix)
+  }
+  
+  
+  print(paste('(DONE) Samling training points for', ID, week))
+  
+  
+  
+  ###########
+  ## fit regressions with k-fold cross validation 
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_f_fittingRegressions.R')
+  
+  # # necessary packages 
+  # if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
+  # library(caret)
+  # if(!('car') %in% installed.packages()){install.packages('car')} 
+  # library(car)
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  # if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
+  # library(ranger)
+  # if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+  # library(CAST)
+  
+  # run function to generate full models
+  for(i in 1:nrow(LUT)){
+    modis_date <- LUT$modis_date[i]
+    fitRegression(run_filepath, ID, week, modis_date, input_suffix = suffix, subset_predictors = NULL, 
+                  feature_selection = F, regression_type = 'ranger', output_suffix = suffix)
+  }
+  
+  
+  print(paste('(DONE) Fitting Random Forest regression for', ID, week))
+  
+  
+  
+  ###########
+  ## Create covariate (Landsat8) raster for predicting MODIS 30m
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  
+  # get list of landsat image names 
+  landsat_image_list <- unique(LUT$closest_landsat_image)
+  
+  # define band combinations that want for band ratios 
+  b_ratios <- list(c('B3', 'B2'), c('B5', 'B4'), c('B7', 'B6'))
+  
+  # run function for each landsat image 
+  for(file in landsat_image_list){
+    createPredictionCovariatesSet(landsat_filepath, file, ID, week, b_ratios)
+  }
+  
+  
+  print(paste('(DONE) Creating covariate prediction set for', ID, week))
+  
+  
+  
+  ###########
+  ## Predict MODIS 30m
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+  
+  # necessary packages
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  # if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
+  # library(ggplot2)
+  
+  # specify model type and suffix if any 
+  model_type <- 'ranger_full'
+  
+  # run the function for each entry from LUT 
+  for (i in 1:nrow(LUT)) {
+    entry <- LUT[i,]
+    predictDownscaledModis(run_filepath, modis_filepath, ID, week, entry, model_type, 
+                           input_suffix = suffix, output_suffix = suffix)
+  }
+  
+  
+  print(paste('(DONE) Predicting MODIS 30m for', ID, week))
+  
+  
+  
+  ###########
+  ## Create mean MODIS NDVI 30m raster 
+  ###########
+  
+  # load function 
+  source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+  
+  # necessary packages 
+  # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # library(terra)
+  # 
+  # define modis 30 filepath 
+  modis_30_filepath <- paste0(run_filepath, '3_g1_downscaled_modis_images_30m_ranger_full_selection/')
+  
+  # run function 
+  createMeanRaster(modis_30_filepath)
+  
+  print(paste('(DONE) Creating a mean MODIS 30m NDVI raster for', ID, week))
+  print(paste('(COMPLETE) Done running', ID, week, '!'))
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
