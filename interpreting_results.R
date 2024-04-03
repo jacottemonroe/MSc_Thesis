@@ -252,14 +252,20 @@ which_pred <- table(sig_clr$sub_clr_sig_coef_which)
 
 
 ##################### plot model (s curve plot)
-# tutorial: https://www.theanalysisfactor.com/r-glm-plotting/
+# tutorial: https://www.theanalysisfactor.com/r-glm-plotting/ --> now its a mix of sources
 
 # retrieve dataset 
 dat <- read.csv('data/LA14/2260/4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m.csv', row.names = 1)
 cov <- dat[,c('ndvi_50', 'ndvi_sd', 'ndvi_rate_50', 'ndvi_rate_sd')]
 # retrieve model 
-model <- readRDS(paste0('output/LA14/2260/6_b0_glm_50p_sd_model_random_path_custom_distr_downscaling_modis_250m.RDS'))
+#model <- readRDS(paste0('output/LA14/2260/6_b0_glm_50p_sd_model_random_path_custom_distr_downscaling_modis_250m.RDS'))
+model <- glm(case_ ~ ndvi_50, data = dat, family = binomial)
 summary(model)
+xvalues <- seq(min(dat$ndvi_50), max(dat$ndvi_50), length.out = 60)
+yvalues <- predict(model, newdata = list(ndvi_50 = xvalues), type = 'response')
+plot(dat$ndvi_50, dat$case_, xlab = "Mean NDVI in a Step", ylab = 'Probability of Elephant Passage')
+lines(xvalues, yvalues)
+
 
 # create dataframe of values 
 dat_new <- data.frame(ndvi_50 = seq(min(dat$ndvi_50), max(dat$ndvi_50), length.out = 60), 
@@ -272,7 +278,7 @@ xvalues <- seq(min(dat_new), max(dat_new), length.out = 60)
 yvalues <- predict(model, newdata = dat_new, type = 'response')
 
 # create s curve plot
-plot(xvalues, yvalues)
+plot(xvalues, yvalues, xlab = "Mean NDVI + StDev NDVI + Mean Rate NDVI + StDev Rate NDVI", ylab = 'Probability of Elephant Passage')
 plot(x=seq(20, 65, by=5), predict( mlogit, 
                                    newdata=data.frame(Drug="Y", Environment="H", Ethnicity="White",
                                                       Age=seq(20, 65, by=5) ), type="response" ) )
@@ -282,6 +288,35 @@ plot(xvalues, yvalues)
 
 plot(mtcars$disp, mtcars$vs, pch = 16, xlab = "DISPLACEMENT (cubic inches)", ylab = "VS")
 
+
+### try another approach 
+
+# intercept & beta coefficients  
+intercept <- as.numeric( coef( model )[1] )
+beta_ndvi_50 <- as.numeric( coef( model )[2] )
+beta_ndvi_sd <- as.numeric( coef( model )[3] )
+beta_ndvi_rate_50 <- as.numeric( coef( model )[4] )
+beta_ndvi_rate_sd <- as.numeric( coef( model )[5] )
+
+
+# range of variables
+range <- seq(min(cov), max(cov), length.out = 60)
+
+# log odds
+logodds_ndvi_50 <- intercept + beta_ndvi_50 * range
+logodds_ndvi_sd <- intercept + beta_ndvi_sd * range
+logodds_ndvi_rate_50 <- intercept + beta_ndvi_rate_50 * range
+logodds_ndvi_rate_sd <- intercept + beta_ndvi_rate_sd * range
+
+# probabilities 
+prob_ndvi_50 <- exp(logodds_ndvi_50) / (1+exp(logodds_ndvi_50))
+prob_ndvi_sd <- exp(logodds_ndvi_sd) / (1+exp(logodds_ndvi_sd))
+prob_ndvi_rate_50 <- exp(logodds_ndvi_rate_50) / (1+exp(logodds_ndvi_rate_50))
+prob_ndvi_rate_sd <- exp(logodds_ndvi_rate_sd) / (1+exp(logodds_ndvi_rate_sd))
+
+# curves
+plot( x=range, y=prob_ndvi_50, type="l" )
+plot( x=range, y=prob_var_2, type="l" )
 
 
 
