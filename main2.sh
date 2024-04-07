@@ -11,7 +11,7 @@ mkdir -p data output
 
 # loop over entries of csv 
 # source: https://www.baeldung.com/linux/csv-parsing
-exec < data/run_settings_downscaling.csv
+exec < data/run_settings_visualizations.csv
 read header
 while read line
 do
@@ -26,5 +26,5 @@ do
   Rscript 5_VisualizingPaths.R
   
   # fit general and conditional logistic regression models and save the model outputs
-  Rscript 6_FittingModels.R
+  #Rscript 6_FittingModels.R
 done 

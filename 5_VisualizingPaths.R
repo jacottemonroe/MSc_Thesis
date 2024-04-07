@@ -8,6 +8,17 @@
 ##    5_a1: A map of the elephant movement over the mean NDVI, saved as png. (final output)
 
 
+# l <- list.files('output/', pattern = glob2rx('5_a1*'), recursive = T)
+# l1 <- l[1]
+# id <- sub('/2.*', '', l)
+# week <- sub('.*/', '', sub('/5.*', '', l))
+# method <- sub('.*map_', '', sub('.png', '', l))
+# 
+# d <- data.frame(ID = id, week = week, pseudo_abs_method = method)
+# write.csv(d, 'data/run_settings_visualizations.csv')
+# r <- read.csv('data/run_settings_visualizations.csv')
+# r <- r[,2:ncol(r)]
+# write.csv(r, 'data/run_settings_visualizations.csv')
 
 ###########
 ## Read run settings 
@@ -42,10 +53,18 @@ source('functions_elephant_ssf/5_a_visualizingPaths.R')
 # load necessary packages
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
+if(!('tidyr') %in% installed.packages()){install.packages('tidyr')}
+library(tidyr)
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
 library(ggplot2)
 if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')} # for mapping spatraster
 library(tidyterra)
+if(!('ggspatial') %in% installed.packages()){install.packages('ggspatial')}
+library(ggspatial)
+if(!('cowplot') %in% installed.packages()){install.packages('cowplot')}
+library(cowplot)
+if(!('patchwork') %in% installed.packages()){install.packages('patchwork')}
+library(patchwork)
 
 # run function 
 visualizePaths(run_filepath, ID, week, pseudo_abs_method, downscaling= downscaling_setting, 
@@ -55,81 +74,136 @@ print(paste('(DONE) Visualizing the movement paths for elephant', ID, 'of week',
 
 
 
-
-
-
-ID <- 'LA14'
-week <- 2260
-input_filepath <- paste0('data/', ID, '/', week, '/')
-random_data_method <- 'random_path_custom_distr'
-downscaling = T
-downscaling_model = 'ranger_full_selection'
-title = 'Elephant movement on mean NDVI'
-  
-# define data directory and suffix
-if(downscaling == 'NULL'){
-  modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
-  
-  suffix <- ''
-  
-}else if(downscaling == T){
-  modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
-  
-  suffix <- '_downscaling_modis_30m'
-  
-}else if(downscaling == F){
-  modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
-  
-  suffix <- '_downscaling_modis_250m'
-  
-}else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
-
-# read NDVI dataset
-ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
-names(ndvi_data) <- 'ndvi'
-
-
-
-if(!('ggspatial') %in% installed.packages()){install.packages('ggspatial')} #for north arrow
-library(ggspatial)
-
-# create NDVI basemap 
-# source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
-modis_ndvi_map <- ggplot() +
-  geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = T) +
-  scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6))
-
-# read step dataset
-dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
-dat$random_id_ <- as.factor(dat$random_id_)
- 
-# add title and theme to plot
-mov_map <- modis_ndvi_map +
-  labs(title = title, subtitle = paste(ID, week), x = "Longitude", y = "Latitude") +
-  annotation_north_arrow(location = 'tl', which_north = 'true', 
-                         pad_x = unit(0.5, "cm"), pad_y = unit(0.6, "cm"),
-  style = north_arrow_fancy_orienteering()) +
-  annotation_scale(location = 'br', pad_x = unit(1.0, "cm"), pad_y = unit(0.5, "cm")) +
-  theme_minimal() + 
-  theme(legend.position = c(1.1, 0.3))
-
-mov_map
-
-t <- mov_map + 
-  geom_path(data = dat[dat$case_ == F & dat$burst_ == 1 & dat$random_id_ == 1,], 
-            aes(x = x1_, y = y1_, color = 'random path'), linewidth = 0.4, linetype = 2) + 
-  scale_color_manual(name = "Legend", values = 'grey40')
-t
-
-# plot presence and pseudo-absence paths on basemap by looping for each path 
-# source: https://stackoverflow.com/questions/9206110/using-png-function-not-working-when-called-within-a-function
-for(i in 1:length(unique(dat$burst_))){
-  for(j in 1:length(unique(dat$random_id_))){
-    # source: https://ggplot2.tidyverse.org/reference/aes_linetype_size_shape.html
-    if(i == 1 & j == 1){legend_setting <- T}else{legend_setting <- F}
-    mov_map <- mov_map + geom_path(data = dat[dat$case_ == F & dat$burst_ == i & dat$random_id_ == j,], aes(x = x1_, y = y1_), color = 'grey40', linewidth = 0.4, linetype = 2, show.legend = legend_setting)
-  }
-  mov_map <- mov_map + geom_path(data = dat[dat$case_ == T & dat$burst_ == i,], aes(x = x1_, y = y1_), color = 'black', linewidth = 0.5, show.legend = legend_setting)
-} 
-
-mov_map
+# 
+# 
+# 
+# ID <- 'LA14'
+# week <- 2260
+# input_filepath <- paste0('data/', ID, '/', week, '/')
+# random_data_method <- 'random_path_custom_distr'
+# downscaling = T
+# downscaling_model = 'ranger_full_selection'
+# title = 'Elephant movement on mean NDVI'
+#   
+# # define data directory and suffix
+# if(downscaling == 'NULL'){
+#   modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
+#   
+#   suffix <- ''
+#   
+# }else if(downscaling == T){
+#   modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+#   
+#   suffix <- '_downscaling_modis_30m'
+#   
+# }else if(downscaling == F){
+#   modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
+#   
+#   suffix <- '_downscaling_modis_250m'
+#   
+# }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+# 
+# # read NDVI dataset
+# ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
+# names(ndvi_data) <- 'ndvi'
+# 
+# 
+# 
+# if(!('ggspatial') %in% installed.packages()){install.packages('ggspatial')} #for north arrow
+# library(ggspatial)
+# 
+# # read step dataset
+# dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
+# dat$random_id_ <- as.factor(dat$random_id_)
+# 
+# # add new step ID column that restarts count at each burst (so doesn't connect the different paths)
+# dat$stepID <- NA
+# steps <- dat[dat$burst_ == 1 & dat$case_ == T,]
+# dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
+# for(b in unique(dat$burst_)){
+#   # select rows of that burst that are true
+#   steps <- dat[dat$burst_ == b & dat$case_ == T,]
+#   dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
+# }
+# 
+# # transfer the step ID of random steps to new column 
+# # NOTE: could move the code to some other script (unless the columns are useful)
+# dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
+# 
+# # new column for pathID
+# dat$pathID <- NA
+# 
+# # find start of new path 
+# smin <- dat$X[dat$stepID == min(dat$stepID)]
+# 
+# # assign new path ID to start of each new path 
+# dat$pathID[smin] <- 1:length(smin)
+# 
+# # fill the column with values from above 
+# # source: https://tidyr.tidyverse.org/reference/fill.html#ref-examples
+# library(tidyr)
+# dat <- dat %>% fill(pathID)
+# dat$pathID <- as.factor(dat$pathID)
+# 
+# # rename the case column (necessary for plotting order)
+# dat$case_[dat$case_ == T] <- 2
+# dat$case_[dat$case_ == F] <- 1
+# 
+# dat$case_ <- as.factor(dat$case_)
+# 
+# 
+# 
+# # make multiple maps then retrieve legends 
+# # tutorial: https://stackoverflow.com/questions/52060601/ggplot-multiple-legends-arrangement
+# if(!('cowplot') %in% installed.packages()){install.packages('cowplot')}
+# library(cowplot)
+# library(patchwork)
+# 
+# # make NDVI map with legend
+# # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
+# modis_ndvi_map <- ggplot() +
+#   geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = T) +
+#   scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6))
+# 
+# # make path graph with legend 
+# path_map <- ggplot(data = dat, aes(x = x1_, y = y1_, colour = case_, group = pathID, linetype = case_)) +
+#   # source: https://stackoverflow.com/questions/27003991/how-can-i-define-line-plotting-order-in-ggplot2-for-grouped-lines
+#   geom_path(data = subset(dat, case_ == 1), linewidth = 0.4) + 
+#   geom_path(data = subset(dat, case_ == 2), linewidth = 0.4) +
+#   # source: https://www.geeksforgeeks.org/control-line-color-and-type-in-ggplot2-plot-legend-in-r/
+#   scale_linetype_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c(2,1)) +
+#   scale_color_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c('grey50', 'darkred')) + 
+#   theme_minimal() 
+# 
+# # make visual map without legends 
+# image_map <- ggplot() +
+#   geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = F) +
+#   scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6)) + 
+#   geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey50', linetype = 2, linewidth = 0.4) + 
+#   geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'darkred', linetype = 1, linewidth = 0.4) +
+#   labs(title = title, subtitle = paste0('Elephant ', ID, ' from ', as.Date(min(dat$t1_), tz = 'Africa/Maputo') , ' to ', 
+#                                         as.Date(max(dat$t2_), tz = 'Africa/Maputo'),' (week ', week, ')'), x = "Longitude", y = "Latitude") +
+#   annotation_north_arrow(location = 'tl', which_north = 'true', 
+#                          pad_x = unit(0.5, "cm"), pad_y = unit(0.6, "cm"),
+#                          style = north_arrow_fancy_orienteering()) +
+#   annotation_scale(location = 'br', pad_x = unit(1.0, "cm"), pad_y = unit(0.5, "cm")) +
+#   theme_minimal() + 
+#   theme(legend.position = 'none')
+# 
+# # retrieve legends 
+# ndvi_legend <- get_legend(modis_ndvi_map)
+# path_legend <- get_legend(path_map)
+# 
+# # create blank plot
+# blank_p <- plot_spacer() + theme_void()
+# 
+# # combine legends and plot on blank plot
+# legends <- plot_grid(blank_p, path_legend, ndvi_legend, blank_p, nrow = 4)
+# 
+# png('output/test.png')
+# final_map <- plot_grid(image_map, legends, nrow = 1, align = 'h', axis = 't', rel_widths = c(1, 0.3))
+# final_map
+# dev.off()
+# 
+# 
+# 
