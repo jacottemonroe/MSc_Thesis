@@ -206,4 +206,4 @@ print(paste('(DONE) Visualizing the movement paths for elephant', ID, 'of week',
 # dev.off()
 # 
 # 
-# 
+

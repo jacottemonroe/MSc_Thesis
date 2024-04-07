@@ -9,7 +9,7 @@
 # source: https://www.geeksforgeeks.org/mkdir-cannot-create-directory-file-exists/
 mkdir -p data output 
 
-# loop over entries of csv 
+# loop over entries of csv
 # source: https://www.baeldung.com/linux/csv-parsing
 exec < data/run_settings_visualizations.csv
 read header
