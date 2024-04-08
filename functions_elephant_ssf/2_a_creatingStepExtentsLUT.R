@@ -22,7 +22,7 @@ createStepExtentsLUT <- function(input_filepath, ID, week, random_data_method = 
   all_steps <- readRDS(input_filename)
   
   # get start date of step
-  all_steps$start_date <- as.Date(all_steps$t1_)
+  all_steps$start_date <- as.Date(all_steps$t1_, tz = 'Africa/Maputo')
   
   # get end date of step 
   all_steps$end_date <- all_steps$start_date + 1

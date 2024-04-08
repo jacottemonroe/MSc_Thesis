@@ -7,7 +7,7 @@
 # Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
 #         MODIS 250m retrieved through downscaling JN script (downscaling = F), MODIS 30m generated through downscaling in R (downscaling = T).
 # Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
-# Packages: tidyr (fill data frame column with values above), ggplot2 (general plotting), ggspatial (plot raster), 
+# Packages: tidyr (fill data frame column with values above), ggplot2 (general plotting), ggspatial and tidyterra (plot raster), 
 #           cowplot (retrieve plot legend), patchwork (create blank plot and mosaic plots together)
 # Input: filepaths for modis and step dataset, elephant ID and week of interest, 
 #         the map title, and the directory for output. All inputs are strings. 
@@ -52,7 +52,9 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   
   # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
   dat$stepID <- NA
-  steps <- dat[dat$burst_ == 1 & dat$case_ == T,]
+  
+  b <- 3
+  steps <- dat[dat$burst_ == b & dat$case_ == T,]
   dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
   
   for(b in unique(dat$burst_)){

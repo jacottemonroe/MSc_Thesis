@@ -9,8 +9,6 @@
 ##    2_a1: Look-up table of spatial extents and dates of the movement steps, saved as csv object. (intermediate output)
 
 
-
-
 ###########
 ## Read run settings 
 ###########
