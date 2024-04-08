@@ -50,8 +50,7 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   # add a time (date) attribute to the spatraster --> daily interval 
   # source: https://rdrr.io/github/rspatial/terra/man/time.html
   # source: https://stackoverflow.com/questions/73259623/how-to-index-individual-layers-from-a-spatraster-object-by-time
-  time(modis_images, tstep = 'days') <- as.Date(names(modis_images)[1], format = '%Y_%m_%d', 
-                                                tz = 'Africa/Maputo') + 0:(nlyr(modis_images)-1)
+  time(modis_images, tstep = 'days') <- as.Date(names(modis_images), format = '%Y_%m_%d', tz = 'Africa/Maputo')
   
   # extract covariates from corresponding MODIS image
   for(i in 1:nrow(step_dataset)){
