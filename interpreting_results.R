@@ -321,3 +321,299 @@ plot( x=range, y=prob_var_2, type="l" )
 
 
 
+
+
+
+## plot coef of model
+
+# NOTE FOR README: this requires installation of SjPlot package --> depending on R version that have might have issues installing 
+# Details: sjPlot package requires sjstats package which requires emmeans package which requires estimability package which requires new R version
+# The packages will not install if have estimability v1.5 and now R v4.3.0 
+# Solution: install estimability v1.4.1 instead of the latest --> 'https://cran.r-project.org/src/contrib/Archive/estimability/estimability_1.4.1.tar.gz'
+# source: https://stackoverflow.com/questions/68172470/i-want-to-install-old-version-package-in-r
+# Once older version installed, the rest should be able to install fine like a chain 
+
+# link <- 'https://cran.r-project.org/src/contrib/Archive/estimability/estimability_1.4.1.tar.gz'
+# install.packages(link, repos = NULL, type = 'source')
+# 
+# if(!('estimability') %in% installed.packages()){install.packages('estimability')} 
+# if(!('emmeans') %in% installed.packages()){install.packages('emmeans')} 
+if(!('sjPlot') %in% installed.packages()){install.packages('sjPlot')} 
+library(sjPlot)
+
+# retrieve fitted model 
+model <- readRDS(paste0('output/LA14/2260/6_b0_glm_50p_sd_model_random_path_custom_distr_downscaling_modis_30m.RDS'))
+#model <- readRDS(paste0('output/LA26/2267/6_b0_glm_50p_sd_model_random_path_custom_distr_downscaling_modis_30m.RDS'))
+summary(model)
+
+plot_model(model, transform = NULL, show.values = T, vline.color = 'red')
+plot_model(model, show.values = T, vline.color = 'red')
+
+
+if(!('terra') %in% installed.packages()){install.packages('terra')} #for north arrow
+library(terra)
+if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')} #for north arrow
+library(tidyterra)
+if(!('ggspatial') %in% installed.packages()){install.packages('ggspatial')} #for north arrow
+library(ggspatial)
+library(tidyr)
+
+ID <- 'LA14'
+week <- 2260
+input_filepath <- paste0('data/', ID, '/', week, '/')
+random_data_method <- 'random_path_custom_distr'
+downscaling = T
+downscaling_model = 'ranger_full_selection'
+title = 'Elephant movement on mean NDVI'
+
+# define data directory and suffix
+if(downscaling == 'NULL'){
+  modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
+
+  suffix <- ''
+
+}else if(downscaling == T){
+  modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+
+  suffix <- '_downscaling_modis_30m'
+
+}else if(downscaling == F){
+  modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
+
+  suffix <- '_downscaling_modis_250m'
+
+}else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+
+
+# read NDVI dataset
+ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
+names(ndvi_data) <- 'ndvi'
+
+
+
+# read step dataset
+dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
+dat$random_id_ <- as.factor(dat$random_id_)
+
+# plot histograms 
+hist(dat$ndvi_50)
+hist(dat$ndvi_sd)
+hist(dat$ndvi_rate_50)
+hist(dat$ndvi_rate_sd)
+
+s <- dat[dat$ndvi_sd > 0.08,]
+ss <- dat[dat$ndvi_rate_sd > 0.015,]
+
+# add new step ID column that restarts count at each burst (so doesn't connect the different paths)
+dat$stepID <- NA
+steps <- dat[dat$burst_ == 1 & dat$case_ == T,]
+dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
+for(b in unique(dat$burst_)){
+  # select rows of that burst that are true
+  steps <- dat[dat$burst_ == b & dat$case_ == T,]
+  dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
+}
+
+# transfer the step ID of random steps to new column
+# NOTE: could move the code to some other script (unless the columns are useful)
+dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
+
+# new column for pathID
+dat$pathID <- NA
+
+# find start of new path
+smin <- dat$X[dat$stepID == min(dat$stepID)]
+
+# assign new path ID to start of each new path
+dat$pathID[smin] <- 1:length(smin)
+
+# fill the column with values from above
+# source: https://tidyr.tidyverse.org/reference/fill.html#ref-examples
+dat <- dat %>% fill(pathID)
+dat$pathID <- as.factor(dat$pathID)
+
+# rename the case column (necessary for plotting order)
+dat$case_[dat$case_ == T] <- 2
+dat$case_[dat$case_ == F] <- 1
+
+dat$case_ <- as.factor(dat$case_)
+
+
+# make visual map without legends
+image_map <- ggplot() +
+  geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = F) +
+  scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6)) +
+  geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey50', linetype = 2, linewidth = 0.4) +
+  geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'darkred', linetype = 1, linewidth = 0.4) +
+  geom_path(data = dat[c(453,454),], aes(x = x1_, y = y1_), colour = 'blue', linetype = 1, linewidth = 0.4) + 
+  #geom_path(data = dat[c(250,251),], aes(x = x1_, y = y1_), colour = 'blue', linetype = 1, linewidth = 0.4) + 
+  labs(title = title, subtitle = paste0('Elephant ', ID, ' from ', as.Date(min(dat$t1_), tz = 'Africa/Maputo') , ' to ',
+                                        as.Date(max(dat$t2_), tz = 'Africa/Maputo'),' (week ', week, ')'), x = "Longitude", y = "Latitude") +
+  annotation_north_arrow(location = 'tl', which_north = 'true',
+                         pad_x = unit(0.5, "cm"), pad_y = unit(0.6, "cm"),
+                         style = north_arrow_fancy_orienteering()) +
+  annotation_scale(location = 'br', pad_x = unit(1.0, "cm"), pad_y = unit(0.5, "cm")) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+
+image_map
+
+
+round(exp(coef(model)[4]), 8)
+
+model[2]
+coef(model)[2]
+
+
+
+
+
+
+
+
+
+
+
+# plot s curve 
+
+m50 <- glm(case_ ~ ndvi_50 , family = binomial(link = 'logit'), data = dat)
+msd <- glm(case_ ~ ndvi_sd , family = binomial(link = 'logit'), data = dat)
+mr50 <- glm(case_ ~ ndvi_rate_50 , family = binomial(link = 'logit'), data = dat)
+mrsd <- glm(case_ ~ ndvi_rate_sd, family = binomial(link = 'logit'), data = dat)
+
+xval <- data.frame(ndvi_50 = seq(from = min(dat$ndvi_50), to = max(dat$ndvi_50), length.out = 60))
+
+#predict gives the predicted value in terms of logits
+yval <- predict(m50, xval)
+
+d <- data.frame(X = xval, Y = yval)
+names(d) <- c('x', 'y')
+ggplot(data = d, aes(x = x, y = y)) + geom_line()
+#convert those logit values to probabilities
+yor <- exp(yval)/(1+exp(yval))
+
+d <- data.frame(X = xval, Y = yor)
+names(d) <- c('x', 'y')
+
+ggplot()+ 
+  #geom_point(data = dat, aes(x=ndvi_50, y=case_)) +
+  geom_line(data = d, aes(x=x, y=y))
+
+ggplot(data = d) + 
+  geom_line(aes(x = ndvi_50, y = yor))
+
+
+
+# derive p-value of model from chi-square stat
+# source: https://stats.stackexchange.com/questions/340489/interpretation-of-deviance-in-logistic-model
+# source: https://www.r-bloggers.com/2022/05/calculate-the-p-value-from-chi-square-statistic-in-r/
+pch <- pchisq(model$null.deviance - model$deviance, model$df.null - model$df.residual, lower.tail = F)
+pch
+
+
+
+
+# new df 
+zdat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'))
+
+df <- data.frame(predicted = predict(model, type = 'response'), 
+                 residuals = residuals(model, type = 'response'), 
+                 linearized = model$linear.predictors, 
+                 weights = model$weights, 
+                 path = as.numeric(zdat$case_))
+
+df$id <- seq(1,nrow(df))
+# this is assuming the decision threshold is set at 0.5
+mism <- df %>% filter(path != round(predicted))
+max(df$predicted)
+for (i in 1:nrow(df)) {
+  if (!is.na(match(df$id[i],mism$id))) m <- 1
+  else m <- 0
+  df$mismatched[i] <- m
+}
+
+df$id <- NULL
+
+#define a function to plot the model
+gra.tot <- function(dat, varLin, varY, weights, group, fitModel, devModel, dfModel, devNull, dfNull, aicModel, nameX, nameY) {
+  ggplot(dat, aes(x = varLin, y = varY)) +
+    geom_point(aes(size=weights, color=as.factor(group)), alpha=.3) +
+    scale_colour_manual(name="mismatched", values = c("grey30", "red3")) +
+    geom_text(x= min(varLin) + (0.1 * (max(varLin) - min(varLin))) , y=0.5, hjust=0, label=paste( 'predicted ~ linearized', "\nmismatched: ",sum(group),"/",length(fitModel), '\nres. deviance: ', round(devModel,2) , ' (df: ', round(dfModel,2),')',  '\nnull deviance: ', round(devNull,2), ' (df: ', round(dfNull,2),')', '\nAIC: ', round(aicModel,2) ), col='grey40', size=3, fontface='italic') +
+    xlab(as.character(nameX)) +
+    ylab(as.character(nameY)) +
+    theme_bw()
+}
+
+#plot the model
+tot <- gra.tot(df, df$linearized, df$predicted, df$weights, df$mismatched, model$fitted, model$deviance, model$df.residual, model$null.deviance, model$df.null, model$aic, 'linearized_predictors', 'logit_risk')
+tot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############### CREATE SUMMARY TABLE OF GLM SIGNIFICANCE AND DEVIANCE AND VIF
+run_table <- read.csv('data/run_settings_visualizations.csv', row.names = 1)
+
+df <- data.frame()
+for(r in 1:nrow(run_table)){
+  r
+  # get settings
+  ID <- run_table$ID[r]
+  week <- run_table$week[r]
+  pseudo_abs_method <- run_table$pseudo_abs_method[r]
+  downscaling_setting <- run_table$downscaling[r]
+  
+  # get model specifications
+  if(downscaling_setting == 'NULL'){
+    suffix <- ''
+    modis_label <- 'MODIS 250m'
+    
+  }else if(downscaling_setting == 'T'){
+    suffix <- '_downscaling_modis_30m'
+    modis_label <- 'MODIS 30m (D)'
+    
+  }else if(downscaling_setting == 'F'){
+    suffix <- '_downscaling_modis_250m'
+    modis_label <- 'MODIS 250m (D)'
+
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
+  # load dataset 
+  dev_df <- read.csv(paste0('output/', ID, '/', week, '/6_b4_glm_50p_sd_deviances_', pseudo_abs_method, suffix, '.csv'))
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', pseudo_abs_method, suffix, '.csv'), row.names = 1, header = T)
+  
+  # retrieve the deviance for the model 
+  pval <- pchisq(dev_df$null_deviance - dev_df$residual_deviance, dev_df$null_df - dev_df$residual_df, lower.tail = F)
+  
+  if(pval < 0.001){sig = '99.9%'}else if(pval >= 0.001 & pval <0.01){sig = '99%'}else if(pval >= 0.01 & pval < 0.05){sig = '95%'}else if(pval >= 0.05 & pval < 0.1){sig = '90%'}else if(pval >= 0.1 & pval < 1){sig = 'not sig'}else{sig = '?'}
+  
+  entry <- data.frame(ID = ID, week = week, method = pseudo_abs_method, modis = modis_label, 
+                      vif_ndvi_50 = vif_df$vif_results[1], vif_ndvi_sd = vif_df$vif_results[2], 
+                      vif_ndvi_rate_50 = vif_df$vif_results[3], vif_ndvi_srate_d = vif_df$vif_results[4], 
+                      deviance = dev_df$residual_deviance, p_value = pval, significance = sig)
+
+  df <- rbind(df, entry)
+}
+
+write.csv(df, file = 'output/summary_deviances_w2075&downscaling.csv')
+
+
+a <- read.csv('data/run_settings_moreRQ1.csv', row.names = 1)
+a <- a[a$pseudo_abs_method == 'random_path_custom_distr',]
+a$week <- 2066
+a$downscaling <- 'NULL'
+a$downscaling_model <- 'NULL'
+
+write.csv(a, 'data/run_settings_moreRQ1.csv')
