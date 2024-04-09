@@ -564,7 +564,7 @@ tot
 
 
 ############### CREATE SUMMARY TABLE OF GLM SIGNIFICANCE AND DEVIANCE AND VIF
-run_table <- read.csv('data/run_settings_visualizations.csv', row.names = 1)
+run_table <- read.csv('data/run_settings_downscaling.csv', row.names = 1)
 
 df <- data.frame()
 for(r in 1:nrow(run_table)){
@@ -580,11 +580,11 @@ for(r in 1:nrow(run_table)){
     suffix <- ''
     modis_label <- 'MODIS 250m'
     
-  }else if(downscaling_setting == 'T'){
+  }else if(downscaling_setting == T){
     suffix <- '_downscaling_modis_30m'
     modis_label <- 'MODIS 30m (D)'
     
-  }else if(downscaling_setting == 'F'){
+  }else if(downscaling_setting == F){
     suffix <- '_downscaling_modis_250m'
     modis_label <- 'MODIS 250m (D)'
 
@@ -607,7 +607,7 @@ for(r in 1:nrow(run_table)){
   df <- rbind(df, entry)
 }
 
-write.csv(df, file = 'output/summary_deviances_w2075&downscaling.csv')
+write.csv(df, file = 'output/summary_deviances_downscalingRQ3.csv')
 
 
 a <- read.csv('data/run_settings_moreRQ1.csv', row.names = 1)

@@ -11,7 +11,7 @@ mkdir -p data output
 
 # loop over entries of csv
 # source: https://www.baeldung.com/linux/csv-parsing
-exec < data/run_settings_moreRQ2.csv
+exec < data/run_settings_downscaling.csv
 read header
 while read line
 do
@@ -20,14 +20,14 @@ do
    echo "$line" > data/single_run_settings.csv
    
   # extract the NDVI values for each step and store in covariate/response dataframe
-  Rscript 4_ExtractingCovariates.R
+  #Rscript 4_ExtractingCovariates.R
   
   # visualize movement paths of elephant for week of interest
   Rscript 5_VisualizingPaths.R
   
   # fit general and conditional logistic regression models and save the model outputs
-  Rscript 6_FittingModels.R
+  #Rscript 6_FittingModels.R
   
   # visualize model restults 
-  Rscript 7_VisualizingModels.R
+  #Rscript 7_VisualizingModels.R
 done 
