@@ -617,3 +617,59 @@ a$downscaling <- 'NULL'
 a$downscaling_model <- 'NULL'
 
 write.csv(a, 'data/run_settings_moreRQ1.csv')
+
+
+
+
+
+## check if elements created correctly 
+r <- read.csv('data/run_settings_RQ2.csv', row.names = 1)
+
+df <- data.frame()
+
+for(i in 1:nrow(r)){
+  
+  # get run settings
+  ID <- r$ID[i]
+  week <- r$week[i]
+  method <- r$pseudo_abs_method[i]
+  
+  # define filepaths
+  data_path <- paste0('data/', ID, '/', week, '/')
+  output_path <- paste0('output/', ID, '/', week, '/')
+  
+  # get files for data and output paths
+  data_files <- list.files(data_path)
+  output_files <- list.files(output_path)
+  
+  # define files that should have for each step
+  step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr.RDS')
+  step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr.csv')
+  step3_files <- c('3_a1_modis_images_random_path_custom_distr')
+  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
+  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
+  step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr.RDS', 
+                   '6_b1_clr_50p_sd_coefs_random_path_custom_distr.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr.csv', 
+                   '6_a1_correlation_matrix_random_path_custom_distr.csv', '6_b3_glm_50p_sd_coefs_random_path_custom_distr.csv', 
+                   '6_b4_glm_50p_sd_deviances_random_path_custom_distr.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr.csv')
+  step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr.png', 
+                   '7_b3_50p_sd_plot_curve_random_path_custom_distr.png')
+  
+  # check if each folder has the correct files and mark the answer in table 
+  if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
+  if(all(step2_files %in% data_files)){step2 = T}else{step2 = F}
+  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) == 15){step3 = T}else{step3 = F}
+  if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
+  if(all(step5_files %in% data_files)){step5 = T}else{step5 = F}
+  if(all(step6_files %in% data_files)){step6 = T}else{step6 = F}
+  if(all(step7_files %in% data_files)){step7 = T}else{step7 = F}
+  
+  # check if all steps complete 
+  if(all(c(step1, step2, step3, step4, step5, step6, step7) == T)){complete = T}else{complete = F}
+  
+  # fill entry 
+  entry <- data.frame(ID = ID, week = week, method = method, step1 = step1, step2 = step2, step3 = step3, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
+  
+  df <- rbind(df, entry)
+  
+}
