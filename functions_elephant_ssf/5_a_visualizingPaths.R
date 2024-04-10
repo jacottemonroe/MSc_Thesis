@@ -53,10 +53,6 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
   dat$stepID <- NA
   
-  b <- 3
-  steps <- dat[dat$burst_ == b & dat$case_ == T,]
-  dat$stepID[min(steps$X):max(steps$X)] <- 1:as.numeric(nrow(steps))
-  
   for(b in unique(dat$burst_)){
     # select rows of that burst that are true
     steps <- dat[dat$burst_ == b & dat$case_ == T,]
