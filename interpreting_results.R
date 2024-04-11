@@ -60,12 +60,12 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-# dfr <- df$week[df$step3 == F]
-# print(dfr)
+dfr <- df_progress$week[df_progress$step6 == F]
+print(dfr)
 
-# rr <- r[r$week %in% dfr,]
-# 
-# write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
+rr <- run_settings[run_settings$week %in% dfr,]
+#
+write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
 
 # 
 # s <- readRDS('data/LA14/2112/1_b1_all_steps_random_path_custom_distr.RDS')
@@ -81,7 +81,10 @@ for(i in 1:nrow(run_settings)){
 
 
 
-
+# retrieve weeks that are true
+dfr <- df_progress$week[df_progress$step6 == T]
+print(dfr)
+run_settings <- run_settings[run_settings$week %in% dfr,]
 
 
 
@@ -274,6 +277,8 @@ write.csv(df_deviance_vif, file = paste0('output/summary_deviances_vif', run_lab
 
 ##### FOR RQ2 TIMESERIES
 
+elephant <- 'LA13'
+
 # retrieves summary results for only sig models GLM 
 srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
 
@@ -322,7 +327,7 @@ ggplot(data = df_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = valu
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Timeseries of GLM predictors for LA14 from August 2009 to July 2011')
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to July 2011'))
 dev.off()  
  
 
@@ -369,7 +374,7 @@ ggplot(data = df_clr_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = valu
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Timeseries of CLR predictors for LA14 from August 2009 to July 2011')
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of CLR predictors for', elephant, 'from August 2009 to July 2011'))
 dev.off()
 
 
@@ -390,7 +395,7 @@ png(paste0('output/timeseries_glm_deviance_improvement', run_label, '.png'), wid
 ggplot(data = df_div, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = diff_deviance_to_null)) + 
   geom_line() + geom_point(data = df_div, aes(y = diff_deviance_to_null), shape = 8) + 
   geom_hline(yintercept = 0) + 
-  xlab('Time') + ylab('Deviance Value') + ggtitle('Timeseries of CLR Deviance Improvement for LA14 from August 2009 to July 2011')
+  xlab('Time') + ylab('Deviance Value') + ggtitle(paste('Timeseries of CLR Deviance Improvement for', elephant, 'from August 2009 to July 2011'))
 dev.off()
 
 
@@ -446,7 +451,7 @@ ggplot(data = df_vif, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = vif, grou
   geom_hline(yintercept = 5, linetype = 'dashed') +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'fixed') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Timeseries of VIF for LA14 from August 2009 to July 2011')
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of VIF for', elephant, 'from August 2009 to July 2011'))
 dev.off()
 
 ######################################### end RQ2 code 
