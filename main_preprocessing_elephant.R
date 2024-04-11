@@ -499,3 +499,18 @@ ndays <- max(days) - min(days) + 1
 animate(map_with_shadow, nframes = ndays, fps = 100)
 anim_save('output/elephant_LA14_timelapse.gif', animation = last_animation())
 
+
+
+
+
+p <- read.csv('data/elephant_etosha/preprocessed_elephant_LA13.csv')
+# select 2 years of data to run for RQ2
+p <- p[p$week %in% seq(2065,2169),]
+
+r <- read.csv('data/run_settings_moreRQ1.csv')
+
+# create new run table
+rt <- data.frame(ID = 'LA14', week = seq(2065,2169), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
+
+# save table for RQ2
+write.csv(rt, 'data/run_settings_RQ2_LA13.csv')
