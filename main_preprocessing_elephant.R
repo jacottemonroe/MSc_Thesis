@@ -510,7 +510,7 @@ p <- p[p$week %in% seq(2065,2169),]
 r <- read.csv('data/run_settings_moreRQ1.csv')
 
 # create new run table
-rt <- data.frame(ID = 'LA14', week = seq(2065,2169), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
+rt <- data.frame(ID = 'LA13', week = seq(2065,2169), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
 
 # save table for RQ2
 write.csv(rt, 'data/run_settings_RQ2_LA13.csv')
