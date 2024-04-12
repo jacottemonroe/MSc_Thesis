@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_RQ2_LA13'
+run_label <- '_RQ2_LA12'
 
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
@@ -60,11 +60,11 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-dfr <- df_progress$week[df_progress$step6 == F]
+dfr <- df_progress$week[df_progress$step3 == F]
 print(dfr)
 
 rr <- run_settings[run_settings$week %in% dfr,]
-#
+
 write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
 
 # 
