@@ -60,12 +60,12 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-dfr <- df_progress$week[df_progress$step3 == F]
-print(dfr)
-
-rr <- run_settings[run_settings$week %in% dfr,]
-
-write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
+# dfr <- df_progress$week[df_progress$step3 == F]
+# print(dfr)
+# 
+# rr <- run_settings[run_settings$week %in% dfr,]
+# 
+# write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
 
 # 
 # s <- readRDS('data/LA14/2112/1_b1_all_steps_random_path_custom_distr.RDS')
@@ -277,7 +277,7 @@ write.csv(df_deviance_vif, file = paste0('output/summary_deviances_vif', run_lab
 
 ##### FOR RQ2 TIMESERIES
 
-elephant <- 'LA13'
+elephant <- 'LA12'
 
 # retrieves summary results for only sig models GLM 
 srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
