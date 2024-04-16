@@ -11,7 +11,7 @@ mkdir -p data output
 
 # loop over entries of csv
 # source: https://www.baeldung.com/linux/csv-parsing
-exec < data/run_settings_RQ2_LA12.csv
+exec < data/run_settings_RQ2_LA14.csv
 read header
 while read line
 do
@@ -23,7 +23,7 @@ do
   Rscript 4_ExtractingCovariates.R
   
   # visualize movement paths of elephant for week of interest
-  Rscript 5_VisualizingPaths.R
+  #Rscript 5_VisualizingPaths.R
   
   # fit general and conditional logistic regression models and save the model outputs
   Rscript 6_FittingModels.R

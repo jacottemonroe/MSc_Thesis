@@ -503,16 +503,40 @@ anim_save('output/elephant_LA14_timelapse.gif', animation = last_animation())
 
 
 
-p <- read.csv('data/elephant_etosha/preprocessed_elephant_LA12.csv')
-# select 2 years of data to run for RQ2
-p <- p[p$week %in% seq(2170,2194),]
 
-r <- read.csv('data/run_settings_moreRQ1.csv')
+
+
+
+
+l <- list.files('data/elephant_etosha/elephant_fixes', full.names = T)
+wtab <- data.frame()
+
+for(i in 1:length(l)){
+  f <- read.csv(l[i])
+  id <- sub('.*preprocessed_elephant_', '', sub('.csv', '', l[i]))
+  entry <- data.frame(ID = id, week = unname(data.frame(unique(f$week))))
+  wtab <- rbind(wtab, entry)
+}
+
+t <- data.frame(table(wtab$week))
+
+
+p <- read.csv('data/elephant_etosha/preprocessed_elephant_LA11.csv')
+# select 2 years of data to run for RQ2
+p <- p[p$week %in% seq(2065,2194),]
+
+r <- read.csv('data/run_settings.csv', row.names = 1)
+r <- r[r$pseudo_abs_method == 'random_path_custom_distr',]
+list_id <- unique(r$ID)
 
 # create new run table
-rt <- data.frame(ID = 'LA12', week = seq(2170,2194), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
-rt13 <- data.frame(ID = 'LA14', week = seq(2170,2194), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
-rt <- rbind(rt, rt13)
+rt <- data.frame()
+for(id in list_id){
+  entry <- data.frame(ID = id, week = c(2065, 2067, 2068, 2069, 2073, 2074, 2076, 2077, seq(2085,2089)), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
+  rt <- rbind(rt, entry)
+}
+
+#rt <- data.frame(ID = 'LA11', week = c(2065, 2067, 2068, 2069, 2073, 2074, 2076, 2077, seq(2085,2089)), pseudo_abs_method = r$pseudo_abs_method[1], downscaling = 'NULL', downscaling_model = 'NULL')
 
 # save table for RQ2
-write.csv(rt, 'data/run_settings_RQ2_moreruns.csv')
+write.csv(rt, 'data/run_settings_RQ2_STS.csv')

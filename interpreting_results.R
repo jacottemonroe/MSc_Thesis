@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_RQ2_LA12'
+run_label <- '_RQ2_STS'
 
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
@@ -60,12 +60,12 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-# dfr <- df_progress$week[df_progress$step3 == F]
-# print(dfr)
-# 
-# rr <- run_settings[run_settings$week %in% dfr,]
-# 
-# write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
+dfr <- df_progress$week[df_progress$step3 == F]
+print(dfr)
+
+rr <- run_settings[run_settings$week %in% dfr,]
+
+write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
 
 # 
 # s <- readRDS('data/LA14/2112/1_b1_all_steps_random_path_custom_distr.RDS')
@@ -84,9 +84,19 @@ for(i in 1:nrow(run_settings)){
 # retrieve weeks that are true
 dfr <- df_progress$week[df_progress$step6 == T]
 print(dfr)
+
 run_settings <- run_settings[run_settings$week %in% dfr,]
 
+#modify run table to only include datasets that passed phase 1 successfully
+a <- df_progress[df_progress$step6 == F, 1:2]
+a$combo <- paste(a$ID, a$week, sep = '_')
 
+run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+
+run_settings <- run_settings[run_settings$combo %in% a$combo,]
+run_settings <- run_settings[,1:5]
+
+write.csv(run_settings, 'data/run_settings_RQ2_STS_phase2.csv')
 
 
 ############## CREATE SUMMARY TABLE ##################################
@@ -277,7 +287,7 @@ write.csv(df_deviance_vif, file = paste0('output/summary_deviances_vif', run_lab
 
 ##### FOR RQ2 TIMESERIES
 
-elephant <- 'LA12'
+elephant <- 'LA11'
 
 # retrieves summary results for only sig models GLM 
 srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
@@ -321,14 +331,22 @@ for(i in 1:nrow(rsig)){
 
 
 #library(ggplot2)
-png(paste0('output/timeseries_glm_coef', run_label, '.png'))
+png(paste0('output/timeseries_glm_coef', run_label, '_extended.png'))
+ggplot(data = df_glm_coef[df_glm_coef$significance == 'sig',], aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = predictor)) + 
+  geom_line() + geom_point(data = df_glm_coef[df_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
+dev.off()  
+
 ggplot(data = df_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = predictor)) + 
   geom_line() + geom_point(data = df_glm_coef[df_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to July 2011'))
-dev.off()  
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
+
  
 
 
@@ -368,14 +386,21 @@ for(i in 1:nrow(run_settings)){
   df_clr_coef <- rbind(df_clr_coef, entry)
 }
 
-png(paste0('output/timeseries_clr_coef', run_label, '.png'))
+png(paste0('output/timeseries_clr_coef', run_label, '_extended.png'))
+ggplot(data = df_clr_coef[df_clr_coef$significance == 'sig',], aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = predictor)) + 
+  geom_line() + geom_point(data = df_clr_coef[df_clr_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of CLR predictors for', elephant, 'from August 2009 to January 2012'))
+dev.off()
+
 ggplot(data = df_clr_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = predictor)) + 
   geom_line() + geom_point(data = df_clr_coef[df_clr_coef$significance == 'sig',], aes(y = value), shape = 8) + 
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of CLR predictors for', elephant, 'from August 2009 to July 2011'))
-dev.off()
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of CLR predictors for', elephant, 'from August 2009 to January 2012'))
 
 
 
@@ -391,11 +416,11 @@ df_div <- df_div[df_div$significance == 'sig', ]
 #   geom_hline(yintercept = 0) + 
 #   xlab('Time') + ylab('Deviance Value') + ggtitle('Timeseries of CLR Deviance for LA14 from August 2009 to July 2011')
 
-png(paste0('output/timeseries_glm_deviance_improvement', run_label, '.png'), width = 600)
+png(paste0('output/timeseries_glm_deviance_improvement', run_label, '_extended.png'), width = 600)
 ggplot(data = df_div, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = diff_deviance_to_null)) + 
   geom_line() + geom_point(data = df_div, aes(y = diff_deviance_to_null), shape = 8) + 
   geom_hline(yintercept = 0) + 
-  xlab('Time') + ylab('Deviance Value') + ggtitle(paste('Timeseries of CLR Deviance Improvement for', elephant, 'from August 2009 to July 2011'))
+  xlab('Time') + ylab('Deviance Value') + ggtitle(paste('Timeseries of GLM Deviance Improvement for', elephant, 'from August 2009 to January 2012'))
 dev.off()
 
 
@@ -444,14 +469,14 @@ for(r in 1:nrow(run_settings)){
   df_vif <- rbind(df_vif, entry)
 }
 
-png(paste0('output/timeseries_vif', run_label, '.png'))
+png(paste0('output/timeseries_vif', run_label, '_extended.png'))
 ggplot(data = df_vif, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = vif, group = predictor, color = predictor)) + 
   geom_line() + geom_point(data = df_vif[df_vif$significance == 'sig',], aes(y = vif), shape = 8) + 
   #geom_hline(yintercept = 0) + 
   geom_hline(yintercept = 5, linetype = 'dashed') +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'fixed') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of VIF for', elephant, 'from August 2009 to July 2011'))
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste('Timeseries of VIF for', elephant, 'from August 2009 to January 2012'))
 dev.off()
 
 ######################################### end RQ2 code 
@@ -459,5 +484,104 @@ dev.off()
 
 
 
+
+
+###################### RQ1 long timeseries 
+
+# create big run dataset that merges RQ2 long timeseries datasets 
+# l <- list.files('data', pattern = glob2rx('run_settings_RQ2_LA*.csv'), full.names = T)
+# run_table_RQ1 <- data.frame()
+# for(item in l){
+#   entry <- read.csv(item, row.names = 1)
+#   run_table_RQ1 <- rbind(run_table_RQ1, entry)
+# }
+
+# retrieve all coef values for all 4 datasets and place in large table 
+
+run_table_RQ1 <- data.frame()
+
+for(ID in c('LA11', 'LA12', 'LA13', 'LA14')){
+  
+  # read run table 
+  run_settings <- read.csv(paste0('data/run_settings_RQ2_', ID, '.csv'), row.names = 1)
+  
+  # read summary table 
+  summary_results <- read.csv(paste0('output/summary_results_RQ2_', ID, '.csv'), row.names = 1)
+  
+  # retrieves summary results for only sig models GLM 
+  srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
+  
+  # get weeks of sig models 
+  sigw <- srsig$week
+  print(length(sigw))
+  
+  # get run table for only weeks that are sig 
+  rsig <- run_settings[run_settings$week %in% sigw,]
+  
+  run_table_RQ1 <- rbind(run_table_RQ1, rsig)
+  
+}
+
+row.names(run_table_RQ1) <- 1:nrow(run_table_RQ1)
+
+RQ1_glm_coef <- data.frame()
+
+for(i in 1:nrow(run_table_RQ1)){
+  
+  # get run settings
+  ID <- run_table_RQ1$ID[i]
+  week <- run_table_RQ1$week[i]
+  method <- run_table_RQ1$pseudo_abs_method[i]
+  
+  # define filepaths
+  data_path <- paste0('data/', ID, '/', week, '/')
+  output_path <- paste0('output/', ID, '/', week, '/')
+  
+  # retrieve date of week 
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  date <- dfile$start_date[1]
+  
+  # retrieve coefs glm 
+  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- c[2:nrow(c),]
+  
+  # specify if sig or not with 90% confidence (so pvalue < 0.1)
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
+  
+  # create new entry with coefs and pvalues 
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], value = c$Estimate, significance = c$Pr...z..)
+  
+  RQ1_glm_coef <- rbind(RQ1_glm_coef, entry)
+}
+
+RQ1_glm_coef_sig <- RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',]
+summary(RQ1_glm_coef_sig$value)
+quantile(RQ1_glm_coef_sig$value, 0.90)
+
+
+z <- RQ1_glm_coef_sig$value
+zs <- scale(z)
+plot(z)
+plot(zs)
+
+### STOPPED THIS HALFWAY THROUGH COME BACK TO IT 
+
+#library(ggplot2)
+png(paste0('output/timeseries_glm_coef', '_RQ1_LTS', '_extended.png'))
+ggplot(data = RQ1_glm_coef_sig, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+  geom_line() + geom_point(data = RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
+dev.off()  
+
+ggplot(data = RQ1_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+  geom_line() + geom_point(data = RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
 
 
