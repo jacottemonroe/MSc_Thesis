@@ -46,4 +46,4 @@ library(ggplot2)
 
 # run function 
 #plotModels(directory = 'output/', ID, week, random_data_method = pseudo_abs_method, downscaling = downscaling_setting, full = T)
-plotModels(directory = 'output/', ID, week, random_data_method = pseudo_abs_method, downscaling = downscaling_setting, full = F)
+plotModels(directory = 'output/', ID, week, random_data_method = pseudo_abs_method, downscaling = downscaling_setting, full = F, scaled = T)

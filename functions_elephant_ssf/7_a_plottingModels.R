@@ -13,7 +13,7 @@
 
 
 
-plotModels <- function(directory = 'output/', ID, week, random_data_method = 'random_path_custom_distr', downscaling = 'NULL', full = F){
+plotModels <- function(directory = 'output/', ID, week, random_data_method = 'random_path_custom_distr', downscaling = 'NULL', full = F, scaled = F){
   
   if(downscaling == 'NULL'){
     suffix <- ''
@@ -35,6 +35,10 @@ plotModels <- function(directory = 'output/', ID, week, random_data_method = 'ra
   }else{
     letter <- 'b'
     model_type <- '50p_sd'}
+  
+  if(scaled == T){
+    suffix <- paste0(suffix, '_scaled')
+  }
   
   # define filepath 
   filepath <- paste0(directory, ID, '/', week, '/')

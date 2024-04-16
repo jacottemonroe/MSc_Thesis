@@ -92,6 +92,16 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   # source: https://stackoverflow.com/questions/19379081/how-to-replace-na-values-in-a-table-for-selected-columns
   step_dataset[c('ndvi_sd', 'ndvi_rate_sd')][is.na(step_dataset[c('ndvi_sd', 'ndvi_rate_sd')])] <- 0
   
+  # add columns of normalized data
+  step_dataset$ndvi_10_scaled <- scale(step_dataset$ndvi_10)
+  step_dataset$ndvi_50_scaled <- scale(step_dataset$ndvi_50)
+  step_dataset$ndvi_90_scaled <- scale(step_dataset$ndvi_90)
+  step_dataset$ndvi_sd_scaled <- scale(step_dataset$ndvi_sd)
+  step_dataset$ndvi_rate_10_scaled <- scale(step_dataset$ndvi_rate_10)
+  step_dataset$ndvi_rate_50_scaled <- scale(step_dataset$ndvi_rate_50)
+  step_dataset$ndvi_rate_90_scaled <- scale(step_dataset$ndvi_rate_90)
+  step_dataset$ndvi_rate_sd_scaled <- scale(step_dataset$ndvi_rate_sd)
+  
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
   

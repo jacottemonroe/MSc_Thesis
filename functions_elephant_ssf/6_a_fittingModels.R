@@ -11,7 +11,7 @@
 
 
 fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method = 'random_path_custom_distr', downscaling = 'NULL',
-                        multicolinearity_check = F, full = T, output_directory = 'output/'){
+                        multicolinearity_check = F, full = T, scaled = F, output_directory = 'output/'){
   
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -53,7 +53,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
   }
   
   # fit conditional logistic regression and general logistic regression models 
-  if(full == T){
+  if(full == T & scaled == F){
     output_number = '6_a'
     model_type = '_full_'
     
@@ -65,7 +65,7 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
     glm_model <- glm(case_ ~ ndvi_10 + ndvi_50 + ndvi_90 + ndvi_sd + ndvi_rate_10 + ndvi_rate_50 +
                        ndvi_rate_90 + ndvi_rate_sd, family = binomial(link = 'logit'), data = step_dataset)
     
-  }else{
+  }else if(full == F & scaled == F){
     output_number = '6_b'
     model_type = '_50p_sd_'
     
@@ -75,6 +75,30 @@ fitSSFModel <- function(input_directory = 'data/', ID, week, random_data_method 
     
     # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
     glm_model <- glm(case_ ~ ndvi_50 + ndvi_sd + ndvi_rate_50 + ndvi_rate_sd, 
+                     family = binomial(link = 'logit'), data = step_dataset)
+  }else if(full == T & scaled == T){
+    output_number = '6_a'
+    model_type = '_full_'
+    suffix <- paste0(suffix, '_scaled')
+    
+    # source: https://cran.r-project.org/web/packages/amt/vignettes/p4_SSF.html
+    clr_model <- fit_clogit(step_dataset, case_ ~ ndvi_10_scaled + ndvi_50_scaled + ndvi_90_scaled + ndvi_sd_scaled + 
+                              ndvi_rate_10_scaled + ndvi_rate_50_scaled + ndvi_rate_90_scaled + ndvi_rate_sd_scaled + strata(step_id_))
+    
+    # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
+    glm_model <- glm(case_ ~ ndvi_10_scaled + ndvi_50_scaled + ndvi_90_scaled + ndvi_sd_scaled + ndvi_rate_10_scaled + ndvi_rate_50_scaled +
+                       ndvi_rate_90_scaled + ndvi_rate_sd_scaled, family = binomial(link = 'logit'), data = step_dataset)
+  }else{
+    output_number = '6_b'
+    model_type = '_50p_sd_'
+    suffix <- paste0(suffix, '_scaled')
+    
+    # source: https://cran.r-project.org/web/packages/amt/vignettes/p4_SSF.html
+    clr_model <- fit_clogit(step_dataset, case_ ~ ndvi_50_scaled + ndvi_sd_scaled + 
+                              ndvi_rate_50_scaled + ndvi_rate_sd_scaled + strata(step_id_))
+    
+    # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
+    glm_model <- glm(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
                      family = binomial(link = 'logit'), data = step_dataset)
   }
   

@@ -76,7 +76,7 @@ library(car) # needed to run vif()
 ## Fit models on dataset with subset of predictors and save model outputs
 ###########
 # run function
-fitSSFModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, multicolinearity_check = T, full = F, output_directory = 'output/')
+fitSSFModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, multicolinearity_check = T, full = F, scaled = T, output_directory = 'output/')
 
 print(paste('(DONE) Fitting models for elephant', ID, 'of week', week))
 print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week', week))
