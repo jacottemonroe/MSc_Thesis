@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_RQ2_STS'
+run_label <- '_RQ2_STS_phase2'
 
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
@@ -34,17 +34,17 @@ for(i in 1:nrow(run_settings)){
   step3_files <- c('3_a1_modis_images_random_path_custom_distr')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
-  step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr.RDS', 
-                   '6_b1_clr_50p_sd_coefs_random_path_custom_distr.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr.csv', 
-                   '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr.csv', 
-                   '6_b4_glm_50p_sd_deviances_random_path_custom_distr.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr.csv')
-  step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr.png', 
-                   '7_b3_50p_sd_plot_curve_random_path_custom_distr.png')
+  step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
+                   '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
+                   '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
+                   '6_b4_glm_50p_sd_deviances_random_path_custom_distr_scaled.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr_scaled.csv')
+  step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr_scaled.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr_scaled.png', 
+                   '7_b3_50p_sd_plot_curve_random_path_custom_distr_scaled.png')
   
   # check if each folder has the correct files and mark the answer in table 
   if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
   if(all(step2_files %in% data_files)){step2 = T}else{step2 = F}
-  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) == 15){step3 = T}else{step3 = F}
+  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 1){step3 = T}else{step3 = F}
   if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
   if(all(step5_files %in% output_files)){step5 = T}else{step5 = F}
   if(all(step6_files %in% output_files)){step6 = T}else{step6 = F}
@@ -60,7 +60,7 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-dfr <- df_progress$week[df_progress$step3 == F]
+dfr <- df_progress$week[df_progress$step6 == F]
 print(dfr)
 
 rr <- run_settings[run_settings$week %in% dfr,]
@@ -82,13 +82,13 @@ write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
 
 
 # retrieve weeks that are true
-dfr <- df_progress$week[df_progress$step6 == T]
-print(dfr)
-
-run_settings <- run_settings[run_settings$week %in% dfr,]
+# dfr <- df_progress$week[df_progress$step6 == T]
+# print(dfr)
+# 
+# run_settings <- run_settings[run_settings$week %in% dfr,]
 
 #modify run table to only include datasets that passed phase 1 successfully
-a <- df_progress[df_progress$step6 == F, 1:2]
+a <- df_progress[df_progress$step3 == F, 1:2]
 a$combo <- paste(a$ID, a$week, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
@@ -96,7 +96,11 @@ run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:5]
 
+n <- data.frame(ID = unique(rr$ID), week = 2066, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+run_settings <- rbind(run_settings, n)
+
 write.csv(run_settings, 'data/run_settings_RQ2_STS_phase2.csv')
+write.csv(run_settings, 'data/run_settings_RQ2_STS_phase1.csv')
 
 
 ############## CREATE SUMMARY TABLE ##################################
@@ -105,7 +109,7 @@ write.csv(run_settings, 'data/run_settings_RQ2_STS_phase2.csv')
 # create empty summary results table 
 summary_results <- data.frame()
 
-suffix <- '' 
+suffix <- '_scaled' 
 
 # loop over each run 
 for(i in 1:nrow(run_settings)){
@@ -229,19 +233,24 @@ for(r in 1:nrow(run_settings)){
   downscaling_setting <- run_settings$downscaling[r]
   
   # get model specifications
-  if(downscaling_setting == 'NULL'){
-    suffix <- ''
-    modis_label <- 'MODIS 250m'
-    
-  }else if(downscaling_setting == T){
-    suffix <- '_downscaling_modis_30m'
-    modis_label <- 'MODIS 30m (D)'
-    
-  }else if(downscaling_setting == F){
-    suffix <- '_downscaling_modis_250m'
-    modis_label <- 'MODIS 250m (D)'
-    
-  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  if(suffix == ''){
+    if(downscaling_setting == 'NULL'){
+      suffix <- ''
+      modis_label <- 'MODIS 250m'
+      
+    }else if(downscaling_setting == T){
+      suffix <- '_downscaling_modis_30m'
+      modis_label <- 'MODIS 30m (D)'
+      
+    }else if(downscaling_setting == F){
+      suffix <- '_downscaling_modis_250m'
+      modis_label <- 'MODIS 250m (D)'
+      
+    }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  }else{
+    modis_label <- "MODIS 250m"
+  }
+
   
   # load dataset 
   dev_df <- read.csv(paste0('output/', ID, '/', week, '/6_b4_glm_50p_sd_deviances_', pseudo_abs_method, suffix, '.csv'))
@@ -526,12 +535,127 @@ row.names(run_table_RQ1) <- 1:nrow(run_table_RQ1)
 
 RQ1_glm_coef <- data.frame()
 
+s <- ''
 for(i in 1:nrow(run_table_RQ1)){
   
   # get run settings
   ID <- run_table_RQ1$ID[i]
   week <- run_table_RQ1$week[i]
   method <- run_table_RQ1$pseudo_abs_method[i]
+  
+  # define filepaths
+  data_path <- paste0('data/', ID, '/', week, '/')
+  output_path <- paste0('output/', ID, '/', week, '/')
+  
+  # retrieve date of week 
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  date <- dfile$start_date[1]
+  
+  # retrieve coefs glm 
+  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', s, '.csv'))
+  c <- c[2:nrow(c),]
+  
+  # specify if sig or not with 90% confidence (so pvalue < 0.1)
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
+  
+  # create new entry with coefs and pvalues 
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], value = c$Estimate, significance = c$Pr...z..)
+  
+  RQ1_glm_coef <- rbind(RQ1_glm_coef, entry)
+}
+
+RQ1_glm_coef_sig <- RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',]
+row.names(RQ1_glm_coef_sig) <- 1:nrow(RQ1_glm_coef_sig)
+
+
+# manual modifications TEMPORARY
+# RQ1_glm_coef_sig$value[352] <- -100
+# RQ1_glm_coef_sig$value[343] <- -1000
+# RQ1_glm_coef_sig$value[347] <- -1000
+# RQ1_glm_coef_sig$value[353] <- 1000
+# RQ1_glm_coef_sig$value[341] <- -3500
+
+#RQ1_glm_coef_sig <- RQ1_glm_coef_sig[RQ1_glm_coef_sig$week < 2175,]
+RQ1_glm_coef_sig$combo <- paste0(RQ1_glm_coef_sig$week, RQ1_glm_coef_sig$predictor, sep = '_')
+
+ag <- aggregate(RQ1_glm_coef_sig$value, list(RQ1_glm_coef_sig$week, RQ1_glm_coef_sig$predictor), FUN = summary)
+agx <- ag$x
+agx_mean <- agx[,4]
+agx_q1 <- agx[,2]
+agx_q3 <- agx[,5]
+agc <- paste0(ag$Group.1, ag$Group.2, sep = '_')
+
+agdf <- data.frame(combo = agc, Q1 = agx_q1, Mean = agx_mean, Q3 = agx_q3)
+
+# source: https://www.guru99.com/r-merge-data-frames.html
+RQ1_glm_coef_sig <- merge(RQ1_glm_coef_sig, agdf, by.x = 'combo')
+
+start_date <- min(RQ1_glm_coef_sig$date)
+end_date <- max(RQ1_glm_coef_sig$date)
+elephant <- '4 elephants'
+
+#library(ggplot2)
+# png(paste0('output/timeseries_glm_coef', '_RQ1_LTS', '_extended.png'))
+# ggplot(data = RQ1_glm_coef_sig, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+#   geom_line() + geom_point(data = RQ1_glm_coef_sig, aes(y = value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
+# dev.off()  
+
+# ggplot(data = RQ1_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+#   geom_line() + geom_point(data = RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
+
+ggplot(data = RQ1_glm_coef_sig, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor)) + 
+  #geom_point(data = RQ1_glm_coef_sig, aes(y = value), shape = 8, colour = 'black') + 
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  geom_ribbon(aes(ymin = Q1, ymax = Q3), fill = 'grey') + 
+  geom_line(aes(y = Mean), color = 'blue') +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Averaged time-series of estimated model coefficients for ', elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal()
+
+
+
+
+
+
+
+
+###################### RQ2 short TS
+
+# create run table with only sig models 
+RQ2_run_table <- data.frame()
+
+# fill new run table with only runs that give sig models 
+srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
+
+# get ID and weeks of sig models 
+srsig$combo <- paste(srsig$ID, srsig$week, sep = '_')
+
+run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+
+RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
+RQ2_run_table <- RQ2_run_table[,1:5]
+
+row.names(RQ2_run_table) <- 1:nrow(RQ2_run_table)
+
+RQ2_glm_coef <- data.frame()
+
+for(i in 1:nrow(RQ2_run_table)){
+  
+  # get run settings
+  ID <- RQ2_run_table$ID[i]
+  week <- RQ2_run_table$week[i]
+  method <- RQ2_run_table$pseudo_abs_method[i]
   
   # define filepaths
   data_path <- paste0('data/', ID, '/', week, '/')
@@ -552,36 +676,35 @@ for(i in 1:nrow(run_table_RQ1)){
   # create new entry with coefs and pvalues 
   entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], value = c$Estimate, significance = c$Pr...z..)
   
-  RQ1_glm_coef <- rbind(RQ1_glm_coef, entry)
+  RQ2_glm_coef <- rbind(RQ2_glm_coef, entry)
 }
 
-RQ1_glm_coef_sig <- RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',]
-summary(RQ1_glm_coef_sig$value)
-quantile(RQ1_glm_coef_sig$value, 0.90)
+RQ2_glm_coef_sig <- RQ2_glm_coef[RQ2_glm_coef$significance == 'sig',]
+start_date <- max(RQ2_glm_coef_sig$date)
+end_date <- min(RQ2_glm_coef_sig$date)
+elephant <- 'many elephants'
 
-
-z <- RQ1_glm_coef_sig$value
-zs <- scale(z)
-plot(z)
-plot(zs)
-
-### STOPPED THIS HALFWAY THROUGH COME BACK TO IT 
-
-#library(ggplot2)
-png(paste0('output/timeseries_glm_coef', '_RQ1_LTS', '_extended.png'))
-ggplot(data = RQ1_glm_coef_sig, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
-  geom_line() + geom_point(data = RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+ggplot(data = RQ2_glm_coef_sig, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+  geom_point(data = RQ2_glm_coef[RQ2_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
-dev.off()  
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
 
-ggplot(data = RQ1_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
-  geom_line() + geom_point(data = RQ1_glm_coef[RQ1_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
+
+start_date <- max(RQ2_glm_coef$date)
+end_date <- min(RQ2_glm_coef$date)
+elephant <- 'many elephants'
+
+RQ2_glm_coef$period[RQ2_glm_coef$week %in% seq(2065, 2069)] <- 'August'
+RQ2_glm_coef$period[RQ2_glm_coef$week %in% seq(2073, 2077)] <- 'October'
+RQ2_glm_coef$period[RQ2_glm_coef$week %in% seq(2085, 2089)] <- 'December'
+
+ggplot(data = RQ2_glm_coef, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = value, group = predictor, color = ID)) + 
+  geom_line() + geom_point(data = RQ2_glm_coef[RQ2_glm_coef$significance == 'sig',], aes(y = value), shape = 8) + 
   geom_hline(yintercept = 0) + 
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
-  facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from August 2009 to January 2012'))
-
+  # source: https://www.statology.org/ggplot-facet-order/
+  facet_grid(c(predictor) ~ c(factor(period, levels=c('August', 'October', 'December'))), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
 
