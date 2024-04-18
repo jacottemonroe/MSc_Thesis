@@ -11,7 +11,7 @@ mkdir -p data output
 
 # loop over entries of csv
 # source: https://www.baeldung.com/linux/csv-parsing
-exec < data/run_settings_RQ2_LA14.csv
+exec < data/run_settings_LA14_LTS_extended.csv
 read header
 while read line
 do

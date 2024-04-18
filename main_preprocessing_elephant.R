@@ -540,3 +540,12 @@ for(id in list_id){
 
 # save table for RQ2
 write.csv(rt, 'data/run_settings_RQ2_STS.csv')
+
+
+
+
+d <- read.csv('data/elephant_etosha/preprocessed_elephant_LA14.csv')
+w <- unique(d$week)
+w <- seq(2095, 2281)
+rt <- data.frame(ID = 'LA14', week = w, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+write.csv(rt, 'data/run_settings_LA14_LTS_extended.csv')
