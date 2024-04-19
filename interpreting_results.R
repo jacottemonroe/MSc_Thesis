@@ -775,6 +775,8 @@ row.names(STS_run_table) <- 1:nrow(STS_run_table)
 
 STS_coef <- data.frame()
 
+suffix <- '_scaled'
+
 for(i in 1:nrow(STS_run_table)){
   
   # get run settings
@@ -786,8 +788,23 @@ for(i in 1:nrow(STS_run_table)){
   data_path <- paste0('data/', ID, '/', week, '/')
   output_path <- paste0('output/', ID, '/', week, '/')
   
-  # check if model is significant based on summary table 
-  sig <- summary_results$sub_glm_sig[summary_results$ID == ID & summary_results$week == week]
+
+  # load and retrieve difference in deviance 
+  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  
+  # calculate deviance improvement 
+  dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
+  
+  # calculate chi-square from deviance to get model significance 
+  # source: https://stats.stackexchange.com/questions/340489/interpretation-of-deviance-in-logistic-model
+  # source: https://www.r-bloggers.com/2022/05/calculate-the-p-value-from-chi-square-statistic-in-r/
+  dev_sig <- pchisq(dev_diff, dev_df$null_df - dev_df$residual_df, lower.tail = F)
+  
+  # check if pvalues below 0.05
+  if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
+  
+  # load and retrieve VIF 
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
   
   # retrieve date of week 
   dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
@@ -805,16 +822,14 @@ for(i in 1:nrow(STS_run_table)){
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
   
   # create new entry with coefs and pvalues 
-  entry <- data.frame(ID = ID, week = week, method = method, date = date, model_sig = sig, 
-                      predictor = c[,1], glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], 
+                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
   STS_coef <- rbind(STS_coef, entry)
 }
 
-# change significance label for convenience 
-STS_coef$model_sig[STS_coef$model_sig == T] <- 'sig'
-STS_coef$model_sig[STS_coef$model_sig == F] <- 'not sig'
 
 
 
@@ -853,8 +868,8 @@ STS_coef_m <- STS_coef
 STS_coef_m[STS_coef_m$ID == 'LA11' & STS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
 
 
-start_date <- max(STS_coef$date)
-end_date <- min(STS_coef$date)
+start_date <- min(STS_coef_m$date)
+end_date <- max(STS_coef_m$date)
 elephant <- '13 elephants'
 
 # plot all at once - GLM
@@ -878,7 +893,7 @@ ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_v
 dev.off()
 
 
-# plot average TS
+# aggregate results of all elephants --> retrieve summary stats
 STS_coef_m$combo <- paste0(STS_coef_m$week, STS_coef_m$predictor, sep = '_')
 
 ag_glm <- aggregate(STS_coef_m$glm_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = mean, na.rm = T)
@@ -887,11 +902,20 @@ ag_glm_q1 <- aggregate(STS_coef_m$glm_value, list(STS_coef_m$week, STS_coef_m$pr
 ag_glm_q2 <- aggregate(STS_coef_m$glm_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
 ag_glm_q3 <- aggregate(STS_coef_m$glm_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
 
-ag_clr <- aggregate(STS_coef_m$clr_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = mean, na.rm = T)
-ag_clr_m <- ag_clr$x
+ag_clr_m <- aggregate(STS_coef_m$clr_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = mean, na.rm = T)$x
 ag_clr_q1 <- aggregate(STS_coef_m$clr_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
 ag_clr_q2 <- aggregate(STS_coef_m$clr_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
 ag_clr_q3 <- aggregate(STS_coef_m$clr_value, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+ag_vif_m <- aggregate(STS_coef_m$VIF, list(STS_coef_m$week, STS_coef_m$predictor), FUN = mean, na.rm = T)$x
+ag_vif_q1 <- aggregate(STS_coef_m$VIF, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_vif_q2 <- aggregate(STS_coef_m$VIF, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_vif_q3 <- aggregate(STS_coef_m$VIF, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+ag_di_m <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week, STS_coef_m$predictor), FUN = mean, na.rm = T)$x
+ag_di_q1 <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_di_q2 <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_di_q3 <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week, STS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
 
 # function to calculate relative number of sig models 
 # source: https://www.geeksforgeeks.org/aggregate-data-using-custom-functions-using-r/
@@ -899,11 +923,15 @@ relative_sum = function(x) {
   return((sum(x == 'sig')/length(x))*100)
 }
 
+ag_model <- aggregate(STS_coef_m$model_sig, list(STS_coef_m$week, STS_coef_m$predictor), FUN = length)$x
+
 ag_model_sig <- aggregate(STS_coef_m$model_sig, list(STS_coef_m$week, STS_coef_m$predictor), FUN = relative_sum)$x
 
 agc <- paste0(ag_glm$Group.1, ag_glm$Group.2, sep = '_')
 
-agdf <- data.frame(combo = agc, GLM_Q1 = ag_glm_q1, GLM_Mean = ag_glm_m, GLM_Q2 = ag_glm_q2, GLM_Q3 = ag_glm_q3, 
+agdf <- data.frame(combo = agc, total_models = ag_model, VIF_Q1 = ag_vif_q1, VIF_Mean = ag_vif_m, VIF_Q2 = ag_vif_q2, VIF_Q3 = ag_vif_q3,
+                   DEV_IMP_Q1 = ag_di_q1, DEV_IMP_Mean = ag_di_m, DEV_IMP_Q2 = ag_di_q2, DEV_IMP_Q3 = ag_di_q3,
+                   GLM_Q1 = ag_glm_q1, GLM_Mean = ag_glm_m, GLM_Q2 = ag_glm_q2, GLM_Q3 = ag_glm_q3, 
                    CLR_Q1 = ag_clr_q1, CLR_Mean = ag_clr_m, CLR_Q2 = ag_clr_q2, CLR_Q3 = ag_clr_q3, Sig_Model_Proportion = ag_model_sig)
 
 # source: https://www.guru99.com/r-merge-data-frames.html
@@ -922,12 +950,49 @@ STS_coef_m <- merge(STS_coef_m, agdf, by.x = 'combo')
 #   theme_minimal()
 
 
+library("cowplot") # to add multiple plots as one
+
+STS_coef_m$date[STS_coef_m$week == 2065] <- min(summary_results$date)
+STS_coef_m$date[STS_coef_m$week == 2074] <- summary_results$date[129]
+STS_coef_m$date[STS_coef_m$week == 2080] <- summary_results$date[16]
+STS_coef_m$date[STS_coef_m$week == 2082] <- summary_results$date[18]
+STS_coef_m$date[STS_coef_m$week == 2084] <- summary_results$date[20]
+STS_coef_m$date[STS_coef_m$week == 2085] <- summary_results$date[21]
+
+# addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
+ag_sig <- aggregate(STS_coef_m$Sig_Model_Proportion, list(STS_coef_m$week), FUN = quantile, probs = 0.5, na.rm = T)$x
+ag_di <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week), FUN = mean)$x
+
+# retrieve the number of models from sst_w df 
+df_bar <- data.frame(week = unique(STS_coef_m$date), total_models = sst_w$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
+
+# change label names of predictors 
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+
+# save STS coef table 
+write.csv(STS_coef_m, 'output/STS_df_results_aggregated.csv')
+
+
 png('output/STS_timeseries_glm_coef_aggregated.png')
-ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = predictor)) + 
+
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+  #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
+  #scale_color_grey(name = '% Significant Models') + 
+  scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  ylab('No. of Models') + xlab('Time') +
+  theme(legend.position = 'none') + 
+  theme_minimal()
+
+lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = predictor)) + 
+  #geom_bar(aes(y = total_models, color = Sig_Model_Proportion)) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
-  geom_line(aes(y = GLM_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range'), alpha = 0.5, show.legend = F) + 
+  geom_line(aes(y = GLM_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
   #geom_line(aes(y = GLM_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
@@ -935,33 +1000,178 @@ ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_v
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
   scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
   scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  guides(colour = guide_colourbar(order = 1),
-         linetype = guide_legend(order = 2),
-         fill = guide_legend(order = 3)) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
   xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  #theme(legend.spacing.y = unit(0, "cm"), legend.margin = margin(0, 0, 0, 0)) +
-  theme_minimal()
-dev.off()
+  theme_minimal() 
+  # source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
+  #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  
 
-png('output/STS_timeseries_clr_coef_aggregated.png')
-ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = predictor)) + 
+lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = predictor)) + 
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
-  geom_line(aes(y = CLR_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
+  geom_line(aes(y = GLM_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
+  scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+
+dev.off()
+
+
+
+png('output/STS_timeseries_clr_coef_aggregated.png')
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+  #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
+  #scale_color_grey(name = '% Significant Models') + 
+  scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  ylab('No. of Models') + xlab('Time') +
+  theme(legend.position = 'none') + 
+  theme_minimal()
+
+lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = predictor)) + 
+  #geom_bar(aes(y = total_models, color = Sig_Model_Proportion)) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range'), alpha = 0.5, show.legend = F) + 
+  geom_line(aes(y = CLR_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
+  #geom_line(aes(y = GLM_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
   scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
   scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  guides(colour = guide_colourbar(order = 1),
-         linetype = guide_legend(order = 2),
-         fill = guide_legend(order = 3)) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
   xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal()
+  theme_minimal() 
+# source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
+#theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+
+lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = predictor)) + 
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
+  geom_line(aes(y = CLR_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
+  scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+
 dev.off()
+
+# plot deviance improvement and VIF 
+png('output/STS_timeseries_dev_VIF_aggregated.png')
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = deviance_improvement, fill = sig_models), stat = 'identity', position = 'dodge') +
+  scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  ylab('Deviance Improvement') + xlab('Time') +
+  theme_minimal() + 
+  theme(legend.position = 'none') 
+
+lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = VIF, group = predictor)) + 
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
+  geom_line(aes(y = VIF_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
+  scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() + 
+  theme(legend.position = 'none') 
+
+lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = VIF, group = predictor)) + 
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
+  geom_line(aes(y = VIF_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
+  scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+dev.off()
+
+
+
+
+
+
+
+
+# ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = predictor)) + 
+#   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+#   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+#   geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range'), alpha = 0.5) + 
+#   geom_line(aes(y = CLR_Mean, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+#   geom_hline(yintercept = 0, linetype = 'dashed') + 
+#   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+#   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+#   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+#   scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + 
+#   scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+#   guides(colour = guide_colourbar(order = 1),
+#          linetype = guide_legend(order = 2),
+#          fill = guide_legend(order = 3)) +
+#   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+#   theme_minimal()
