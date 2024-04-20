@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_STS'
+run_label <- '_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
@@ -52,7 +52,7 @@ for(i in 1:nrow(run_settings)){
   # check if each folder has the correct files and mark the answer in table 
   if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
   if(all(step2_files %in% data_files)){step2 = T}else{step2 = F}
-  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 1){step3 = T}else{step3 = F}
+  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 6){step3 = T}else{step3 = F}
   if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
   if(all(step5_files %in% output_files)){step5 = T}else{step5 = F}
   if(all(step6_files %in% output_files)){step6 = T}else{step6 = F}
@@ -68,12 +68,13 @@ for(i in 1:nrow(run_settings)){
   
 }
 
-# dfr <- df_progress$week[df_progress$step6 == F]
+# dfr <- df_progress$week[df_progress$step3 == F]
 # print(dfr)
 # 
 # rr <- run_settings[run_settings$week %in% dfr,]
 # 
-# write.csv(rr, 'data/run_settings_RQ2_rerun.csv')
+# write.csv(rr, 'data/run_settings_LA14_LTS_rerun2.csv')
+
 
 # 
 # s <- readRDS('data/LA14/2112/1_b1_all_steps_random_path_custom_distr.RDS')
@@ -89,21 +90,28 @@ for(i in 1:nrow(run_settings)){
 
 
 
-# retrieve weeks that are true
-# dfr <- df_progress$week[df_progress$step6 == T]
-# print(dfr)
-# 
-# run_settings <- run_settings[run_settings$week %in% dfr,]
+# retrieve weeks that are true for single elephant dataset
+dfr <- df_progress$week[df_progress$step6 == T]
+print(dfr)
+
+run_settings <- run_settings[run_settings$week %in% dfr,]
+
 
 #modify run table to only include datasets that passed phase 1 successfully
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
-a <- df_progress[df_progress$step6 == T, 1:2]
-a$combo <- paste(a$ID, a$week, sep = '_')
 
-run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+# to select when have multiple elephants 
+# a <- df_progress[df_progress$step6 == T, 1:2]
+# a$combo <- paste(a$ID, a$week, sep = '_')
+# 
+# run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+# 
+# run_settings <- run_settings[run_settings$combo %in% a$combo,]
+# run_settings <- run_settings[,1:5]
 
-run_settings <- run_settings[run_settings$combo %in% a$combo,]
-run_settings <- run_settings[,1:5]
+
+
+
 # 
 # n <- data.frame(ID = unique(rr$ID), week = 2066, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
 # run_settings <- rbind(run_settings, n)
@@ -122,7 +130,7 @@ run_settings <- run_settings[,1:5]
 # run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
 # run_settings <- run_settings[!duplicated(run_settings),]
 
-write.csv(run_settings, 'data/run_settings_STS.csv')
+#write.csv(run_settings, 'data/run_settings_STS.csv')
 
 
 
@@ -1175,3 +1183,415 @@ dev.off()
 #   facet_grid(vars(predictor), scale = 'free') + 
 #   xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
 #   theme_minimal()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### LTS ANALYSIS 
+# create run table with only sig models 
+#RQ2_run_table <- data.frame()
+
+# fill new run table with only runs that give sig models 
+srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
+
+# get ID and weeks of sig models 
+srsig$combo <- paste(srsig$ID, srsig$week, sep = '_')
+
+run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+
+#RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
+LTS_run_table <- run_settings
+LTS_run_table <- LTS_run_table[,1:5]
+
+row.names(LTS_run_table) <- 1:nrow(LTS_run_table)
+
+LTS_coef <- data.frame()
+
+suffix <- '_scaled'
+
+for(i in 1:nrow(LTS_run_table)){
+  
+  # get run settings
+  ID <- LTS_run_table$ID[i]
+  week <- LTS_run_table$week[i]
+  method <- LTS_run_table$pseudo_abs_method[i]
+  
+  # define filepaths
+  data_path <- paste0('data/', ID, '/', week, '/')
+  output_path <- paste0('output/', ID, '/', week, '/')
+  
+  
+  # load and retrieve difference in deviance 
+  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  
+  # calculate deviance improvement 
+  dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
+  
+  # calculate chi-square from deviance to get model significance 
+  # source: https://stats.stackexchange.com/questions/340489/interpretation-of-deviance-in-logistic-model
+  # source: https://www.r-bloggers.com/2022/05/calculate-the-p-value-from-chi-square-statistic-in-r/
+  dev_sig <- pchisq(dev_diff, dev_df$null_df - dev_df$residual_df, lower.tail = F)
+  
+  # check if pvalues below 0.05
+  if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
+  
+  # load and retrieve VIF 
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  
+  # retrieve date of week 
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  date <- dfile$start_date[1]
+  
+  # retrieve coefs glm 
+  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- c[2:nrow(c),]
+  c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  
+  # specify if sig or not with 90% confidence (so pvalue < 0.1)
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
+  
+  # create new entry with coefs and pvalues 
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], 
+                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+                      clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
+  
+  LTS_coef <- rbind(LTS_coef, entry)
+}
+
+
+LTS_coef_m <- LTS_coef
+LTS_coef_m[LTS_coef_m$ID == 'LA11' & LTS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
+
+
+start_date <- min(LTS_coef_m$date)
+end_date <- max(LTS_coef_m$date)
+elephant <- 'LA11 and LA14'
+
+# plot all at once - GLM
+png('output/LTS_timeseries_glm_coef.png')
+ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = interaction(predictor, ID), color = ID)) + 
+  geom_line() + 
+  geom_point(data = LTS_coef_m[LTS_coef_m$glm_significance == 'sig',], aes(y = glm_value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+dev.off()
+
+# plot all at once - CLR
+png('output/LTS_timeseries_clr_coef.png')
+ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = interaction(predictor, ID), color = ID)) + 
+  geom_line() + 
+  geom_point(data = LTS_coef_m[LTS_coef_m$clr_significance == 'sig',], aes(y = clr_value), shape = 8) + 
+  geom_hline(yintercept = 0) + 
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of CLR predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+dev.off()
+
+
+# aggregate results of all elephants --> retrieve summary stats
+LTS_coef_m$combo <- paste0(LTS_coef_m$week, LTS_coef_m$predictor, sep = '_')
+
+ag_glm <- aggregate(LTS_coef_m$glm_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = mean, na.rm = T)
+ag_glm_m <- ag_glm$x
+ag_glm_q1 <- aggregate(LTS_coef_m$glm_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_glm_q2 <- aggregate(LTS_coef_m$glm_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_glm_q3 <- aggregate(LTS_coef_m$glm_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+ag_clr_m <- aggregate(LTS_coef_m$clr_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = mean, na.rm = T)$x
+ag_clr_q1 <- aggregate(LTS_coef_m$clr_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_clr_q2 <- aggregate(LTS_coef_m$clr_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_clr_q3 <- aggregate(LTS_coef_m$clr_value, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+ag_vif_m <- aggregate(LTS_coef_m$VIF, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = mean, na.rm = T)$x
+ag_vif_q1 <- aggregate(LTS_coef_m$VIF, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_vif_q2 <- aggregate(LTS_coef_m$VIF, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_vif_q3 <- aggregate(LTS_coef_m$VIF, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+ag_di_m <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = mean, na.rm = T)$x
+ag_di_q1 <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.25, na.rm = T)$x
+ag_di_q2 <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.50, na.rm = T)$x
+ag_di_q3 <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = quantile, probs = 0.75, na.rm = T)$x
+
+# function to calculate relative number of sig models 
+# source: https://www.geeksforgeeks.org/aggregate-data-using-custom-functions-using-r/
+relative_sum = function(x) {
+  return((sum(x == 'sig')/length(x))*100)
+}
+
+ag_model <- aggregate(LTS_coef_m$model_sig, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = length)$x
+
+ag_model_sig <- aggregate(LTS_coef_m$model_sig, list(LTS_coef_m$week, LTS_coef_m$predictor), FUN = relative_sum)$x
+
+agc <- paste0(ag_glm$Group.1, ag_glm$Group.2, sep = '_')
+
+agdf <- data.frame(combo = agc, total_models = ag_model, VIF_Q1 = ag_vif_q1, VIF_Mean = ag_vif_m, VIF_Q2 = ag_vif_q2, VIF_Q3 = ag_vif_q3,
+                   DEV_IMP_Q1 = ag_di_q1, DEV_IMP_Mean = ag_di_m, DEV_IMP_Q2 = ag_di_q2, DEV_IMP_Q3 = ag_di_q3,
+                   GLM_Q1 = ag_glm_q1, GLM_Mean = ag_glm_m, GLM_Q2 = ag_glm_q2, GLM_Q3 = ag_glm_q3, 
+                   CLR_Q1 = ag_clr_q1, CLR_Mean = ag_clr_m, CLR_Q2 = ag_clr_q2, CLR_Q3 = ag_clr_q3, Sig_Model_Proportion = ag_model_sig)
+
+# source: https://www.guru99.com/r-merge-data-frames.html
+LTS_coef_m <- merge(LTS_coef_m, agdf, by.x = 'combo')
+
+
+
+library("cowplot") # to add multiple plots as one
+
+LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(summary_results$date) # for both STS and LTS
+LTS_coef_m$date[LTS_coef_m$week == 2085] <- LTS_coef_m$date[159]
+LTS_coef_m$date[LTS_coef_m$week == 2104] <- LTS_coef_m$date[310]
+LTS_coef_m$date[LTS_coef_m$week == 2178] <- LTS_coef_m$date[821]
+
+#print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
+
+
+
+# addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
+ag_sig <- aggregate(LTS_coef_m$Sig_Model_Proportion, list(LTS_coef_m$week), FUN = quantile, probs = 0.5, na.rm = T)$x
+ag_di <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week), FUN = mean)$x
+
+# retrieve the number of models from sst_w df 
+df_bar <- data.frame(week = unique(LTS_coef_m$date), total_models = sst_w$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
+
+# change label names of predictors 
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+
+# save STS coef table 
+write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated.csv')
+
+
+
+# retrieve dates that want to highlight 
+date_hl <- unique(LTS_coef_m$date[grep('-09-', LTS_coef_m$date)])
+
+# get a list of dates by year
+# source: https://r-coder.com/split-r/
+date_hl <- split(date_hl, f = sub('-.*', '', date_hl))
+
+# get start and end dates for each year
+# source: https://stackoverflow.com/questions/43425540/get-max-min-values-from-a-list-of-dataframes-without-loop
+date_hl <- sapply(date_hl, function(x) range(x))
+
+# convert to data frame (doesn't work if matrix) of xmin and xmax 
+date_hl <- data.frame(t(date_hl))
+colnames(date_hl) <- c('xmin', 'xmax')
+
+# convert dates to date object
+date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
+date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
+
+
+png('output/LTS_timeseries_glm_coef_aggregated.png')
+
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+  #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
+  #scale_color_grey(name = '% Significant Models') + 
+  # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  ylab('No. of Models') + xlab('Time') +
+  theme(legend.position = 'none') + 
+  theme_minimal()
+
+lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
+  #geom_line(aes(y = GLM_Q2, color = 'Median')) +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() 
+# source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
+#theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+
+dev.off()
+
+
+
+png('output/LTS_timeseries_clr_coef_aggregated.png')
+
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+  #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
+  #scale_color_grey(name = '% Significant Models') + 
+  # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  ylab('No. of Models') + xlab('Time') +
+  theme(legend.position = 'none') + 
+  theme_minimal()
+
+lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
+  #geom_line(aes(y = CLR_Q2, color = 'Median')) +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() 
+# source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
+#theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+
+dev.off()
+
+
+
+# plot deviance improvement and VIF 
+png('output/LTS_timeseries_dev_VIF_aggregated.png')
+bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = deviance_improvement, fill = sig_models), stat = 'identity', position = 'dodge') +
+  # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
+  scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  ylab('Deviance Improvement') + xlab('Time') +
+  theme_minimal() + 
+  theme(legend.position = 'none') 
+
+lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') + 
+  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() + 
+  theme(legend.position = 'none') 
+
+lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
+  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
+  # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
+  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
+  # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
+  scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
+  # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
+  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  guides(colour = guide_colourbar(order = 3),
+         linetype = guide_legend(order = 1),
+         fill = guide_legend(order = 2)) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(predictor), scale = 'free') 
+
+
+# source: https://wilkelab.org/cowplot/reference/get_legend.html
+lp_leg <- get_legend(lp_leg)
+
+# source: https://wilkelab.org/cowplot/articles/plot_grid.html
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+dev.off()
+
