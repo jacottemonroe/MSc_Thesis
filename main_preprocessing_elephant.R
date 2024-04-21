@@ -549,3 +549,10 @@ w <- unique(d$week)
 w <- seq(2095, 2281)
 rt <- data.frame(ID = 'LA14', week = w, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
 write.csv(rt, 'data/run_settings_LA14_LTS_extended.csv')
+
+# create new run table for downscaling runs that have not been rescaled
+d <- read.csv('data/run_settings_downscaling.csv', row.names = 1)
+dm <- d[d$ID == 'LA14' & d$downscaling == F,]
+d <- d[rownames(d) != as.numeric(rownames(dm)),]
+d <- d[rownames(d) != c(11),]
+write.csv(d, 'data/run_settings_downscaling_rescaling.csv')
