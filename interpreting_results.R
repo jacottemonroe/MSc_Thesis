@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_LTS_LA11_LA12_LA13_LA14' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -92,7 +92,9 @@ for(i in 1:nrow(run_settings)){
 # r <- read.csv('data/run_settings_RQ2.csv', row.names = 1)
 # r$X <- NULL
 
-
+# make consistent the downscaling setting 
+# r <- run_settings[run_settings$ID == 'LA14' & run_settings$downscaling == F,]
+# write.csv(r, 'data/run_settings_downscaling_LA14_250_rescaling.csv')
 
 # retrieve weeks that are true for single elephant dataset
 dfr <- df_progress$week[df_progress$step6 == T]
@@ -154,8 +156,6 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 # create empty summary results table 
 summary_results <- data.frame()
 
-suffix <- '_scaled' 
-
 # loop over each run 
 for(i in 1:nrow(run_settings)){
   # retrieve the run
@@ -170,15 +170,34 @@ for(i in 1:nrow(run_settings)){
   # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
   pseudo_abs_method <- run[[3]]
   
+  # define if downscaled or not 
+  downscaling_setting <- run[[4]]
+  
   # define run filepath 
   run_filepath <- paste0('output/', ID, '/', week, '/')
+  
+  if(downscaling_setting == 'NULL'){
+    suffix <- ''
+    modis_label <- 'MODIS 250m'
+    
+  }else if(downscaling_setting == T){
+    suffix <- '_downscaling_modis_30m'
+    modis_label <- 'MODIS 30m (D)'
+    
+  }else if(downscaling_setting == F){
+    suffix <- '_downscaling_modis_250m'
+    modis_label <- 'MODIS 250m (D)'
+    
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
+  suffix <- paste0(suffix, '_scaled')
   
   # get date 
   dfile <- read.csv(paste0('data/', ID, '/', week, '/2_a1_step_extents_LUT_', pseudo_abs_method, '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # create results data entry 
-  entry <- data.frame(ID = ID, week = week, date = date, pseudo_abs_method = pseudo_abs_method, 
+  entry <- data.frame(ID = ID, week = week, date = date, pseudo_abs_method = pseudo_abs_method, downscaling = downscaling_setting, 
                       VIF_full = NA, full_glm_sig_coef = NA, full_glm_sig_coef_which = NA, full_glm_deviance = NA, full_glm_sig = NA, full_clr_sig_coef = NA, full_clr_sig_coef_which = NA, full_clr_concord = NA, full_clr_concord_se = NA, 
                       VIF_sub = NA, sub_glm_sig_coef = NA, sub_glm_sig_coef_which = NA, sub_glm_deviance = NA, sub_glm_sig = NA, sub_clr_sig_coef = NA, sub_clr_sig_coef_which = NA, sub_clr_concord = NA, sub_clr_concord_se = NA)
   
@@ -363,23 +382,21 @@ for(r in 1:nrow(run_settings)){
   downscaling_setting <- run_settings$downscaling[r]
   
   # get model specifications
-  if(suffix == ''){
-    if(downscaling_setting == 'NULL'){
-      suffix <- ''
-      modis_label <- 'MODIS 250m'
-      
-    }else if(downscaling_setting == T){
-      suffix <- '_downscaling_modis_30m'
-      modis_label <- 'MODIS 30m (D)'
-      
-    }else if(downscaling_setting == F){
-      suffix <- '_downscaling_modis_250m'
-      modis_label <- 'MODIS 250m (D)'
-      
-    }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
-  }else{
-    modis_label <- "MODIS 250m"
-  }
+  if(downscaling_setting == 'NULL'){
+    suffix <- ''
+    modis_label <- 'MODIS 250m'
+    
+  }else if(downscaling_setting == T){
+    suffix <- '_downscaling_modis_30m'
+    modis_label <- 'MODIS 30m (D)'
+    
+  }else if(downscaling_setting == F){
+    suffix <- '_downscaling_modis_250m'
+    modis_label <- 'MODIS 250m (D)'
+    
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
+  suffix <- paste0(suffix, '_scaled')
 
   
   # load dataset 
@@ -781,12 +798,12 @@ dev.off()
 # RQ2_run_table <- data.frame()
 
 # fill new run table with only runs that give sig models 
-srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
-
-# get ID and weeks of sig models 
-srsig$combo <- paste(srsig$ID, srsig$week, sep = '_')
-
-run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
+# srsig <- summary_results[summary_results$sub_glm_sig == T,] # these are the models i want to retrieve coefs for 
+# 
+# # get ID and weeks of sig models 
+# srsig$combo <- paste(srsig$ID, srsig$week, sep = '_')
+# 
+# run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
 
 #RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
 STS_run_table <- run_settings
@@ -1663,3 +1680,196 @@ plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths =
 
 dev.off()
 
+
+
+
+
+
+
+
+
+
+
+
+######## RQ3 spatial detail visualizations 
+
+# create a dataset that summarizes all predictor coefficients for all models and whether they are significant 
+downscaling_coef <- data.frame()
+
+for(i in 1:nrow(run_settings)){
+  
+  # get run settings
+  ID <- run_settings$ID[i]
+  week <- run_settings$week[i]
+  method <- run_settings$pseudo_abs_method[i]
+  downscaling_setting <- run_settings$downscaling[i]
+  
+  if(downscaling_setting == 'NULL'){
+    suffix <- ''
+    modis_label <- 'MODIS 250m'
+    
+  }else if(downscaling_setting == T){
+    suffix <- '_downscaling_modis_30m'
+    modis_label <- 'MODIS 30m (D)'
+    
+  }else if(downscaling_setting == F){
+    suffix <- '_downscaling_modis_250m'
+    modis_label <- 'MODIS 250m (D)'
+    
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  
+  suffix <- paste0(suffix, '_scaled')
+  
+  # define filepaths
+  data_path <- paste0('data/', ID, '/', week, '/')
+  output_path <- paste0('output/', ID, '/', week, '/')
+  
+  
+  # load and retrieve difference in deviance 
+  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  
+  # calculate deviance improvement 
+  dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
+  
+  # calculate chi-square from deviance to get model significance 
+  # source: https://stats.stackexchange.com/questions/340489/interpretation-of-deviance-in-logistic-model
+  # source: https://www.r-bloggers.com/2022/05/calculate-the-p-value-from-chi-square-statistic-in-r/
+  dev_sig <- pchisq(dev_diff, dev_df$null_df - dev_df$residual_df, lower.tail = F)
+  
+  # check if pvalues below 0.05
+  if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
+  
+  # load and retrieve VIF 
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  
+  # retrieve date of week 
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  date <- dfile$start_date[1]
+  
+  # retrieve coefs glm 
+  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- c[2:nrow(c),]
+  c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  
+  # specify if sig or not with 90% confidence (so pvalue < 0.1)
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
+  
+  # create new entry with coefs and pvalues 
+  entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1], 
+                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+                      clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
+  
+  downscaling_coef <- rbind(downscaling_coef, entry)
+}
+
+
+# define start and end dates for plotting 
+start_date <- min(downscaling_coef$date)
+end_date <- max(downscaling_coef$date)
+elephant <- 'LA14 and LA26'
+
+# manually adapt the dates in case they don't match per week (this happens when there is missing data)
+downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37]
+
+#print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
+
+# change label names of predictors 
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+
+# change label for downscaling status to be more indicative 
+downscaling_coef$downscaling[downscaling_coef$downscaling == T] <- '30 m'
+downscaling_coef$downscaling[downscaling_coef$downscaling == F] <- '250 m'
+
+# create new column for seasons (to make it easier than dates)
+downscaling_coef$seasons[downscaling_coef$week == 2260] <- 'April'
+downscaling_coef$seasons[downscaling_coef$week == 2267] <- 'June'
+downscaling_coef$seasons[downscaling_coef$week == 2278] <- 'August'
+
+# rename the elephant IDs 
+downscaling_coef$ID[downscaling_coef$ID == 'LA14'] <- 'Elephant LA14'
+downscaling_coef$ID[downscaling_coef$ID == 'LA26'] <- 'Elephant LA26'
+
+# sort the dataset to have same order of appearance of spatial res --> decreasing = F because dealing with characters not numbers
+downscaling_coef <- downscaling_coef[order(downscaling_coef$downscaling, decreasing = F),]
+
+# save STS coef table 
+write.csv(downscaling_coef, 'output/downscaling_df_results.csv')
+
+# plot results 
+if(!('ggpattern') %in% installed.packages()){install.packages('ggpattern')} # to read rasters
+library(ggpattern)
+
+png('output/downscaling_plot_glm_coef.png')
+ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = glm_significance, pattern = downscaling)) + 
+  #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '250 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+  #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '30 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+  # source: https://stackoverflow.com/questions/20060949/ggplot2-multiple-sub-groups-of-a-bar-chart
+  #geom_bar(aes(x = interaction(seasons, downscaling), y = glm_value, fill = glm_significance, group = downscaling), stat = 'identity') + 
+  # source: https://guslipkin.medium.com/grouped-and-stacked-bar-charts-in-r-e5f5ac5637de
+  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+                   pattern_angle = 45, pattern_density = 0.05,
+                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+  geom_hline(yintercept = 0, linetype = 'dashed') +
+  # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+  scale_fill_manual(name = 'Coefficient Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
+                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+                    guide = guide_legend(override.aes = list(pattern = "none"))) + 
+  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+  # source: https://www.statology.org/ggplot-facet-order/
+  facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+  xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() 
+dev.off()
+
+
+
+png('output/downscaling_plot_clr_coef.png')
+ggplot(data = downscaling_coef, aes(x = seasons, y = clr_value, fill = glm_significance, pattern = downscaling)) + 
+  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+                   pattern_angle = 45, pattern_density = 0.05,
+                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+  geom_hline(yintercept = 0, linetype = 'dashed') +
+  # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+  scale_fill_manual(name = 'Coefficient Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
+                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+                    guide = guide_legend(override.aes = list(pattern = "none"))) + 
+  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+  # source: https://www.statology.org/ggplot-facet-order/
+  facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+  xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for CLR models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() 
+dev.off()
+
+
+png('output/downscaling_plot_vif.png')
+ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = model_sig, pattern = downscaling)) + 
+  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+                   pattern_angle = 45, pattern_density = 0.05,
+                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+  geom_hline(yintercept = 0, linetype = 'dashed') +
+  # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+  scale_fill_manual(name = 'Model Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
+                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+                    guide = guide_legend(override.aes = list(pattern = "none"))) + 
+  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+  # source: https://www.statology.org/ggplot-facet-order/
+  facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+  xlab('Study Period') + ylab('VIF') + ggtitle('Comparison of VIF for models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() 
+dev.off()
