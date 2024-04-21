@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_LTS_LA11_LA12_LA13_LA14' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -26,6 +26,7 @@ for(i in 1:nrow(run_settings)){
   ID <- run_settings$ID[i]
   week <- run_settings$week[i]
   method <- run_settings$pseudo_abs_method[i]
+  downscaling <- run_settings$downscaling[i]
   
   # define filepaths
   data_path <- paste0('data/', ID, '/', week, '/')
@@ -61,7 +62,7 @@ for(i in 1:nrow(run_settings)){
   if(all(c(step1, step2, step3, step4, step5, step6, step7) == T)){complete = T}else{complete = F}
   
   # fill entry 
-  entry <- data.frame(ID = ID, week = week, method = method, step1 = step1, step2 = step2, step3 = step3, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
+  entry <- data.frame(ID = ID, week = week, method = method, downscaling = downscaling, step1 = step1, step2 = step2, step3 = step3, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
   
   df_progress <- rbind(df_progress, entry)
   
@@ -99,6 +100,16 @@ print(dfr)
 
 run_settings <- run_settings[run_settings$week %in% dfr,]
 
+
+# r <- run_settings
+# run_settings <- rbind(run_settings, r)
+# range(run_settings$week)
+# rownames(run_settings) <- 1:nrow(run_settings)
+# write.csv(run_settings, 'data/run_settings_LTS_LA11_LA12_LA13_LA14.csv')
+
+# # remove the faulty run of LA13 w2181 that has weird steps without error but causes error in modeling 
+# run_settings <- run_settings[rownames(run_settings) != 486,]
+# write.csv(run_settings, 'data/run_settings_LTS_LA11_LA12_LA13_LA14.csv')
 
 #modify run table to only include datasets that passed phase 1 successfully
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
@@ -1249,7 +1260,6 @@ dev.off()
 
 
 
-
 ### LTS ANALYSIS 
 # create run table with only sig models 
 #RQ2_run_table <- data.frame()
@@ -1334,7 +1344,7 @@ LTS_coef_m$clr_value[LTS_coef_m$clr_value > 7 | LTS_coef_m$clr_value < -7] <- NA
 
 start_date <- min(LTS_coef_m$date)
 end_date <- max(LTS_coef_m$date)
-elephant <- 'LA14' #'LA11, LA12, and LA14'
+elephant <- 'LA11, LA12, LA13, and LA14'
 
 library(ggplot2)
 # plot all at once - GLM
@@ -1409,12 +1419,16 @@ LTS_coef_m <- merge(LTS_coef_m, agdf, by.x = 'combo')
 
 library("cowplot") # to add multiple plots as one
 
+# make sure all weeks have same date 
+# note: some dates differ because of missing data for certain elephants in that week 
+# this is hardcoded for now --> could write code to automate this 
+# indices correspond to dataset with all 4 elephants 
 LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(LTS_coef_m$date) # for both STS and LTS
-LTS_coef_m$date[LTS_coef_m$week == 2085] <- LTS_coef_m$date[237]
-LTS_coef_m$date[LTS_coef_m$week == 2104] <- LTS_coef_m$date[465]
-LTS_coef_m$date[LTS_coef_m$week == 2178] <- LTS_coef_m$date[1273]
+LTS_coef_m$date[LTS_coef_m$week == 2085] <- LTS_coef_m$date[317]
+LTS_coef_m$date[LTS_coef_m$week == 2104] <- LTS_coef_m$date[621]
+LTS_coef_m$date[LTS_coef_m$week == 2178] <- LTS_coef_m$date[1726]
 
-print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
+#print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
 
 
 
