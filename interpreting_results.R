@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -1045,7 +1045,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
-  ylab('No. of Models') + xlab('Time') +
+  ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
 
@@ -1100,7 +1100,7 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(4,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1114,7 +1114,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
-  ylab('No. of Models') + xlab('Time') +
+  ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
 
@@ -1445,7 +1445,7 @@ LTS_coef_m$date[LTS_coef_m$week == 2085] <- LTS_coef_m$date[317]
 LTS_coef_m$date[LTS_coef_m$week == 2104] <- LTS_coef_m$date[621]
 LTS_coef_m$date[LTS_coef_m$week == 2178] <- LTS_coef_m$date[1726]
 
-#print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
+print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
 
 
 
@@ -1495,13 +1495,13 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
-  ylab('No. of Models') + xlab('Time') +
+  ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
 
 lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
@@ -1511,7 +1511,7 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1519,13 +1519,13 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('Coefficient Value') + #ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
 # source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
 #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
@@ -1533,7 +1533,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1547,7 +1547,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(4,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1561,7 +1561,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
-  ylab('No. of Models') + xlab('Time') +
+  ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
 
@@ -1873,3 +1873,41 @@ ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = model_sig, patt
   xlab('Study Period') + ylab('VIF') + ggtitle('Comparison of VIF for models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
 dev.off()
+
+
+
+
+
+# quick reading of results table to see how many models had high VIF
+r <- read.csv('output/LTS_df_results_aggregated.csv', row.names = 1)
+r$run <- paste0(r$ID, "_", r$week)
+length(unique(r$run))
+v <- r[r$VIF > 5,]
+
+# count how many vif per elephant and per month
+t <- data.frame(run = v$run, id = v$ID, date = v$date)
+u <- t[duplicated(t),]
+table((format(as.Date(u$date, tz = 'Africa/Maputo'), "%m")))
+table(u$id)
+
+# quick reading of dates for weeks that have 100% model sig 
+ms <- unique(r$date[r$Sig_Model_Proportion == 100])
+
+# see which week had smallest interquartile range 
+r$GLM_IQR <- r$GLM_Q3 - r$GLM_Q1
+m <- r[r$predictor == "Avg. NDVI",]
+mean(m$glm_value, na.rm = T)
+hist(m$glm_value)
+sd(m$glm_value, na.rm = T)
+
+# calculate overall proportion of sig models per predictor
+m <- r[r$predictor == "Dev. NDVI",]
+nrow(m[m$glm_significance == 'sig',])/nrow(m)
+
+# count how many models set to NA 
+n <- r[is.na(r$glm_value),]
+length(unique(n$run))
+t <- data.frame(run = n$run, id = n$ID, date = n$date)
+u <- t[duplicated(t),]
+table((u$id))
+table((format(as.Date(u$date, tz = 'Africa/Maputo'), "%Y-%m-%d")))

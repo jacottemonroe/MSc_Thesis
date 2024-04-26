@@ -556,3 +556,46 @@ dm <- d[d$ID == 'LA14' & d$downscaling == F,]
 d <- d[rownames(d) != as.numeric(rownames(dm)),]
 d <- d[rownames(d) != c(11),]
 write.csv(d, 'data/run_settings_downscaling_rescaling.csv')
+
+
+
+# calculate average number of paths per week of elephant dataset 
+p <- list.files('data/elephant_etosha', pattern = glob2rx('preprocessed*.csv'))
+p
+
+d <- data.frame()
+for(item in p){
+  df <- read.csv(paste0('data/elephant_etosha/', item))
+  id <- as.character(sub('.*_', '', sub('.csv', '', item)))
+  # source: https://stackoverflow.com/questions/17421776/add-count-of-unique-distinct-values-by-group-to-the-original-data
+  df <- df %>% group_by(week) %>% mutate(unique_types = n_distinct(path))
+  n <- unique(df[,c('week', 'unique_types')])
+  entry <- data.frame(ID = id, n)
+  d <- rbind(d, entry)
+}
+
+summary(d$unique_types)
+
+id_list <- unique(d$ID)
+id_list <- id_list[-c(6, 12)]
+
+# calculate average step length for all datasets 
+l <- list.files('data', pattern = glob2rx('1_b1*'), recursive = T)
+d <- data.frame()
+for(item in l){
+  id <- sub('/.*', '', item)
+  w <- sub('.*/', '', sub('/1_.*', '', item))
+  df <- readRDS(paste0('data/', item))
+  l <- df$sl_[df$case_ == T]
+  ta <- df$ta_[df$case_ == T]
+  entry <- data.frame(ID = id, week = w, sl = l, ta = ta)
+  d <- rbind(d, entry)
+}
+
+summary(d$sl)
+sd(d$sl)
+summary(d$ta)
+sd(d$ta)
+
+
+
