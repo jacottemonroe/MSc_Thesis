@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_downscaling' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -1547,7 +1547,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(4,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(5,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1631,16 +1631,17 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
 
 lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  geom_hline(yintercept = 5, linetype = 'dashed') +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1654,7 +1655,7 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
 
 lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
@@ -1662,7 +1663,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1676,7 +1677,8 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+#plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, ncol = 2, nrow = 1, rel_widths = c(3,1))
 
 dev.off()
 
@@ -1767,15 +1769,11 @@ for(i in 1:nrow(run_settings)){
 }
 
 
-# define start and end dates for plotting 
-start_date <- min(downscaling_coef$date)
-end_date <- max(downscaling_coef$date)
-elephant <- 'LA14 and LA26'
 
 # manually adapt the dates in case they don't match per week (this happens when there is missing data)
 downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37]
 
-#print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
+print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
 
 # change label names of predictors 
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
@@ -1802,12 +1800,19 @@ downscaling_coef <- downscaling_coef[order(downscaling_coef$downscaling, decreas
 # save STS coef table 
 write.csv(downscaling_coef, 'output/downscaling_df_results.csv')
 
+downscaling_coef <- read.csv('output/downscaling_df_results.csv')
+
+# define start and end dates for plotting 
+start_date <- min(downscaling_coef$date)
+end_date <- max(downscaling_coef$date)
+elephant <- 'LA14 and LA26'
+
 # plot results 
 if(!('ggpattern') %in% installed.packages()){install.packages('ggpattern')} # to read rasters
 library(ggpattern)
 
 png('output/downscaling_plot_glm_coef.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = glm_significance, pattern = downscaling)) + 
+ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = downscaling, pattern = glm_significance)) + 
   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '250 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '30 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
   # source: https://stackoverflow.com/questions/20060949/ggplot2-multiple-sub-groups-of-a-bar-chart
@@ -1819,33 +1824,35 @@ ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = glm_signi
                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
   geom_hline(yintercept = 0, linetype = 'dashed') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
-  scale_fill_manual(name = 'Coefficient Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
-                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+  scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+                    breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
+                       breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
   xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
+
 dev.off()
 
 
 
 png('output/downscaling_plot_clr_coef.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = clr_value, fill = glm_significance, pattern = downscaling)) + 
+ggplot(data = downscaling_coef, aes(x = seasons, y = clr_value, fill = downscaling, pattern = clr_significance)) + 
   # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
   geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
                    pattern_angle = 45, pattern_density = 0.05,
                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
   geom_hline(yintercept = 0, linetype = 'dashed') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
-  scale_fill_manual(name = 'Coefficient Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
-                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+  scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+                    breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
@@ -1855,18 +1862,19 @@ dev.off()
 
 
 png('output/downscaling_plot_vif.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = model_sig, pattern = downscaling)) + 
+ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = downscaling, pattern = model_sig)) + 
   # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
   geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
                    pattern_angle = 45, pattern_density = 0.05,
                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
   geom_hline(yintercept = 0, linetype = 'dashed') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
-  scale_fill_manual(name = 'Model Significance', values = c('sig' = '#bce784', 'not sig' = '#43A5C5'), 
-                    breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'), 
+  scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+                    breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Spatial Resolution', values = c("none", "stripe"), 
+  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
+                       breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
@@ -1911,3 +1919,33 @@ t <- data.frame(run = n$run, id = n$ID, date = n$date)
 u <- t[duplicated(t),]
 table((u$id))
 table((format(as.Date(u$date, tz = 'Africa/Maputo'), "%Y-%m-%d")))
+
+# find when coef becomes neg and get stats
+t <- r[r$predictor == 'Dev. NDVI Growth',c('combo', 'ID', 'week', 'date', 'glm_value', 'GLM_Mean', 'Sig_GLM_Proportion')]
+# t <- t[t$week %in% seq(2065, 2168), ]
+# t <- t[t$week %in% seq(2169, 2194), ]
+t <- t[t$week %in% seq(2065, 2139), ]
+t <- t[t$week %in% seq(2140, 2194), ]
+mean(t$GLM_Mean)
+sd(t$GLM_Mean)
+hist(t$glm_value)
+
+t <- t[t$week == 2144,]
+
+
+# quick reading of downscaling results 
+r <- read.csv('output/downscaling_df_results.csv', row.names = 1)
+
+# compare VIF betw res 
+v250 <- r[r$downscaling == '250 m',]
+v30 <- r[r$downscaling == '30 m',]  
+v250 <- r[r$downscaling == '250 m' & r$predictor == 'Avg. NDVI',]
+v30 <- r[r$downscaling == '30 m' & r$predictor == 'Avg. NDVI',]
+v <- v250[,c('ID', 'week', 'date')]
+v$VIF_250 <- v250$VIF
+v$VIF_30 <- v30$VIF
+v$diff <- v$VIF_30 - v$VIF_250
+summary(v$diff)
+sd(v$diff)
+
+r <- r[, c('ID', 'week', 'date', 'downscaling', 'predictor', 'glm_significance')]

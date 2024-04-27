@@ -328,7 +328,7 @@ presence <- data.frame(ID = NA, start_date = NA, end_date = NA, week = NA, path 
 # each elephant gets 1 column in dataframe where fill in matching dates 
 for (ID in elephant_IDs) {
   
-  file_name <- paste0('output/preprocessed_VSS_elephant_', ID,'.csv')
+  file_name <- paste0('data/elephant_etosha/preprocessed_elephant_', ID,'.csv')
   
   # get elephant dataset
   df <- read.csv(file_name)
@@ -363,7 +363,7 @@ presence <- na.omit(presence)
 
 # define start and end of green up
 GU_start <- c("2008-11-01", "2009-11-01", "2010-11-01", "2011-11-01", "2012-11-01", "2013-11-01")
-GU_end <- c("2009-03-15", "2010-03-15", "2011-03-15", "2012-03-15", "2013-03-15", "2014-03-15")
+GU_end <- c("2009-04-30", "2010-04-30", "2011-04-30", "2012-04-30", "2013-04-30", "2014-04-30")
 obs_start <- c("2008-11-01", "2009-10-01", "2010-10-01", "2011-10-01", "2012-10-01", "2013-10-01")
 obs_end <- c("2009-04-15", "2010-04-15", "2011-04-15", "2012-04-15", "2013-04-15", "2014-03-27")
 
@@ -373,13 +373,16 @@ green_up <- data.frame(start_greenup = as.Date(GU_start), end_greenup = as.Date(
 # plot elephant temporal presence 
 # source: https://stackoverflow.com/questions/72165869/plotting-date-ranges-for-each-id-and-marking-specific-dates-using-ggplot # for line ranges 
 elephant_presence_plot <- ggplot(presence) + 
-  geom_rect(data = green_up, aes(xmin = start_observ, xmax = end_observ, ymin = -Inf, 
-                                 ymax = Inf), fill = 'grey70', alpha = 0.2) +
+  # geom_rect(data = green_up, aes(xmin = start_observ, xmax = end_observ, ymin = -Inf, 
+  #                                ymax = Inf), fill = 'grey70', alpha = 0.2) +
   geom_rect(data = green_up, aes(xmin = start_greenup, xmax = end_greenup, ymin = -Inf, 
-                                 ymax = Inf), fill = 'green1', alpha = 0.1) +
-  geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date), linewidth = 4,
-                 color = 'orange') + 
-  theme_bw()
+                                 ymax = Inf, fill = 'Wet Season'), alpha = 0.1) +
+  geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date, color = 'Elephant Path Data'), linewidth = 4) + 
+  scale_fill_manual(name = '', values = c('Wet Season' = 'green4')) +
+  scale_color_manual(name = '', values = c('Elephant Path Data' = 'orange')) +
+  guide_legend(override.aes = list(alpha = 0.1)) +
+  xlab('Time') + ylab('Elephant ID') + 
+  theme_minimal()
 
 elephant_presence_plot
 
