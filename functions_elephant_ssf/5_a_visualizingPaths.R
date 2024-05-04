@@ -66,8 +66,11 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # new column for pathID --> every different path (true and false) has a different ID, necessary for plotting paths separately 
   dat$pathID <- NA
   
+  # create new column for row names 
+  dat$rowNames <- rownames(dat)
+  
   # find start of new path 
-  smin <- as.numeric(rownames(dat[dat$stepID == min(dat$stepID),]))
+  smin <- as.numeric(dat$rowNames[dat$stepID == min(dat$stepID)])
   
   # assign new path ID to start of each new path 
   dat$pathID[smin] <- 1:length(smin)
