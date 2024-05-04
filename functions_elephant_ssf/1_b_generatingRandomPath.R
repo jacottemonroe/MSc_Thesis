@@ -41,14 +41,11 @@ generateRandomPathFromCustomDistribution <- function(starting_fixes_dataset, tru
     starting_x <- fake_path[nrow(fake_path), 2]
     starting_y <- fake_path[nrow(fake_path), 3]
     
-    # set seed 
-    seed <- i+100*(loop_number-1)
-    
     # generate random step length 
-    random_sl <- sampleCustomDistribution(step_lengths, density_distr_step_lengths, seed) #full_sl
+    random_sl <- sampleCustomDistribution(step_lengths, density_distr_step_lengths) #full_sl
     
     # generate random turning angle 
-    random_ta <- sampleCustomDistribution(turning_angles, density_distr_turning_angles, seed) #full_ta
+    random_ta <- sampleCustomDistribution(turning_angles, density_distr_turning_angles) #full_ta
     
     # calculate coordinates of new point 
     new_coordinates <- calculateNewPoint(starting_x, starting_y, random_sl, random_ta)
@@ -108,7 +105,6 @@ generateRandomPathFromBufferPoint <- function(starting_fixes_dataset, true_step_
 
     # convert buffer polygon into polyline and sample random point along line
     # source: https://stackoverflow.com/questions/68987453/generating-random-locations-along-the-outer-border-of-a-shp-polygon-using-r
-    set.seed(i+100*(loop_number-1))
     new_point <- st_sample(st_cast(buffer_point, 'MULTILINESTRING'), 1)
 
     # add coordinates to fake path data frame

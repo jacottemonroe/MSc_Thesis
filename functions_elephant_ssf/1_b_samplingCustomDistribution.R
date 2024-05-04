@@ -10,7 +10,7 @@
 #   (otherwise it is not likely to occur in the actual dataset, so we reject it). Returns the random x that was accepted. 
 
 
-sampleCustomDistribution <- function(observations, density_function, seed){
+sampleCustomDistribution <- function(observations, density_function){
   
   # create empty vector to store random value 
   random_value <- c()
@@ -18,8 +18,6 @@ sampleCustomDistribution <- function(observations, density_function, seed){
   # loop to sample random value from distribution by means of rejection sampling 
   # method checks if random point is under the PDF (if over = omitted and new value is generated)
   while(length(random_value) < 1){
-    
-    set.seed(seed)
     
     # generate random x value from uniform distribution (between values from existing observations)
     # source: https://www.spsanderson.com/steveondata/posts/2023-10-30/index.html#:~:text=The%20runif()%20function%20generates,of%20random%20numbers%20to%20generate
@@ -36,7 +34,6 @@ sampleCustomDistribution <- function(observations, density_function, seed){
     if(random_y <= density_y){
       random_value <- append(random_value, random_x)
     }
-    seed <- seed + 3
   }
   
   return(random_value)

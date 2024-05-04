@@ -74,9 +74,14 @@ if(pseudo_abs_method == 'random_path_buffer_point'){
   library(terra)
 }
 
+# create custom seed for run by combining elephant ID and week 
+# Note: the seed should be the same every time I run a certain run but different between runs
+seed <- as.numeric(paste0(sub('LA', '', ID), week))
+
+set.seed(seed)
+
 # run function
 generateSteps(run_filepath, ID, week, 20, random_data_method = pseudo_abs_method, paste0('data/'))
 
 print(paste('(DONE) Generating steps for elephant', ID, 'of week', week, 'using pseudo-absence method:', pseudo_abs_method))
 print('Now creating step extent look-up table...')
-
