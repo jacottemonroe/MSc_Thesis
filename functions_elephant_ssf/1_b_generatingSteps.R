@@ -17,7 +17,7 @@
 
 generateSteps <- function(track_dataset_directory, 
                           ID, week, n_random_steps = 20, random_data_method = 'random_path_custom_distr', 
-                          output_directory = 'data/'){
+                          output_directory = 'data/', input_suffix = '', output_suffix = ''){
   
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -26,8 +26,8 @@ generateSteps <- function(track_dataset_directory,
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # load track datasets 
-  track_dataset_full <- readRDS(paste0(track_dataset_directory, '1_a1_elephant_full_track_xyt.RDS'))
-  track_dataset_subset <- readRDS(paste0(track_dataset_directory, '1_a2_elephant_track_xyt.RDS'))
+  track_dataset_full <- readRDS(paste0(track_dataset_directory, '1_a1_elephant_full_track_xyt', input_suffix, '.RDS'))
+  track_dataset_subset <- readRDS(paste0(track_dataset_directory, '1_a2_elephant_track_xyt', input_suffix, '.RDS'))
   
   
   ##### create observed dataset of steps 
@@ -101,7 +101,7 @@ generateSteps <- function(track_dataset_directory,
     }
     
     # define filename 
-    output_filename <- paste0('1_b1_all_steps_', random_data_method, '.RDS')
+    output_filename <- paste0('1_b1_all_steps_', random_data_method, output_suffix, '.RDS')
     
   }else if(random_data_method == 'random_path_buffer_point'){
     
@@ -121,7 +121,7 @@ generateSteps <- function(track_dataset_directory,
     }
     
     # define filename 
-    output_filename <- paste0('1_b1_all_steps_', random_data_method, '.RDS')
+    output_filename <- paste0('1_b1_all_steps_', random_data_method, output_suffix, '.RDS')
     
   }else if(random_data_method == 'random_step'){
     
@@ -133,7 +133,7 @@ generateSteps <- function(track_dataset_directory,
                               ta_distr = fit_distr(true_steps$ta_, 'vonmises'))
     
     # define filename 
-    output_filename <- paste0('1_b1_all_steps_', random_data_method, '.RDS')
+    output_filename <- paste0('1_b1_all_steps_', random_data_method, output_suffix, '.RDS')
   }else{print('Wrong pseudo-absence method specified. Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step')}
   
   ##### save output dataframe of all steps
