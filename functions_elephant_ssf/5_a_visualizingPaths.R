@@ -56,7 +56,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   for(b in unique(dat$burst_)){
     # select rows of that burst that are true
     steps <- dat[dat$burst_ == b & dat$case_ == T,]
-    dat$stepID[min(as.numeric(rownames(steps))):max(as.numeric(rownames(steps)))] <- 1:nrow(steps)
+    dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
   }
 
   # transfer the step ID of random steps to new column 
