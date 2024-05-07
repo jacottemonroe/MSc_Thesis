@@ -562,6 +562,46 @@ write.csv(d, 'data/run_settings_downscaling_rescaling.csv')
 
 
 
+# create new run table for STS + LTS + downscaling on old path + with CV
+sts <- read.csv('data/run_settings_STS.csv', row.names = 1)
+lts <- read.csv('data/run_settings_LTS_LA11_LA12_LA13_LA14.csv', row.names = 1)
+ds <- read.csv('data/run_settings_downscaling_rescaling.csv', row.names = 1)
+ds14 <- read.csv('data/run_settings_downscaling_LA14_250_rescaling.csv', row.names = 1)
+
+run_oldPathWithCV <- rbind(sts, lts, ds, ds14)
+run_oldPathWithCV <- run_oldPathWithCV[!duplicated(run_oldPathWithCV),]
+
+run_oldPathWithCV$input_suffix <- NA
+run_oldPathWithCV$output_suffix <- '_oldPathWithCV'
+
+write.csv(run_oldPathWithCV, 'data/run_settings_all_runs_old_path_with_CV.csv')
+
+
+
+# create new run table for STS + LTS + downscaling + extended LA14 + extended LA11 + full LA26 on new path + CV
+d14 <- read.csv('data/elephant_etosha/preprocessed_elephant_LA14.csv')
+w14 <- unique(d$week)
+rt14 <- data.frame(ID = 'LA14', week = w, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+
+d11 <- read.csv('data/elephant_etosha/preprocessed_elephant_LA11.csv')
+w11 <- unique(d$week)
+rt11 <- data.frame(ID = 'LA11', week = w, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+
+d26 <- read.csv('data/elephant_etosha/preprocessed_elephant_LA26.csv')
+w26 <- unique(d$week)
+rt26 <- data.frame(ID = 'LA26', week = w, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+
+run_newPathWithCV <- rbind(run_oldPathWithCV, rt14, rt11, rt26)
+run_newPathWithCV <- run_newPathWithCV[!duplicated(run_newPathWithCV),]
+
+run_newPathWithCV$input_suffix <- '_newPathWithCV'
+run_newPathWithCV$output_suffix <- '_newPathWithCV'
+
+write.csv(run_newPathWithCV, 'data/run_settings_all_runs_new_path_with_CV.csv')
+
+
+
+
 # calculate average number of paths per week of elephant dataset 
 p <- list.files('data/elephant_etosha', pattern = glob2rx('preprocessed*.csv'))
 p
