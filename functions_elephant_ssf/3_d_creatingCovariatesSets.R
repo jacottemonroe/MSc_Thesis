@@ -113,7 +113,7 @@ createCovariatesResponseSet <- function(modis_filepath, landsat_filepath, ID, we
 
 
 createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID, week, band_combinations,
-                                        output_directory = 'data/'){
+                                        output_directory = 'data/', output_suffix = ''){
   
   # # define date 
   # l_date <- sub('LC08_179073_4_', '', sub('_stitched.tif', '', LUT_entry$closest_landsat_image))
@@ -163,6 +163,6 @@ createPredictionCovariatesSet <- function(landsat_filepath, landsat_filename, ID
   
   # save dataset
   writeRaster(l_30, paste0(output_filepath,'3_d2_', sub('LC08_179073_4_', '', sub('_stitched.tif', '', landsat_filename)),
-                           '_prediction_covariates.tif'), overwrite = T)
+                           '_prediction_covariates', output_suffix, '.tif'), overwrite = T)
 
 }

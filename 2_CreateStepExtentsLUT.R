@@ -24,6 +24,14 @@ week <- run_settings[[2]]
 # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
 pseudo_abs_method <- run_settings[[3]]
 
+# replace NA from suffix columns of run settings to empty strings
+if(is.na(run_settings[[6]])){run_settings[[6]] <- ''}
+if(is.na(run_settings[[7]])){run_settings[[7]] <- ''}
+
+# define input and output suffixes
+input_suffix <- run_settings[[6]]
+output_suffix <- run_settings[[7]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -41,7 +49,8 @@ if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for groupin
 library(dplyr)
 
 # run function
-createStepExtentsLUT(run_filepath, ID, week, pseudo_abs_method, output_directory = 'data/')
+createStepExtentsLUT(run_filepath, ID, week, pseudo_abs_method, input_suffix = input_suffix, 
+                     output_suffix = output_suffix, output_directory = 'data/')
 
 print(paste('(DONE) Creating step extent LUT for elephant', ID, 'of week', week))
 print('Now retrieving MODIS data...')

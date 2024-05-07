@@ -13,11 +13,12 @@
 # Output: saves covariates table as csv.
 
  
-loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, 
-                                     random_data_method, downscaling = 'NULL', downscaling_model = 'ranger_full_selection', output_directory = 'data/'){ 
+loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, random_data_method, 
+                                     downscaling = 'NULL', downscaling_model = 'ranger_full_selection', 
+                                     input_suffix = '', output_directory = 'data/', output_suffix = ''){ 
   
   # load step dataset RDS 
-  step_dataset <- readRDS(paste0(input_directory, '1_b1_all_steps_', random_data_method, '.RDS'))
+  step_dataset <- readRDS(paste0(input_directory, '1_b1_all_steps_', random_data_method, input_suffix, '.RDS'))
   
   # add empty columns for covariates 
   # source: https://sparkbyexamples.com/r-programming/add-empty-column-to-dataframe-in-r/
@@ -26,19 +27,17 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   
   # retrieve and stack all generated MODIS images together
   if(downscaling == 'NULL'){
-    modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method, '/')
-    
-    output_suffix <- ''
+    modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method, input_suffix, '/')
     
   }else if(downscaling == T){
-    modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+    modis_directory <- paste0(input_directory, '3_g1_downscaled_modis_images_30m_', downscaling_model, input_suffix, '/')
     
-    output_suffix <- '_downscaling_modis_30m'
+    output_suffix <- paste0('_downscaling_modis_30m', output_suffix)
 
   }else if(downscaling == F){
-    modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method, '/')
+    modis_directory <- paste0(input_directory, '3_b1_modis_images_downscaling_', random_data_method, input_suffix, '/')
     
-    output_suffix <- '_downscaling_modis_250m'
+    output_suffix <- paste0('_downscaling_modis_250m', output_suffix)
     
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
 

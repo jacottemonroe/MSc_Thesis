@@ -14,7 +14,7 @@
 # Output: Map of filepaths on top of NDVI raster saved as png. 
 
 visualizePaths <- function(input_filepath, ID, week, random_data_method, downscaling= 'NULL', downscaling_model = 'ranger_full_selection',
-                           title = 'Elephant Movement on NDVI', output_directory = 'output/'){
+                           input_suffix = '', title = 'Elephant Movement on NDVI', output_directory = 'output/', output_suffix = ''){
   
   # create output filepath 
   output_filepath <- paste0(output_directory, ID, '/', week, '/')
@@ -26,19 +26,19 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   
   # define data directory and suffix
   if(downscaling == 'NULL'){
-    modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, '/')
+    modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, input_suffix, '/')
     
-    suffix <- ''
+    suffix <- input_suffix
     
   }else if(downscaling == T){
-    modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, '/')
+    modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, input_suffix, '/')
     
-    suffix <- '_downscaling_modis_30m'
+    suffix <- paste0('_downscaling_modis_30m', input_suffix)
     
   }else if(downscaling == F){
-    modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, '/')
+    modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, input_suffix, '/')
     
-    suffix <- '_downscaling_modis_250m'
+    suffix <- paste0('_downscaling_modis_250m', input_suffix)
     
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
   

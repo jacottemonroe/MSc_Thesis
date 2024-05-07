@@ -17,7 +17,7 @@ predictDownscaledModis <- function(input_filepath, modis_filepath, ID, week, LUT
   l_date <- sub('LC.*4_', '', sub('_stitched.tif', '', l_name))
   
   # load Landsat covariate raster 
-  l_30 <- rast(paste0(input_filepath, '3_d2_', l_date, '_prediction_covariates.tif'))
+  l_30 <- rast(paste0(input_filepath, '3_d2_', l_date, '_prediction_covariates', input_suffix, '.tif'))
   
   # define date and name of downscaling model
   m_date <- LUT_entry$modis_date

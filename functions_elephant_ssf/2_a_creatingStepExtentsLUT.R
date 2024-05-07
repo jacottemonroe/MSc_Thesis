@@ -13,10 +13,10 @@
 
 
 createStepExtentsLUT <- function(input_filepath, ID, week, random_data_method = 'random_path_custom_distr', 
-                                ndvi_rate_lag = 7, output_directory = 'data/elephant_etosha/'){
+                                 input_suffix = '', ndvi_rate_lag = 7, output_directory = 'data/elephant_etosha/', output_suffix = ''){
   
   # get input filepath 
-  input_filename <- paste0(input_filepath, '1_b1_all_steps_', random_data_method, '.RDS')
+  input_filename <- paste0(input_filepath, '1_b1_all_steps_', random_data_method, input_suffix, '.RDS')
   
   # read elephant step dataset
   all_steps <- readRDS(input_filename)
@@ -55,6 +55,6 @@ createStepExtentsLUT <- function(input_filepath, ID, week, random_data_method = 
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # save table 
-  write.csv(step_extents, paste0(output_filepath, '2_a1_step_extents_LUT_', random_data_method, '.csv'))
+  write.csv(step_extents, paste0(output_filepath, '2_a1_step_extents_LUT_', random_data_method, output_suffix, '.csv'))
   
 }

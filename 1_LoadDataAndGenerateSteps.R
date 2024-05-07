@@ -27,6 +27,12 @@ week <- run_settings[[2]]
 # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
 pseudo_abs_method <- run_settings[[3]]
 
+# replace NA from suffix columns of run settings to empty strings
+if(is.na(run_settings[[7]])){run_settings[[7]] <- ''}
+
+# define input and output suffixes
+output_suffix <- run_settings[[7]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -81,7 +87,7 @@ seed <- as.numeric(paste0(sub('LA', '', ID), week))
 set.seed(seed)
 
 # run function
-generateSteps(run_filepath, ID, week, 20, random_data_method = pseudo_abs_method, paste0('data/'))
+generateSteps(run_filepath, ID, week, 20, random_data_method = pseudo_abs_method, paste0('data/'), output_suffix = output_suffix)
 
 print(paste('(DONE) Generating steps for elephant', ID, 'of week', week, 'using pseudo-absence method:', pseudo_abs_method))
 print('Now creating step extent look-up table...')

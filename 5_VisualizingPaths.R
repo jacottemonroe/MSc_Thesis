@@ -39,6 +39,14 @@ pseudo_abs_method <- run_settings[[3]]
 downscaling_setting <- run_settings[[4]]
 downscaling_model <- run_settings[[5]]
 
+# replace NA from suffix columns of run settings to empty strings
+if(is.na(run_settings[[6]])){run_settings[[6]] <- ''}
+if(is.na(run_settings[[7]])){run_settings[[7]] <- ''}
+
+# define input and output suffixes
+input_suffix <- run_settings[[6]]
+output_suffix <- run_settings[[7]]
+
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
@@ -68,7 +76,8 @@ library(patchwork)
 
 # run function 
 visualizePaths(run_filepath, ID, week, pseudo_abs_method, downscaling= downscaling_setting, 
-               downscaling_model = downscaling_model, title = "Elephant Movement on Mean NDVI", output_directory = 'output/')
+               downscaling_model = downscaling_model, input_suffix = input_suffix, 
+               title = "Elephant Movement on Mean NDVI", output_directory = 'output/', output_suffix = output_suffix)
 
 print(paste('(DONE) Visualizing the movement paths for elephant', ID, 'of week', week))
 

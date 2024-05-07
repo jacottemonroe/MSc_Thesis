@@ -92,8 +92,7 @@ print(paste('(DONE) Fitting models for elephant', ID, 'of week', week))
 print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week', week))
 
 
-ID <- 'LA2'
-week <- 2065
+
 
 # 
 # 

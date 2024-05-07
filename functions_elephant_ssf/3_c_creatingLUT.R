@@ -6,7 +6,7 @@
 ## Output: LUT
 
 
-createLUT <- function(m_folder_name, l_folder_name, ID, week, output_directory = 'data/'){
+createLUT <- function(m_folder_name, l_folder_name, ID, week, output_directory = 'data/', output_suffix = ''){
   
   ## get list of all dates from all landsat images
   ## for all items in folder, retrieve data from file name and store in list
@@ -55,7 +55,7 @@ createLUT <- function(m_folder_name, l_folder_name, ID, week, output_directory =
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
   # save LUT as RDS
-  saveRDS(lut, paste0(output_filepath, '3_c1_MODISLandsatLUT.RData'))
+  saveRDS(lut, paste0(output_filepath, '3_c1_MODISLandsatLUT', output_suffix, '.RData'))
 }
 
 
