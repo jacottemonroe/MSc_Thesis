@@ -89,6 +89,374 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 
 
 
+###### full process to integrate in function 
+
+# necessary packages
+if(!('dplyr') %in% installed.packages()){install.packages('dplyr')}
+library(dplyr)
+if(!('caret') %in% installed.packages()){install.packages('caret')}
+library(caret)
+
+### set up - not included in function itself (just temporary)
+
+ID <- 'LA12'
+week <- 2172
+pseudo_abs_method <- 'random_path_custom_distr'
+downscaling_setting <- 'NULL'
+
+# define run filepath
+run_filepath <- paste0('data/', ID, '/', week, '/')
+
+# specify function parameters 
+input_directory <- run_filepath
+random_data_method <- pseudo_abs_method
+downscaling <- downscaling_setting
+multicolinearity_check <- F
+full <- T
+output_directory <- 'output/'
+
+
+### set up - included in function (preprocessing)
+
+# determine suffix based on input parameters
+if(downscaling == 'NULL'){
+  suffix <- ''
+  
+}else if(downscaling == T){
+  suffix <- '_downscaling_modis_30m'
+  
+}else if(downscaling == F){
+  suffix <- '_downscaling_modis_250m'
+  
+}else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+
+# read step dataset
+step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
+
+# rename case outcome T = presence; F = absence 
+step_dataset$case_[step_dataset$case_ == T] <- 'presence'
+step_dataset$case_[step_dataset$case_ == F] <- 'absence'
+
+# fix the step ID column to restart step count for every burst 
+step_dataset$stepID <- NA
+
+for(b in unique(step_dataset$burst_)){
+  # select rows of that burst that are true
+  steps <- step_dataset[step_dataset$burst_ == b & step_dataset$case_ == 'presence',]
+  step_dataset$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
+}
+
+# transfer the step ID of random steps to new column 
+# NOTE: could move the code to some other script (unless the columns are useful)
+step_dataset$stepID[step_dataset$case_ == 'absence'] <- step_dataset$step_id_[step_dataset$case_ == 'absence']
+
+# create new column that groups true/false cases for corresponding step in burst 
+# package: dplyr
+# source: https://stackoverflow.com/questions/24119599/how-to-assign-a-unique-id-number-to-each-group-of-identical-values-in-a-column
+step_dataset <- step_dataset %>% group_by(burst_, stepID) %>% mutate(pair_id=cur_group_id())
+
+# set the class to factor type instead of string
+step_dataset$case_ <- factor(step_dataset$case_, levels = c('absence', 'presence'))
+
+
+### split step dataset into training and testing sets 
+
+# get list of pair IDs (all pair groups have 1 T and 20 F)
+pair_id_list <- unique(step_dataset$pair_id)
+
+# generate random split in indices of step pairs
+# package: caret
+# source: https://rforhr.com/kfold.html
+set.seed(152)
+partition <- unname(createDataPartition(pair_id_list, p=.7, list=F, times=1))
+
+# split dataset into training and testing based on partition
+training_steps <- step_dataset[step_dataset$pair_id %in% partition,]
+test_steps <- step_dataset[!(step_dataset$pair_id %in% partition),]
+
+# convert outcome column to factor (necessary to define classes)
+training_steps$case_ <- factor(training_steps$case_, levels = c('absence', 'presence'))
+test_steps$case_ <- factor(test_steps$case_, levels = c('absence', 'presence'))
+
+
+### build custom GLM model to implement threshold probability tuning in cross-validation 
+
+## Step by step code used as reference: http://rstudio-pubs-static.s3.amazonaws.com/145252_b241fc4c9cc640a185e721694648ad31.html
+## The reference script modified the settings of the default rf model to incorporate threshold probability tuning in cross-validation. 
+## Taking the online tutorial and the glm documentation (getModelInfo) as a guideline, I did the same but for the glm model.
+## The following functions were modified from the original glm model:
+##    model$type
+##    model$parameters
+##    model$grid
+##    model$predict
+
+# get GLM model information
+thresh_glm <- getModelInfo("glm", regex = FALSE)[[1]]
+
+# specify the model type as classification 
+thresh_glm$type <- c('Classification')
+
+# add threshold as tuning parameter 
+thresh_glm$parameters <- data.frame(parameter = c('threshold'), class = c('numeric'), label = c('Probability Cutoff'))
+
+# set tuning grid
+thresh_glm$grid <- function(x, y, len = NULL, search = 'grid'){
+  if(search == 'grid'){
+    grid <- expand.grid(threshold = seq(0.01, 0.99, length = len))
+  } else{
+    grid <- expand.grid(threshold = runif(1, 0, size = len))
+  }
+  grid
+}
+
+# modify the predict function to test custom threshold
+thresh_glm$predict <- function(modelFit, newdata, submodels = NULL){
+  if (!is.data.frame(newdata)) {
+    newdata <- as.data.frame(newdata, stringsAsFactors = TRUE) 
+  }
+  
+  if (modelFit$problemType == "Classification") {
+    probs <- predict(modelFit, newdata, type = "response")
+    out <- ifelse(probs >= modelFit$tuneValue$threshold, 
+                  modelFit$obsLevel[1], modelFit$obsLevel[2])
+  }
+  else {
+    out <- predict(modelFit, newdata, type = "response")
+  }
+  
+  out
+}
+
+# # remove some part of prob function to just return the class
+# thresh_glm$prob <- function (modelFit, newdata, submodels = NULL) 
+# {
+#   if (!is.data.frame(newdata)) 
+#     newdata <- as.data.frame(newdata, stringsAsFactors = TRUE)
+#   out <- predict(modelFit, newdata, type = "response")
+#   out
+# }
+
+# write custom summaryFunction for trControl
+# still based on tutorial: http://rstudio-pubs-static.s3.amazonaws.com/145252_b241fc4c9cc640a185e721694648ad31.html
+# Note: twoClassSummary automatically returns ROC, sensitivity, and specificity metrics
+# Note: Dist = distance of specificity and sensitivity metrics to optimal performance (=1), the smaller the distance the better the model
+# source: https://cran.r-project.org/web/packages/caret/vignettes/caret.html
+performanceStats <- function(data, lev = levels(data$obs), model = NULL){
+  out <- c(twoClassSummary(data, lev = levels(data$obs), model = NULL))
+  #out2 <- c(prSummary(data, lev = levels(data$obs), model = NULL))
+  coords <- matrix(c(1, 1, out["Spec"], out["Sens"]), ncol = 2, byrow = T)
+  colnames(coords) <- c('Spec', 'Sens')
+  rownames(coords) <- c('Best', 'Current')
+  c(out, Dist = dist(coords)[1])
+}
+
+
+### implement cross-validation and fit GLM model on training step dataset
+
+# define cross-validation settings 
+# Note: Applying a 10-fold cross-validation on the training data 
+
+# # Option1: with default performance metric used for parameter tuning
+# cv_settings_default <- trainControl(method = 'cv', classProbs = T, summaryFunction = twoClassSummary)
+
+# Option 2: with custom performance metric used for parameter tuning
+cv_settings_custom <- trainControl(method = 'cv', classProbs = T, summaryFunction = performanceStats)
+
+# # ONLY FOR OPTION 1: Reverse level order of classes!
+# # Note: By default, absence (= 0) is first level, that's the negative outcome. 
+# #       This doesn't match hardcoded 'first level = positive outcome' rule of CV function (twoClassSummary). 
+# #       Need to reverse so presence (=1) is first level and read in CV function as positive outcome. 
+# # source: https://stackoverflow.com/questions/45333029/specifying-positive-class-of-an-outcome-variable-in-caret-train
+# # Note: also applying this so test set (even though CV function not used) for consistency
+# training_steps_rev <- training_steps
+# training_steps_rev$case_ <- factor(training_steps_rev$case_, levels=rev(levels(as.factor(training_steps_rev$case_))))
+# test_steps_rev <- test_steps
+# test_steps_rev$case_ <- factor(test_steps_rev$case_, levels=rev(levels(as.factor(test_steps_rev$case_))))
+
+# fit a custom GLM model through the training data with hyperparameter tuning of threshold probability
+# source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
+# source: https://www.rdocumentation.org/packages/traineR/versions/2.2.0/topics/train.glm
+# source: https://cran.r-project.org/web/packages/caret/vignettes/caret.html
+# Note: 20 threshold values are tested in the parameter tuning 
+# 
+# # Option 1: fit default GLM that uses AUC as performance metric
+# glm_model_default <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+#                    data = training_steps_rev, method = 'glm', family = binomial(link = 'logit'),
+#                    metric = 'ROC', maximize = F, tuneLength = 20, trControl = cv_settings_default)
+
+# Option 2: fit custom GLM that uses Dist as performance metric 
+# Note: the custom metric Dist is used for tuning threshold probability 
+glm_model_custom <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+           data = training_steps, method = thresh_glm, family = binomial(link = 'logit'),
+           metric = 'Dist', maximize = F, tuneLength = 20, trControl = cv_settings_custom)
+
+# also fit conditional logistic regression and general logistic regression models (without cross-validation)
+# note: models trained on full step dataset (no split into training and validation)
+# package: amt
+# source: https://cran.r-project.org/web/packages/amt/vignettes/p4_SSF.html
+clr_model <- fit_clogit(step_dataset, case_ ~ ndvi_50_scaled + ndvi_sd_scaled + 
+                          ndvi_rate_50_scaled + ndvi_rate_sd_scaled + strata(step_id_))
+
+# source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
+glm_model <- glm(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+                 family = binomial(link = 'logit'), data = step_dataset)
+
+
+### predict test set with trained, optimized, and validated GLM model
+
+# predict likelihood of elephant occurrence on step
+# Note: Type 'raw' outputs the class directly instead of the probability based on the tuned cutoff value from trained model
+test_steps$prediction  <- predict(glm_model_custom, newdata = test_steps , type = "raw" )
+
+# create confusion matrix
+# source: https://stackoverflow.com/questions/46028360/confusionmatrix-for-logistic-regression-in-r
+cm <- confusionMatrix(data = test_steps$prediction, reference = test_steps$case_, positive = 'presence')
+
+
+### Retrieve model performance metrics and results 
+
+# get VIF from GLM (not applicable to train object = cross-validated GLM model or CLR)
+# package: car
+glm_vif <- data.frame(vif(glm_model))
+
+# get model summaries
+clr_summary <- summary(clr_model)
+glm_summary <- summary(glm_model)
+glm_summary_c <- summary(glm_model_custom)
+
+# get model coefficients 
+# source: https://stackoverflow.com/questions/61482594/export-coxph-summary-from-r-to-csv
+clr_coef <- data.frame(clr_summary$coefficients)
+glm_coef <- data.frame(glm_summary$coefficients)
+glm_coef_c <- data.frame(glm_summary_c$coefficients)
+
+# create dataframe with statistical test results of CLR, the concordance and its standard error 
+clr_tests <- data.frame(log_likelihood = clr_summary$logtest, score = clr_summary$sctest, wald = clr_summary$waldtest)
+clr_tests <- rbind(clr_tests, SE_concordance = c(NA))
+clr_tests <- cbind(clr_tests, concordance = c(clr_summary$concordance[1], NA, NA, clr_summary$concordance[2]))
+
+# create dataframe of deviance and AIC for GLM models 
+glm_deviances <- data.frame(AIC = glm_summary$aic, null_deviance = glm_summary$null.deviance, null_df = glm_summary$df.null, 
+                            residual_deviance = glm_summary$deviance, residual_df = glm_summary$df.residual)
+glm_deviances_c <- data.frame(AIC = glm_summary_c$aic, null_deviance = glm_summary_c$null.deviance, null_df = glm_summary_c$df.null, 
+                            residual_deviance = glm_summary_c$deviance, residual_df = glm_summary_c$df.residual)
+
+# create dataframe with optimal cross-validation results from custom GLM
+glm_c_validation <- glm_model_custom$results[glm_model_custom$results$threshold == glm_model_custom$bestTune$threshold,]
+
+# create dataframe with custom GLM performance results on test set 
+glm_c_test <- data.frame(cm$byClass)
+
+
+### save outputs 
+
+# save model 
+saveRDS(clr_model, paste0(output_filepath, output_number, '0_clr', model_type, 'model_', random_data_method, suffix, '.RDS'))
+saveRDS(glm_model, paste0(output_filepath, output_number, '0_glm', model_type, 'model_', random_data_method, suffix, '.RDS'))
+saveRDS(glm_model_custom, paste0(output_filepath, output_number, '0_glm_custom', model_type, 'model_', random_data_method, suffix, '.RDS'))
+
+# save model results as csv 
+write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs_', random_data_method, suffix, '.csv'))
+write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests_', random_data_method, suffix, '.csv'))
+
+write.csv(glm_coef, paste0(output_filepath, output_number, '3_glm', model_type, 'coefs_', random_data_method, suffix, '.csv'))
+write.csv(glm_deviances, paste0(output_filepath, output_number, '4_glm', model_type, 'deviances_', random_data_method, suffix, '.csv'))
+write.csv(glm_vif, paste0(output_filepath, output_number, '5_glm', model_type, 'vif_', random_data_method, suffix, '.csv'))
+
+write.csv(glm_coef_c, paste0(output_filepath, output_number, '3_glm_custom', model_type, 'coefs_', random_data_method, suffix, '.csv'))
+write.csv(glm_deviances_c, paste0(output_filepath, output_number, '4_glm_custom', model_type, 'deviances_', random_data_method, suffix, '.csv'))
+write.csv(glm_c_validation, paste0(output_filepath, output_number, '6_glm_custom', model_type, 'CV_results_', random_data_method, suffix, '.csv'))
+write.csv(glm_c_test, paste0(output_filepath, output_number, '7_glm_custom', model_type, 'test_results_', random_data_method, suffix, '.csv'))
+
+# save confusion matrix from custom GLM
+saveRDS(cm, paste0(output_filepath, output_number, '8_glm_custom', model_type, 'confusion_matrix_', random_data_method, suffix, '.csv'))
+
+
+
+
+
+
+
+
+
+
+
+### analyze trained model 
+
+glm_model
+# get ROC spec sens diff by selecting values base on threshold best tuned 
+s <- summary(glm_model)
+s$aic
+
+# metrics <- glm_model$results[, c(1, 3:5)]
+# if(!('reshape2') %in% installed.packages()){install.packages('reshape2')}
+# library(reshape2)
+# metrics <- melt(metrics, id.vars = "threshold",
+#                 variable.name = "Resampled",
+#                 value.name = "Data")
+# 
+# ggplot(metrics, aes(x = threshold, y = Data, color = Resampled)) +
+#   geom_line() +
+#   ylab('Performance Score') + xlab("Threshold Probability") +
+#   ggtitle('Threshold Probability Tuning') +
+#   # source: https://stackoverflow.com/questions/14622421/how-to-change-legend-title-in-ggplot
+#   labs(color = 'Performance Metrics') +
+#   theme_minimal() +
+#   theme(legend.position = "top")
+
+# retrieve threshold value
+new_threshold <- glm_model$bestTune[[1]]
+
+
+### predict the test outcome with trained model and new threshold value
+
+# predict likelihood of elephant occurrence on step
+#test_steps$prediction  <- predict(glm_model, newdata = test_steps, type = "response")
+training_steps$prediction <- predict( glm_model, newdata = training_steps, type = "raw" )
+test_steps$prediction  <- predict( glm_model, newdata = test_steps , type = "raw" )
+
+# create confusion matrix of predicted values based on new threshold value
+# source: https://stackoverflow.com/questions/46028360/confusionmatrix-for-logistic-regression-in-r
+# source: https://stackoverflow.com/questions/39803667/r-create-factor-based-on-condition
+confusionMatrix(data = factor(ifelse(test_steps$prediction$presence > 0.5, 'presence', 'absence')), 
+                reference = test_steps$case_, positive = 'presence')
+
+confusionMatrix(data = factor(ifelse(test_steps$prediction$presence > new_threshold, 'presence', 'absence')), 
+                reference = test_steps$case_, positive = 'presence')
+
+cm <- confusionMatrix(data = test_steps$prediction, reference = test_steps$case_, positive = 'presence')
+cm$byClass
+
+ggplot( training_steps, aes( prediction, color = as.factor(case_) ) ) + 
+  geom_density( linewidth = 1 ) +
+  ggtitle( "Training Set's Predicted Score" ) + 
+  scale_color_manual( name = "data", values = c( "absence" = 'orange', "presence" = 'blue'), labels = c('absence', 'presence')) + 
+  theme_minimal()
+
+ggplot( test_steps, aes( prediction, color = as.factor(case_) ) ) + 
+  geom_density( linewidth = 1 ) +
+  ggtitle( "Test Set's Predicted Score" ) + 
+  scale_color_manual( name = "data", values = c( "absence" = 'orange', "presence" = 'blue'), labels = c('absence', 'presence')) + 
+  theme_minimal()
+
+# iterate to find optimal cutoff value
+# source: https://cran.r-project.org/web/packages/cutpointr/vignettes/cutpointr.html
+if(!('cutpointr') %in% installed.packages()){install.packages('cutpointr')}
+library(cutpointr)
+# source: https://stats.stackexchange.com/questions/61521/cut-off-point-in-a-roc-curve-is-there-a-simple-function
+cp <- cutpointr(training_steps, prediction, case_, method = maximize_metric, metric = F1_score, pos_class = 'presence', direction = '>=')
+summary(cp)
+cp$F1_score
+cp$AUC
+plot(cp)
+plot_metric(cp)
+
+
+
+
+
+
+
 
 # 
 # 
@@ -106,19 +474,14 @@ r3 <- rbind(r, r2)
 rs <- r3[,c('ID', 'week', 'date', 'method', 'model_sig')]
 rs <- rs[!duplicated(rs),]
 
-# # randomly sample 100 indices 
-# si <- floor(runif(300, min=1, max=nrow(rs)))
-# 
-# # retrieve rows from results dataset (output/LTS_df_results_aggregated.csv)
-# rs <- rs[si,]
-
+# create new columns for relevant performance metrics 
 rs$cutoff <- NA
 rs$f1_score <- NA
 rs$AUC <- NA
 rs$sensitivity <- NA
 rs$specificity <- NA
 
-
+# loop for each elephant run (data entry)
 for(i in 1:nrow(rs)){
   
   ID <- rs$ID[i]
@@ -347,22 +710,6 @@ test_steps <- step_dataset[!(step_dataset$pair_id %in% partition),]
 # Note: also applying this so test set (even though CV function not used) for consistency
 training_steps$case_ <- factor(training_steps$case_, levels=rev(levels(as.factor(training_steps$case_))))
 test_steps$case_ <- factor(test_steps$case_, levels=rev(levels(as.factor(test_steps$case_))))
-
-# define weights for presence/absence data (to deal with data imbalance)
-# source: https://www.r-bloggers.com/2016/12/handling-class-imbalance-with-r-and-caret-an-introduction/
-model_weights <- ifelse(training_steps$case_ == "presence",
-                        (1/table(training_steps$case_)[1]) * 0.5,
-                        (1/table(training_steps$case_)[2]) * 0.5)
-
-# define function to calculate F1 Score from predicted values 
-# Note: this function will be embeded in other functions for cross-validation therefore needs to fit certain format (hence the NULL arguments)
-# f1 <- function (data, lev = NULL, model = NULL) {
-#   precision <- precision(data = data$pred, reference = data$obs, relevant = 'presence')
-#   recall  <- recall(data = data$pred, reference = data$obs, relevant = 'presence')
-#   f1_val <- (2 * precision * recall) / (precision + recall)
-#   names(f1_val) <- c("F1")
-#   f1_val
-# } 
 
 # custom function for evaluating performance at custom cutoff based on improvement compared to ideal model --> based on ROC
 fourStats <- function (data, lev = levels(data$obs), model = NULL) {
@@ -755,3 +1102,28 @@ submodels[[1]] <- data.frame(threshold = grid$threshold)
 l <- list(loop = 1, submodels = submodels)
 
 r <- randomForest(training_steps$ndvi_50_scaled, training_steps$case_)
+
+
+
+
+
+
+
+######## leftover code 
+
+
+# define weights for presence/absence data (to deal with data imbalance)
+# source: https://www.r-bloggers.com/2016/12/handling-class-imbalance-with-r-and-caret-an-introduction/
+model_weights <- ifelse(training_steps$case_ == "presence",
+                        (1/table(training_steps$case_)[1]) * 0.5,
+                        (1/table(training_steps$case_)[2]) * 0.5)
+
+# define function to calculate F1 Score from predicted values 
+# Note: this function will be embeded in other functions for cross-validation therefore needs to fit certain format (hence the NULL arguments)
+# f1 <- function (data, lev = NULL, model = NULL) {
+#   precision <- precision(data = data$pred, reference = data$obs, relevant = 'presence')
+#   recall  <- recall(data = data$pred, reference = data$obs, relevant = 'presence')
+#   f1_val <- (2 * precision * recall) / (precision + recall)
+#   names(f1_val) <- c("F1")
+#   f1_val
+# } 
