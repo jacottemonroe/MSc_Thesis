@@ -38,8 +38,15 @@ generateSteps <- function(track_dataset_directory,
   
   # add information attributes as new columns (to differentiate the true and false steps)
   true_steps$case_ <- T
-  true_steps$step_id_ <- row.names(true_steps)
+  true_steps$step_id_ <- NA
   true_steps$random_id_ <- NA
+  
+  # number each true step by burst
+  for(b in unique(true_steps$burst_)){
+    # select rows of that burst that are true
+    steps <- true_steps[true_steps$burst_ == b,]
+    true_steps$step_id_[true_steps$burst_ == b] <- 1:nrow(steps)
+  }
   
   
   ##### create custom distributions from full dataset of all observations for that elephant 
@@ -77,7 +84,7 @@ generateSteps <- function(track_dataset_directory,
   # select starting fixes of each burst
   # PACKAGE: dplyr should be installed
   # source: https://www.r-bloggers.com/2022/07/select-the-first-row-by-group-in-r/
-  starting_fixes <- track_dataset_subset %>% group_by(burst_) %>% filter(row_number()==1)
+  starting_fixes <- all_steps %>% group_by(burst_) %>% filter(row_number()==1)
   
   
   ##### generate random pseudo-absence paths 
@@ -92,11 +99,11 @@ generateSteps <- function(track_dataset_directory,
     for(loop in 1:n_random_steps){
       
       # for each true separate path generate a corresponding false path 
-      for(burst in 1:nrow(starting_fixes)){
+      for(burst in starting_fixes$burst_){
         
         # generate a random pseudo-absence path for the corresponding true path and add it to the dataset of all steps
         all_steps <- generateRandomPathFromCustomDistribution(starting_fixes, true_steps, sl, ta, density_sl,
-                                                              density_ta, track_dataset_subset, all_steps, burst, loop) 
+                                                              density_ta, all_steps, burst, loop) 
       }
     }
     

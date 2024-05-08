@@ -9,6 +9,8 @@
 ##    2_a1: Look-up table of spatial extents and dates of the movement steps, saved as csv object. (intermediate output)
 
 
+
+
 ###########
 ## Read run settings 
 ###########
@@ -35,6 +37,8 @@ output_suffix <- run_settings[[7]]
 # define run filepath 
 run_filepath <- paste0('data/', ID, '/', week, '/')
 
+print(paste('Now creating step extent look-up table for elephant', ID, 'of week', week, '...'))
+
 
 
 ###########
@@ -53,4 +57,3 @@ createStepExtentsLUT(run_filepath, ID, week, pseudo_abs_method, input_suffix = i
                      output_suffix = output_suffix, output_directory = 'data/')
 
 print(paste('(DONE) Creating step extent LUT for elephant', ID, 'of week', week))
-print('Now retrieving MODIS data...')

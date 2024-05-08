@@ -53,23 +53,23 @@ fitMovementModel <- function(input_directory = 'data/', ID, week, random_data_me
   step_dataset$case_[step_dataset$case_ == T] <- 'presence'
   step_dataset$case_[step_dataset$case_ == F] <- 'absence'
   
-  # fix the step ID column to restart step count for every burst 
-  step_dataset$stepID <- NA
-  
-  for(b in unique(step_dataset$burst_)){
-    # select rows of that burst that are true
-    steps <- step_dataset[step_dataset$burst_ == b & step_dataset$case_ == 'presence',]
-    step_dataset$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
-  }
-  
-  # transfer the step ID of random steps to new column 
-  # NOTE: could move the code to some other script (unless the columns are useful)
-  step_dataset$stepID[step_dataset$case_ == 'absence'] <- step_dataset$step_id_[step_dataset$case_ == 'absence']
-  
+  # # fix the step ID column to restart step count for every burst 
+  # step_dataset$stepID <- NA
+  # 
+  # for(b in unique(step_dataset$burst_)){
+  #   # select rows of that burst that are true
+  #   steps <- step_dataset[step_dataset$burst_ == b & step_dataset$case_ == 'presence',]
+  #   step_dataset$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
+  # }
+  # 
+  # # transfer the step ID of random steps to new column 
+  # # NOTE: could move the code to some other script (unless the columns are useful)
+  # step_dataset$stepID[step_dataset$case_ == 'absence'] <- step_dataset$step_id_[step_dataset$case_ == 'absence']
+  # 
   # create new column that groups true/false cases for corresponding step in burst 
   # package: dplyr
   # source: https://stackoverflow.com/questions/24119599/how-to-assign-a-unique-id-number-to-each-group-of-identical-values-in-a-column
-  step_dataset <- step_dataset %>% group_by(burst_, stepID) %>% mutate(pair_id=cur_group_id())
+  step_dataset <- step_dataset %>% group_by(burst_, step_id_) %>% mutate(pair_id=cur_group_id())
   
   # set the class to factor type instead of string
   step_dataset$case_ <- factor(step_dataset$case_, levels = c('absence', 'presence'))
@@ -125,7 +125,7 @@ fitMovementModel <- function(input_directory = 'data/', ID, week, random_data_me
   # package: amt
   # source: https://cran.r-project.org/web/packages/amt/vignettes/p4_SSF.html
   clr_model <- fit_clogit(step_dataset, case_bool ~ ndvi_50_scaled + ndvi_sd_scaled + 
-                            ndvi_rate_50_scaled + ndvi_rate_sd_scaled + strata(stepID))
+                            ndvi_rate_50_scaled + ndvi_rate_sd_scaled + strata(step_id_))
   
   # package: caret
   # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/

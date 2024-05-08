@@ -23,19 +23,19 @@
 
 generateRandomPathFromCustomDistribution <- function(starting_fixes_dataset, true_step_dataset, step_lengths, 
                                turning_angles, density_distr_step_lengths, density_distr_turning_angles, 
-                               true_fixes_dataset, all_steps_dataset, burst_number, loop_number){
+                               all_steps_dataset, burst_number, loop_number){
   
   # call necessary functions 
   source('functions_elephant_ssf/1_b_samplingCustomDistribution.R')
   source('functions_elephant_ssf/1_b_calculatingNewPoint.R')
   
   # create dataframe of starting point for burst of interest 
-  fake_path <- data.frame(t_ = starting_fixes_dataset$t_[starting_fixes_dataset$burst_ == burst_number],  
-                          x_ = starting_fixes_dataset$x_[starting_fixes_dataset$burst_ == burst_number], 
-                          y_ = starting_fixes_dataset$y_[starting_fixes_dataset$burst_ == burst_number])
+  fake_path <- data.frame(t_ = starting_fixes_dataset$t1_[starting_fixes_dataset$burst_ == burst_number],  
+                          x_ = starting_fixes_dataset$x1_[starting_fixes_dataset$burst_ == burst_number], 
+                          y_ = starting_fixes_dataset$y1_[starting_fixes_dataset$burst_ == burst_number])
   
   # for all true steps from the burst of interest, generate a random step to get a random path of the same length
-  for(i in 1:nrow(true_step_dataset[true_step_dataset$burst_ == burst_number,])){
+  for(id in true_step_dataset$step_id_[true_step_dataset$burst_ == burst_number]){
     
     # get starting coordinates 
     starting_x <- fake_path[nrow(fake_path), 2]
@@ -52,10 +52,9 @@ generateRandomPathFromCustomDistribution <- function(starting_fixes_dataset, tru
     
     # add coordinates to fake path data frame
     # source: https://rdrr.io/cran/sf/man/st_coordinates.html
-    fake_path <- rbind(fake_path, data.frame(t_ = true_fixes_dataset$t_[i+1],
-                                             x_ = new_coordinates[1],
-                                             y_ = new_coordinates[2]),
-                       make.row.names = F)
+    fake_path <- rbind(fake_path, data.frame(t_ = true_step_dataset$t2_[true_step_dataset$burst_ == burst_number 
+                                                                        & true_step_dataset$step_id_ == id],
+                                             x_ = new_coordinates[1], y_ = new_coordinates[2]), make.row.names = F)
     
   }
   

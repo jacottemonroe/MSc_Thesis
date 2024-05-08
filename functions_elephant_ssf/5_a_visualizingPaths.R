@@ -49,19 +49,19 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # read step dataset
   dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
   dat$random_id_ <- as.factor(dat$random_id_)
-  
-  # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
-  dat$stepID <- NA
-  
-  for(b in unique(dat$burst_)){
-    # select rows of that burst that are true
-    steps <- dat[dat$burst_ == b & dat$case_ == T,]
-    dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
-  }
-
-  # transfer the step ID of random steps to new column 
-  # NOTE: could move the code to some other script (unless the columns are useful)
-  dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
+  # 
+  # # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
+  # dat$stepID <- NA
+  # 
+  # for(b in unique(dat$burst_)){
+  #   # select rows of that burst that are true
+  #   steps <- dat[dat$burst_ == b & dat$case_ == T,]
+  #   dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
+  # }
+  # 
+  # # transfer the step ID of random steps to new column 
+  # # NOTE: could move the code to some other script (unless the columns are useful)
+  # dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
   
   # new column for pathID --> every different path (true and false) has a different ID, necessary for plotting paths separately 
   dat$pathID <- NA
@@ -70,7 +70,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   dat$rowNames <- rownames(dat)
   
   # find start of new path 
-  smin <- as.numeric(dat$rowNames[dat$stepID == min(dat$stepID)])
+  smin <- as.numeric(dat$rowNames[dat$step_id_ == min(dat$step_id_)])
   
   # assign new path ID to start of each new path 
   dat$pathID[smin] <- 1:length(smin)
