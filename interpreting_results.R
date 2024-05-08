@@ -42,7 +42,7 @@ for(i in 1:nrow(run_settings)){
   step3_files <- c('3_a1_modis_images_random_path_custom_distr')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
-  step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_oldPathWithCV.csv')
+  step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_oldPathWithCV.RDS')
   # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
   #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
   #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
