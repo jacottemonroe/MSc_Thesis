@@ -110,15 +110,16 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # 
 # ### set up - not included in function itself (just temporary)
 # 
-# ID <- 'LA12'
-# week <- 2172
+# ID <- 'LA3'
+# week <- 2089
 # pseudo_abs_method <- 'random_path_custom_distr'
 # downscaling_setting <- 'NULL'
+# input_suffix <- '_withMean'
 # 
 # # define run filepath
 # run_filepath <- paste0('data/', ID, '/', week, '/')
 # 
-# # specify function parameters 
+# # specify function parameters
 # input_directory <- run_filepath
 # random_data_method <- pseudo_abs_method
 # downscaling <- downscaling_setting
@@ -132,26 +133,26 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # # determine suffix based on input parameters
 # if(downscaling == 'NULL'){
 #   suffix <- ''
-#   
+# 
 # }else if(downscaling == T){
 #   suffix <- '_downscaling_modis_30m'
-#   
+# 
 # }else if(downscaling == F){
 #   suffix <- '_downscaling_modis_250m'
-#   
+# 
 # }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
 # 
 # # read step dataset
-# step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
+# step_dataset <- read.csv(paste0(input_directory, '4_a1_cov_resp_dataset_', random_data_method, suffix, input_suffix, '.csv'), row.names = 1)
 # 
 # # duplicate the case outcome column (to keep a version with boolean)
 # step_dataset$case_bool <- step_dataset$case_
 # 
-# # rename case outcome T = presence; F = absence 
+# # rename case outcome T = presence; F = absence
 # step_dataset$case_[step_dataset$case_ == T] <- 'presence'
 # step_dataset$case_[step_dataset$case_ == F] <- 'absence'
 # 
-# # fix the step ID column to restart step count for every burst 
+# # fix the step ID column to restart step count for every burst
 # step_dataset$stepID <- NA
 # 
 # for(b in unique(step_dataset$burst_)){
@@ -160,20 +161,20 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 #   step_dataset$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
 # }
 # 
-# # transfer the step ID of random steps to new column 
+# # transfer the step ID of random steps to new column
 # # NOTE: could move the code to some other script (unless the columns are useful)
 # step_dataset$stepID[step_dataset$case_ == 'absence'] <- step_dataset$step_id_[step_dataset$case_ == 'absence']
 # 
-# # create new column that groups true/false cases for corresponding step in burst 
+# # create new column that groups true/false cases for corresponding step in burst
 # # package: dplyr
 # # source: https://stackoverflow.com/questions/24119599/how-to-assign-a-unique-id-number-to-each-group-of-identical-values-in-a-column
-# step_dataset <- step_dataset %>% group_by(burst_, stepID) %>% mutate(pair_id=cur_group_id())
+# step_dataset <- step_dataset %>% group_by(burst_, step_id_) %>% mutate(pair_id=cur_group_id())
 # 
 # # set the class to factor type instead of string
 # step_dataset$case_ <- factor(step_dataset$case_, levels = c('absence', 'presence'))
 # 
 # 
-# ### split step dataset into training and testing sets 
+# ### split step dataset into training and testing sets
 # 
 # # get list of pair IDs (all pair groups have 1 T and 20 F)
 # pair_id_list <- unique(step_dataset$pair_id)
@@ -193,10 +194,10 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # test_steps$case_ <- factor(test_steps$case_, levels = c('absence', 'presence'))
 # 
 # 
-# ### build custom GLM model to implement threshold probability tuning in cross-validation 
+# ### build custom GLM model to implement threshold probability tuning in cross-validation
 # 
 # ## Step by step code used as reference: http://rstudio-pubs-static.s3.amazonaws.com/145252_b241fc4c9cc640a185e721694648ad31.html
-# ## The reference script modified the settings of the default rf model to incorporate threshold probability tuning in cross-validation. 
+# ## The reference script modified the settings of the default rf model to incorporate threshold probability tuning in cross-validation.
 # ## Taking the online tutorial and the glm documentation (getModelInfo) as a guideline, I did the same but for the glm model.
 # ## The following functions were modified from the original glm model:
 # ##    model$type
@@ -207,10 +208,10 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # # get GLM model information
 # thresh_glm <- getModelInfo("glm", regex = FALSE)[[1]]
 # 
-# # specify the model type as classification 
+# # specify the model type as classification
 # thresh_glm$type <- c('Classification')
 # 
-# # add threshold as tuning parameter 
+# # add threshold as tuning parameter
 # thresh_glm$parameters <- data.frame(parameter = c('threshold'), class = c('numeric'), label = c('Probability Cutoff'))
 # 
 # # set tuning grid
@@ -226,25 +227,25 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # # modify the predict function to test custom threshold
 # thresh_glm$predict <- function(modelFit, newdata, submodels = NULL){
 #   if (!is.data.frame(newdata)) {
-#     newdata <- as.data.frame(newdata, stringsAsFactors = TRUE) 
+#     newdata <- as.data.frame(newdata, stringsAsFactors = TRUE)
 #   }
-#   
+# 
 #   if (modelFit$problemType == "Classification") {
 #     probs <- predict(modelFit, newdata, type = "response")
-#     out <- ifelse(probs >= modelFit$tuneValue$threshold, 
+#     out <- ifelse(probs >= modelFit$tuneValue$threshold,
 #                   modelFit$obsLevel[1], modelFit$obsLevel[2])
 #   }
 #   else {
 #     out <- predict(modelFit, newdata, type = "response")
 #   }
-#   
+# 
 #   out
 # }
 # 
 # # # remove some part of prob function to just return the class
-# # thresh_glm$prob <- function (modelFit, newdata, submodels = NULL) 
+# # thresh_glm$prob <- function (modelFit, newdata, submodels = NULL)
 # # {
-# #   if (!is.data.frame(newdata)) 
+# #   if (!is.data.frame(newdata))
 # #     newdata <- as.data.frame(newdata, stringsAsFactors = TRUE)
 # #   out <- predict(modelFit, newdata, type = "response")
 # #   out
@@ -267,8 +268,8 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # 
 # ### implement cross-validation and fit GLM model on training step dataset
 # 
-# # define cross-validation settings 
-# # Note: Applying a 10-fold cross-validation on the training data 
+# # define cross-validation settings
+# # Note: Applying a 10-fold cross-validation on the training data
 # 
 # # # Option1: with default performance metric used for parameter tuning
 # # cv_settings_default <- trainControl(method = 'cv', classProbs = T, summaryFunction = twoClassSummary)
@@ -278,9 +279,9 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # cv_settings_custom <- trainControl(method = 'cv', classProbs = T, summaryFunction = performanceStats)
 # 
 # # # ONLY FOR OPTION 1: Reverse level order of classes!
-# # # Note: By default, absence (= 0) is first level, that's the negative outcome. 
-# # #       This doesn't match hardcoded 'first level = positive outcome' rule of CV function (twoClassSummary). 
-# # #       Need to reverse so presence (=1) is first level and read in CV function as positive outcome. 
+# # # Note: By default, absence (= 0) is first level, that's the negative outcome.
+# # #       This doesn't match hardcoded 'first level = positive outcome' rule of CV function (twoClassSummary).
+# # #       Need to reverse so presence (=1) is first level and read in CV function as positive outcome.
 # # # source: https://stackoverflow.com/questions/45333029/specifying-positive-class-of-an-outcome-variable-in-caret-train
 # # # Note: also applying this so test set (even though CV function not used) for consistency
 # # training_steps_rev <- training_steps
@@ -292,17 +293,17 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
 # # source: https://www.rdocumentation.org/packages/traineR/versions/2.2.0/topics/train.glm
 # # source: https://cran.r-project.org/web/packages/caret/vignettes/caret.html
-# # Note: 20 threshold values are tested in the parameter tuning 
-# # 
+# # Note: 20 threshold values are tested in the parameter tuning
+# #
 # # # Option 1: fit default GLM that uses AUC as performance metric
-# # glm_model_default <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+# # glm_model_default <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled,
 # #                    data = training_steps_rev, method = 'glm', family = binomial(link = 'logit'),
 # #                    metric = 'ROC', maximize = F, tuneLength = 20, trControl = cv_settings_default)
 # 
-# # Option 2: fit custom GLM that uses Dist as performance metric 
+# # Option 2: fit custom GLM that uses Dist as performance metric
 # # package: caret
-# # Note: the custom metric Dist is used for tuning threshold probability 
-# glm_model_custom <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+# # Note: the custom metric Dist is used for tuning threshold probability
+# glm_model_custom <- train(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled,
 #            data = training_steps, method = thresh_glm, family = binomial(link = 'logit'),
 #            metric = 'Dist', maximize = F, tuneLength = 20, trControl = cv_settings_custom)
 # 
@@ -310,12 +311,12 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # # note: models trained on full step dataset (no split into training and validation)
 # # package: amt
 # # source: https://cran.r-project.org/web/packages/amt/vignettes/p4_SSF.html
-# clr_model <- fit_clogit(step_dataset, case_bool ~ ndvi_50_scaled + ndvi_sd_scaled + 
+# clr_model <- fit_clogit(step_dataset, case_bool ~ ndvi_50_scaled + ndvi_sd_scaled +
 #                           ndvi_rate_50_scaled + ndvi_rate_sd_scaled + strata(stepID))
 # 
 # # package: caret
 # # source: https://www.r-bloggers.com/2015/09/how-to-perform-a-logistic-regression-in-r/
-# glm_model <- glm(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled, 
+# glm_model <- glm(case_ ~ ndvi_50_scaled + ndvi_sd_scaled + ndvi_rate_50_scaled + ndvi_rate_sd_scaled,
 #                  family = binomial(link = 'logit'), data = step_dataset)
 # 
 # 
@@ -330,7 +331,7 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # cm <- confusionMatrix(data = test_steps$prediction, reference = test_steps$case_, positive = 'presence')
 # 
 # 
-# ### Retrieve model performance metrics and results 
+# ### Retrieve model performance metrics and results
 # 
 # # get VIF from GLM (not applicable to train object = cross-validated GLM model or CLR)
 # # package: car
@@ -341,38 +342,38 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # glm_summary <- summary(glm_model)
 # glm_summary_c <- summary(glm_model_custom)
 # 
-# # get model coefficients 
+# # get model coefficients
 # # source: https://stackoverflow.com/questions/61482594/export-coxph-summary-from-r-to-csv
 # clr_coef <- data.frame(clr_summary$coefficients)
 # glm_coef <- data.frame(glm_summary$coefficients)
 # glm_coef_c <- data.frame(glm_summary_c$coefficients)
 # 
-# # create dataframe with statistical test results of CLR, the concordance and its standard error 
+# # create dataframe with statistical test results of CLR, the concordance and its standard error
 # clr_tests <- data.frame(log_likelihood = clr_summary$logtest, score = clr_summary$sctest, wald = clr_summary$waldtest)
 # clr_tests <- rbind(clr_tests, SE_concordance = c(NA))
 # clr_tests <- cbind(clr_tests, concordance = c(clr_summary$concordance[1], NA, NA, clr_summary$concordance[2]))
 # 
-# # create dataframe of deviance and AIC for GLM models 
-# glm_deviances <- data.frame(AIC = glm_summary$aic, null_deviance = glm_summary$null.deviance, null_df = glm_summary$df.null, 
+# # create dataframe of deviance and AIC for GLM models
+# glm_deviances <- data.frame(AIC = glm_summary$aic, null_deviance = glm_summary$null.deviance, null_df = glm_summary$df.null,
 #                             residual_deviance = glm_summary$deviance, residual_df = glm_summary$df.residual)
-# glm_deviances_c <- data.frame(AIC = glm_summary_c$aic, null_deviance = glm_summary_c$null.deviance, null_df = glm_summary_c$df.null, 
+# glm_deviances_c <- data.frame(AIC = glm_summary_c$aic, null_deviance = glm_summary_c$null.deviance, null_df = glm_summary_c$df.null,
 #                             residual_deviance = glm_summary_c$deviance, residual_df = glm_summary_c$df.residual)
 # 
 # # create dataframe with optimal cross-validation results from custom GLM
 # glm_c_validation <- glm_model_custom$results[glm_model_custom$results$threshold == glm_model_custom$bestTune$threshold,]
 # 
-# # create dataframe with custom GLM performance results on test set 
+# # create dataframe with custom GLM performance results on test set
 # glm_c_test <- data.frame(cm$byClass)
 # 
 # 
-# ### save outputs 
+# ### save outputs
 # 
-# # save model 
+# # save model
 # saveRDS(clr_model, paste0(output_filepath, output_number, '0_clr', model_type, 'model_', random_data_method, suffix, '.RDS'))
 # saveRDS(glm_model, paste0(output_filepath, output_number, '0_glm', model_type, 'model_', random_data_method, suffix, '.RDS'))
 # saveRDS(glm_model_custom, paste0(output_filepath, output_number, '0_glm_custom', model_type, 'model_', random_data_method, suffix, '.RDS'))
 # 
-# # save model results as csv 
+# # save model results as csv
 # write.csv(clr_coef, paste0(output_filepath, output_number, '1_clr', model_type, 'coefs_', random_data_method, suffix, '.csv'))
 # write.csv(clr_tests, paste0(output_filepath, output_number, '2_clr', model_type, 'tests_', random_data_method, suffix, '.csv'))
 # 
@@ -392,9 +393,9 @@ print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week
 # 
 # 
 # 
-# 
-# 
-# 
+
+
+
 # 
 # 
 # 

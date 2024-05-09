@@ -118,7 +118,7 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step2 == F, c(1:2, 4)]
+a <- df_progress[df_progress$step3 == T, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
@@ -175,6 +175,14 @@ for(i in 1:nrow(run_settings)){
   # define if downscaled or not 
   downscaling_setting <- run[[4]]
   
+  # replace NA from suffix columns of run settings to empty strings
+  if(is.na(run[[6]])){run[[6]] <- ''}
+  if(is.na(run[[7]])){run[[7]] <- ''}
+  
+  # define input and output suffixes
+  input_suffix <- run[[6]]
+  output_suffix <- run[[7]]
+  
   # define run filepath 
   run_filepath <- paste0('output/', ID, '/', week, '/')
   
@@ -192,90 +200,134 @@ for(i in 1:nrow(run_settings)){
     
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
   
-  suffix <- paste0(suffix, '_scaled')
+  if(input_suffix == '_newPathWithCV_withMean'){
+    pred <- 'mean'
+  } else{ pred <- '50p'}
+  
+  suffix <- paste0(suffix, input_suffix)
   
   # get date 
-  dfile <- read.csv(paste0('data/', ID, '/', week, '/2_a1_step_extents_LUT_', pseudo_abs_method, '.csv'), row.names = 1)
+  dfile <- read.csv(paste0('data/', ID, '/', week, '/2_a1_step_extents_LUT_', pseudo_abs_method, '_newPathWithCV', '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # create results data entry 
-  entry <- data.frame(ID = ID, week = week, date = date, pseudo_abs_method = pseudo_abs_method, downscaling = downscaling_setting, 
-                      VIF_full = NA, full_glm_sig_coef = NA, full_glm_sig_coef_which = NA, full_glm_deviance = NA, full_glm_sig = NA, full_clr_sig_coef = NA, full_clr_sig_coef_which = NA, full_clr_concord = NA, full_clr_concord_se = NA, 
-                      VIF_sub = NA, sub_glm_sig_coef = NA, sub_glm_sig_coef_which = NA, sub_glm_deviance = NA, sub_glm_sig = NA, sub_clr_sig_coef = NA, sub_clr_sig_coef_which = NA, sub_clr_concord = NA, sub_clr_concord_se = NA)
+  # entry <- data.frame(ID = ID, week = week, date = date, pseudo_abs_method = pseudo_abs_method, downscaling = downscaling_setting, 
+  #                     VIF_full = NA, full_glm_sig_coef = NA, full_glm_sig_coef_which = NA, full_glm_deviance = NA, full_glm_sig = NA, full_clr_sig_coef = NA, full_clr_sig_coef_which = NA, full_clr_concord = NA, full_clr_concord_se = NA, 
+  #                     VIF_sub = NA, sub_glm_sig_coef = NA, sub_glm_sig_coef_which = NA, sub_glm_deviance = NA, sub_glm_sig = NA, sub_clr_sig_coef = NA, sub_clr_sig_coef_which = NA, sub_clr_concord = NA, sub_clr_concord_se = NA)
+  # 
   
+  entry <- data.frame(ID = ID, week = week, date = date, pseudo_abs_method = pseudo_abs_method, downscaling = downscaling_setting, suffix = input_suffix,
+                      VIF = NA, glm_sig_coef = NA, glm_sig_coef_which = NA, glm_deviance = NA, glm_sig = NA, glm_AIC = NA,
+                      glm_CV_sig_coef = NA, glm_CV_sig_coef_which = NA, glm_CV_deviance = NA, glm_CV_sig = NA, glm_CV_AIC = NA,
+                      glm_CV_threshold = NA, glm_CV_ROC = NA, glm_CV_sens = NA, glm_CV_spec = NA, 
+                      glm_CV_test_sens = NA, glm_CV_test_spec = NA, glm_CV_test_precision = NA, glm_CV_test_F1 = NA, glm_CV_test_accuracy = NA, 
+                      clr_sig_coef = NA, clr_sig_coef_which = NA, clr_concord = NA, clr_concord_se = NA)
   
   ## are the VIF values of the model acceptable? 
   # retrieve the dataset
   #full_df <- read.csv(paste0(run_filepath, '6_a5_glm_full_vif_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b5_glm_50p_sd_vif_', pseudo_abs_method, suffix, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_c5_glm_', pred, '_sd_vif_', pseudo_abs_method, suffix, '.csv'))
   
   # check if vif values below 5
   #if(any(full_df$vif_results <5)){entry$VIF_full <- T}else{entry$VIF_full <- F}
-  if(any(sub_df$vif_results >5)){entry$VIF_sub <- F}else{entry$VIF_sub <- T}
-  
+  if(any(sub_df$vif_results >5)){entry$VIF <- F}else{entry$VIF <- T}
   
   ## does the glm model have a significant coefficient? 
   # retrieve dataset
   #full_df <- read.csv(paste0(run_filepath, '6_a3_glm_full_coefs_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b3_glm_50p_sd_coefs_', pseudo_abs_method, suffix, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_c3_glm_', pred, '_sd_coefs_', pseudo_abs_method, suffix, '.csv'))
+  cv_df <- read.csv(paste0(run_filepath, '6_c3_glm_custom_', pred, '_sd_coefs_', pseudo_abs_method, suffix, '.csv'))
   
   # exclude intercept 
   #full_df <- full_df[full_df$X != '(Intercept)', ]
   sub_df <- sub_df[sub_df$X != '(Intercept)', ]
+  cv_df <- cv_df[cv_df$X != '(Intercept)', ]
   
   # check if pvalues below 0.05
   #if(any(full_df$Pr...z.. <=0.05)){entry$full_glm_sig_coef <- T}else{entry$full_glm_sig_coef <- F}
-  if(any(sub_df$Pr...z.. <=0.05)){entry$sub_glm_sig_coef <- T}else{entry$sub_glm_sig_coef <- F}
-  
+  if(any(sub_df$Pr...z.. <=0.05)){entry$glm_sig_coef <- T}else{entry$glm_sig_coef <- F}
+  if(any(cv_df$Pr...z.. <=0.05)){entry$glm_CV_sig_coef <- T}else{entry$glm_CV_sig_coef <- F}
+
   # select predictors that are significant with 95% confidence 
   # source: https://sparkbyexamples.com/r-programming/r-merge-vector-to-string/
   #entry$full_glm_sig_coef_which <- paste(full_df$X[full_df$Pr...z.. < 0.05], collapse = '; ')
-  entry$sub_glm_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. < 0.05], collapse = '; ')
-
+  entry$glm_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. <= 0.05], collapse = '; ')
+  entry$glm_CV_sig_coef_which <- paste(cv_df$X[cv_df$Pr...z.. <= 0.05], collapse = '; ')
+  
   ## how high is the deviance of the fitted model? is the model significant? 
   # retrieve dataset
   #full_df <- read.csv(paste0(run_filepath, '6_a4_glm_full_deviances_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b4_glm_50p_sd_deviances_', pseudo_abs_method, suffix, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_c4_glm_', pred, '_sd_deviances_', pseudo_abs_method, suffix, '.csv'))
+  cv_df <- read.csv(paste0(run_filepath, '6_c4_glm_custom_', pred, '_sd_deviances_', pseudo_abs_method, suffix, '.csv'))
   
   # select residual deviance 
   #entry$full_glm_deviance <- full_df$residual_deviance
-  entry$sub_glm_deviance <- sub_df$residual_deviance
+  entry$glm_deviance <- sub_df$residual_deviance
+  entry$glm_CV_deviance <- cv_df$residual_deviance
   
   # derive p-value of model from chi-square stat
   # source: https://stats.stackexchange.com/questions/340489/interpretation-of-deviance-in-logistic-model
   # source: https://www.r-bloggers.com/2022/05/calculate-the-p-value-from-chi-square-statistic-in-r/
   #full_pval <- pchisq(full_df$null_deviance - full_df$residual_deviance, full_df$null_df - full_df$residual_df, lower.tail = F)
   sub_pval <- pchisq(sub_df$null_deviance - sub_df$residual_deviance, sub_df$null_df - sub_df$residual_df, lower.tail = F)
+  cv_pval <- pchisq(cv_df$null_deviance - cv_df$residual_deviance, cv_df$null_df - cv_df$residual_df, lower.tail = F)
   
   # check if pvalues below 0.05
   #if(full_pval <=0.05){entry$full_glm_sig <- T}else{entry$full_glm_sig <- F}
-  if(sub_pval <=0.05){entry$sub_glm_sig <- T}else{entry$sub_glm_sig <- F}
+  # if(sub_pval <=0.05){entry$glm_sig <- T}else{entry$glm_sig <- F}
+  # if(cv_pval <=0.05){entry$glm_CV_sig <- T}else{entry$glm_CV_sig <- F}
+  # 
+  entry$glm_sig <- sub_pval
+  entry$glm_CV_sig <- cv_pval
   
+  
+  # select aic value
+  entry$glm_AIC <- sub_df$AIC
+  entry$glm_CV_AIC <- cv_df$AIC
+  
+  # what are the cross validation results? 
+  cv_df <- read.csv(paste0(run_filepath, '6_c6_glm_custom_', pred, '_sd_CV_results_', pseudo_abs_method, suffix, '.csv'))
+  
+  # retrieve performance metrics from k-fold cross validation 
+  entry$glm_CV_threshold <- cv_df$threshold
+  entry$glm_CV_ROC <- cv_df$ROC
+  entry$glm_CV_sens <- cv_df$Sens
+  entry$glm_CV_spec <- cv_df$Spec
+  
+  # what are the testing results after cross validation? 
+  cv_df <- read.csv(paste0(run_filepath, '6_c7_glm_custom_', pred, '_sd_test_results_', pseudo_abs_method, suffix, '.csv'), header = T)
+
+  # retrieve performance metrics 
+  entry$glm_CV_test_sens <- cv_df[1,2]
+  entry$glm_CV_test_spec <- cv_df[2,2]
+  entry$glm_CV_test_precision <- cv_df[5,2]
+  entry$glm_CV_test_F1 <- cv_df[9,2]
+  entry$glm_CV_test_accuracy <- cv_df[11,2]
   
   ## does the clr model have a significant coefficient? 
   # retrieve dataset
   #full_df <- read.csv(paste0(run_filepath, '6_a1_clr_full_coefs_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b1_clr_50p_sd_coefs_', pseudo_abs_method, suffix, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_c1_clr_', pred, '_sd_coefs_', pseudo_abs_method, suffix, '.csv'))
   
   # check if pvalues below 0.05
   #if(any(full_df$Pr...z.. <=0.05)){entry$full_clr_sig_coef <- T}else{entry$full_clr_sig_coef <- F}
-  if(any(sub_df$Pr...z.. <=0.05)){entry$sub_clr_sig_coef <- T}else{entry$sub_clr_sig_coef <- F}
+  if(any(sub_df$Pr...z.. <=0.05)){entry$clr_sig_coef <- T}else{entry$clr_sig_coef <- F}
   
   # select predictors that are significant with 95% confidence 
   # source: https://sparkbyexamples.com/r-programming/r-merge-vector-to-string/
   #entry$full_clr_sig_coef_which <- paste(full_df$X[full_df$Pr...z.. < 0.05], collapse = '; ')
-  entry$sub_clr_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. < 0.05], collapse = '; ')
+  entry$clr_sig_coef_which <- paste(sub_df$X[sub_df$Pr...z.. < 0.05], collapse = '; ')
 
   ## what is the concordance? how much does it vary by? 
   # retrieve dataset
   #full_df <- read.csv(paste0(run_filepath, '6_a2_clr_full_tests_', pseudo_abs_method, '.csv'))
-  sub_df <- read.csv(paste0(run_filepath, '6_b2_clr_50p_sd_tests_', pseudo_abs_method, suffix, '.csv'))
+  sub_df <- read.csv(paste0(run_filepath, '6_c2_clr_', pred, '_sd_tests_', pseudo_abs_method, suffix, '.csv'))
   
   # select concordance and SE
   # entry$full_clr_concord <- full_df$concordance[1]
   # entry$full_clr_concord_se <- full_df$concordance[4]
-  entry$sub_clr_concord <- sub_df$concordance[1]
-  entry$sub_clr_concord_se <- sub_df$concordance[4]
+  entry$clr_concord <- sub_df$concordance[1]
+  entry$clr_concord_se <- sub_df$concordance[4]
   
   # rbind the entry to the summary table 
   summary_results <- rbind(summary_results, entry)
@@ -285,7 +337,7 @@ summary_results <- summary_results[,grep('full', names(summary_results), invert 
 
 # results for running 13 elephants on week 2075 with three methods 
 write.csv(summary_results, paste0('output/summary_results', run_label, '.csv'))
-
+#write.csv(summary_results, 'output/summary_results_comparingMeanMedian_withCV.csv')
 
 # summary table of summary table per elephant
 sst_e <- data.frame()
@@ -363,8 +415,6 @@ summary(sst_w$percent_sig_models)
 #   theme_minimal() + 
 #   xlab('Time') + ylab('Proportion of Models') + ggtitle('Proportion of GLM Models per Week over Time')
   
-
-
 
 
 
@@ -1697,6 +1747,8 @@ dev.off()
 
 ######## RQ3 spatial detail visualizations 
 
+run_settings <- read.csv('data/run_settings_downscaling.csv', row.names = 1)
+
 # create a dataset that summarizes all predictor coefficients for all models and whether they are significant 
 downscaling_coef <- data.frame()
 
@@ -1741,7 +1793,7 @@ for(i in 1:nrow(run_settings)){
   dev_sig <- pchisq(dev_diff, dev_df$null_df - dev_df$residual_df, lower.tail = F)
   
   # check if pvalues below 0.05
-  if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
+  #if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
   vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
@@ -1756,10 +1808,10 @@ for(i in 1:nrow(run_settings)){
   c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
-  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
-  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
+  # c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
+  # c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
+  # c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
+  # c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
   
   # create new entry with coefs and pvalues 
   entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1], 
@@ -1778,7 +1830,7 @@ downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37
 print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
 
 # change label names of predictors 
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Median NDVI'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
@@ -1802,7 +1854,7 @@ downscaling_coef <- downscaling_coef[order(downscaling_coef$downscaling, decreas
 # save STS coef table 
 write.csv(downscaling_coef, 'output/downscaling_df_results.csv')
 
-downscaling_coef <- read.csv('output/downscaling_df_results.csv')
+downscaling_coef <- read.csv('output/downscaling_df_results.csv', row.names = 1)
 
 # define start and end dates for plotting 
 start_date <- min(downscaling_coef$date)
