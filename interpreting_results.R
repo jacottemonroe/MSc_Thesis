@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_all_runs_old_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -37,8 +37,8 @@ for(i in 1:nrow(run_settings)){
   output_files <- list.files(output_path)
   
   # define files that should have for each step
-  step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr.RDS')
-  step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr.csv')
+  step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
+  step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
   step3_files <- c('3_a1_modis_images_random_path_custom_distr')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
@@ -118,14 +118,15 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-# a <- df_progress[df_progress$step6 == T, 1:2]
-# a$combo <- paste(a$ID, a$week, sep = '_')
-# 
-# run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
-# 
-# run_settings <- run_settings[run_settings$combo %in% a$combo,]
-# run_settings <- run_settings[,1:5]
+a <- df_progress[df_progress$step2 == T, c(1:2, 4)]
+a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
+run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
+
+run_settings <- run_settings[run_settings$combo %in% a$combo,]
+run_settings <- run_settings[,1:7]
+
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_486.csv')
 
 
 # 
