@@ -39,7 +39,7 @@ for(i in 1:nrow(run_settings)){
   # define files that should have for each step
   step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
-  step3_files <- c('3_a1_modis_images_random_path_custom_distr')
+  step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
   step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_oldPathWithCV.RDS')
@@ -118,7 +118,7 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step2 == T, c(1:2, 4)]
+a <- df_progress[df_progress$step2 == F, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
@@ -126,7 +126,7 @@ run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$dow
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:7]
 
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_486.csv')
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
 
 
 # 
@@ -1951,3 +1951,303 @@ summary(v$diff)
 sd(v$diff)
 
 r <- r[, c('ID', 'week', 'date', 'downscaling', 'predictor', 'glm_significance')]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################## step 5 multivisualization #######################
+r <- read.csv('data/run_settings_all_runs_old_path_with_CV.csv', row.names = 1)
+row.names(r) <- 1:nrow(r)
+# create short run table for datasets that want to combine 
+run_table <- r[c(195, 476, 594, 602, 409, 422, 436, 444), ]
+
+# create table of max extents of datasets
+extent_LUT <- data.frame()
+
+for(i in 1:nrow(run_table)){
+  
+  ID <- run_table$ID[i]
+  week <- run_table$week[i]
+  input_filepath <- paste0('data/', ID, '/', week, '/')
+  random_data_method <- 'random_path_custom_distr'
+  downscaling = 'NULL'
+  downscaling_model = 'ranger_full_selection'
+  title = 'Elephant movement on mean NDVI'
+  
+  # retrieve step extent LUT 
+  lut <- read.csv(paste0(input_filepath, '2_a1_step_extents_LUT_', random_data_method, suffix, '.csv'), row.names = 1)
+  
+  entry <- data.frame(ID = ID, week = week, lut[nrow(lut),])
+  
+  extent_LUT <- rbind(extent_LUT, entry)
+}  
+
+# generate max extent when combining all datasets --> to have all images on same extent 
+max_ext <- c(xmin = min(extent_LUT$xmin), ymin = min(extent_LUT$ymin), xmax = max(extent_LUT$xmax), ymax = max(extent_LUT$ymax))
+
+# create empty list to store maps 
+l_maps <- list()
+
+for(i in 1:nrow(run_table)){
+  
+  ID <- run_table$ID[i]
+  week <- run_table$week[i]
+  input_filepath <- paste0('data/', ID, '/', week, '/')
+  random_data_method <- 'random_path_custom_distr'
+  downscaling = 'NULL'
+  downscaling_model = 'ranger_full_selection'
+  title = 'Elephant movement on mean NDVI'
+
+  # define data directory and suffix
+  if(downscaling == 'NULL'){
+    modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, input_suffix, '/')
+
+    suffix <- input_suffix
+
+  }else if(downscaling == T){
+    modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, input_suffix, '/')
+
+    suffix <- paste0('_downscaling_modis_30m', input_suffix)
+
+  }else if(downscaling == F){
+    modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, input_suffix, '/')
+
+    suffix <- paste0('_downscaling_modis_250m', input_suffix)
+
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+
+  # read NDVI dataset
+  ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
+  ext(ndvi_data) <- max_ext
+  names(ndvi_data) <- 'ndvi'
+
+  # read step dataset
+  dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
+  dat$random_id_ <- as.factor(dat$random_id_)
+  #
+  # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
+  dat$stepID <- NA
+
+  for(b in unique(dat$burst_)){
+    # select rows of that burst that are true
+    steps <- dat[dat$burst_ == b & dat$case_ == T,]
+    dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
+  }
+
+  # transfer the step ID of random steps to new column
+  # NOTE: could move the code to some other script (unless the columns are useful)
+  dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
+
+  # new column for pathID --> every different path (true and false) has a different ID, necessary for plotting paths separately
+  dat$pathID <- NA
+
+  # create new column for row names
+  dat$rowNames <- rownames(dat)
+
+  # find start of new path
+  smin <- as.numeric(dat$rowNames[dat$step_id_ == min(dat$step_id_)])
+
+  # assign new path ID to start of each new path
+  dat$pathID[smin] <- 1:length(smin)
+
+  # fill the column with values from above
+  # package: tidyr
+  # source: https://tidyr.tidyverse.org/reference/fill.html#ref-examples
+  dat <- dat %>% fill(pathID)
+  dat$pathID <- as.factor(dat$pathID)
+
+  # rename the case column (necessary for plotting order)
+  dat$case_[dat$case_ == T] <- 2
+  dat$case_[dat$case_ == F] <- 1
+
+  dat$case_ <- as.factor(dat$case_)
+
+
+  ## PLOTTING
+
+  # make elephant movement on NDVI map without legends
+  image_map <- ggplot() +
+    # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
+    geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = F) +
+    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6) +
+    geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey30', linetype = 2, linewidth = 0.4) +
+    geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'red', linetype = 1, linewidth = 0.7) +
+    labs(title = paste0('Elephant ', ID, ' - ', format(as.Date(min(dat$t1_), tz = 'Africa/Maputo', '%B %d %Y')))) +
+    annotation_north_arrow(location = 'tl', which_north = 'true',
+                           pad_x = unit(0.5, "cm"), pad_y = unit(0.6, "cm"),
+                           style = north_arrow_fancy_orienteering()) +
+    annotation_scale(location = 'br', pad_x = unit(1.0, "cm"), pad_y = unit(0.5, "cm")) +
+    theme_minimal() +
+    theme(legend.position = 'none')
+  
+  l_maps <- append(l_maps, list(image_map))
+
+}
+
+# create legend elements from random dataset
+# make NDVI map with legend
+# source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
+modis_ndvi_map <- ggplot() +
+  geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = T) +
+  scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6)
+
+# make rough path graph with legend (legend is what's important here)
+path_map <- ggplot(data = dat, aes(x = x1_, y = y1_, colour = case_, group = pathID, linetype = case_)) +
+  # source: https://stackoverflow.com/questions/27003991/how-can-i-define-line-plotting-order-in-ggplot2-for-grouped-lines
+  geom_path(data = subset(dat, case_ == 1), linewidth = 0.4) +
+  geom_path(data = subset(dat, case_ == 2), linewidth = 0.7) +
+  # source: https://www.geeksforgeeks.org/control-line-color-and-type-in-ggplot2-plot-legend-in-r/
+  scale_linetype_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c(2,1)) +
+  scale_color_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c('grey30', '#e60000')) +
+  theme_minimal()
+
+# retrieve legends
+ndvi_legend <- get_legend(modis_ndvi_map)
+path_legend <- get_legend(path_map)
+
+# create blank plot
+blank_p <- plot_spacer() + theme_void()
+
+# combine legends and plot
+legends <- plot_grid(blank_p, path_legend, ndvi_legend, blank_p, nrow = 4)
+final_map <- plot_grid(l_maps[[1]], legends, l_maps[[2]], ncol = 2, nrow = 2, rel_widths = c(1, 0.3))
+final_map
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # define data directory and suffix
+# if(downscaling == 'NULL'){
+#   modis_directory <- paste0(input_filepath, '3_a1_modis_images_', random_data_method, input_suffix, '/')
+#   
+#   suffix <- input_suffix
+#   
+# }else if(downscaling == T){
+#   modis_directory <- paste0(input_filepath, '3_g1_downscaled_modis_images_30m_', downscaling_model, input_suffix, '/')
+#   
+#   suffix <- paste0('_downscaling_modis_30m', input_suffix)
+#   
+# }else if(downscaling == F){
+#   modis_directory <- paste0(input_filepath, '3_b1_modis_images_downscaling_', random_data_method, input_suffix, '/')
+#   
+#   suffix <- paste0('_downscaling_modis_250m', input_suffix)
+#   
+# }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+# 
+# # read NDVI dataset
+# ndvi_data <- rast(paste0(modis_directory, 'mean_ndvi.tif'))
+# names(ndvi_data) <- 'ndvi'
+# 
+# # read step dataset
+# dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
+# dat$random_id_ <- as.factor(dat$random_id_)
+# # 
+# # # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
+# # dat$stepID <- NA
+# # 
+# # for(b in unique(dat$burst_)){
+# #   # select rows of that burst that are true
+# #   steps <- dat[dat$burst_ == b & dat$case_ == T,]
+# #   dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
+# # }
+# # 
+# # # transfer the step ID of random steps to new column 
+# # # NOTE: could move the code to some other script (unless the columns are useful)
+# # dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
+# 
+# # new column for pathID --> every different path (true and false) has a different ID, necessary for plotting paths separately 
+# dat$pathID <- NA
+# 
+# # create new column for row names 
+# dat$rowNames <- rownames(dat)
+# 
+# # find start of new path 
+# smin <- as.numeric(dat$rowNames[dat$step_id_ == min(dat$step_id_)])
+# 
+# # assign new path ID to start of each new path 
+# dat$pathID[smin] <- 1:length(smin)
+# 
+# # fill the column with values from above 
+# # package: tidyr 
+# # source: https://tidyr.tidyverse.org/reference/fill.html#ref-examples
+# dat <- dat %>% fill(pathID)
+# dat$pathID <- as.factor(dat$pathID)
+# 
+# # rename the case column (necessary for plotting order)
+# dat$case_[dat$case_ == T] <- 2
+# dat$case_[dat$case_ == F] <- 1
+# 
+# dat$case_ <- as.factor(dat$case_)
+# 
+# 
+# ## PLOTTING
+# 
+# # make NDVI map with legend
+# # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
+# modis_ndvi_map <- ggplot() +
+#   geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = T) +
+#   scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6)
+# modis_ndvi_map
+# 
+# # make rough path graph with legend (legend is what's important here)
+# path_map <- ggplot(data = dat, aes(x = x1_, y = y1_, colour = case_, group = pathID, linetype = case_)) +
+#   # source: https://stackoverflow.com/questions/27003991/how-can-i-define-line-plotting-order-in-ggplot2-for-grouped-lines
+#   geom_path(data = subset(dat, case_ == 1), linewidth = 0.4) + 
+#   geom_path(data = subset(dat, case_ == 2), linewidth = 0.7) +
+#   # source: https://www.geeksforgeeks.org/control-line-color-and-type-in-ggplot2-plot-legend-in-r/
+#   scale_linetype_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c(2,1)) +
+#   scale_color_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c('grey30', '#e60000')) + 
+#   theme_minimal() 
+# path_map
+# # make elephant movement on NDVI map without legends 
+# image_map <- ggplot() +
+#   geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = F) +
+#   scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6) +
+#   geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey30', linetype = 2, linewidth = 0.4) + 
+#   geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'red', linetype = 1, linewidth = 0.7) +
+#   labs(title = title, subtitle = paste0('Elephant ', ID, ' from ', as.Date(min(dat$t1_), tz = 'Africa/Maputo') , ' to ', 
+#                                         as.Date(max(dat$t2_), tz = 'Africa/Maputo'),' (week ', week, ')'), x = "Longitude", y = "Latitude") +
+#   annotation_north_arrow(location = 'tl', which_north = 'true', 
+#                          pad_x = unit(0.5, "cm"), pad_y = unit(0.6, "cm"),
+#                          style = north_arrow_fancy_orienteering()) +
+#   annotation_scale(location = 'br', pad_x = unit(1.0, "cm"), pad_y = unit(0.5, "cm")) +
+#   theme_minimal() + 
+#   theme(legend.position = 'none')
+# image_map
+# # retrieve legends 
+# ndvi_legend <- get_legend(modis_ndvi_map)
+# path_legend <- get_legend(path_map)
+# 
+# # create blank plot
+# blank_p <- plot_spacer() + theme_void()
+# 
+# # combine legends and plot
+# legends <- plot_grid(blank_p, path_legend, ndvi_legend, blank_p, nrow = 4)
+# final_map <- plot_grid(image_map, legends, nrow = 1, align = 'h', axis = 't', rel_widths = c(1, 0.3))
+# final_map
+# 
