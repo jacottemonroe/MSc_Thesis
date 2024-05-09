@@ -126,8 +126,8 @@ run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$dow
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:7]
 
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
-
+#write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_504.csv')
 
 # 
 # n <- data.frame(ID = unique(rr$ID), week = 2066, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
