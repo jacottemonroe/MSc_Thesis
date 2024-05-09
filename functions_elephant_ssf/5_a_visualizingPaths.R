@@ -92,25 +92,25 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # make NDVI map with legend
   # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
   modis_ndvi_map <- ggplot() +
-    geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = T) +
-    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6))
-  
+    geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = T) +
+    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6)
+
   # make rough path graph with legend (legend is what's important here)
   path_map <- ggplot(data = dat, aes(x = x1_, y = y1_, colour = case_, group = pathID, linetype = case_)) +
     # source: https://stackoverflow.com/questions/27003991/how-can-i-define-line-plotting-order-in-ggplot2-for-grouped-lines
     geom_path(data = subset(dat, case_ == 1), linewidth = 0.4) + 
-    geom_path(data = subset(dat, case_ == 2), linewidth = 0.4) +
+    geom_path(data = subset(dat, case_ == 2), linewidth = 0.7) +
     # source: https://www.geeksforgeeks.org/control-line-color-and-type-in-ggplot2-plot-legend-in-r/
     scale_linetype_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c(2,1)) +
-    scale_color_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c('grey50', 'darkred')) + 
+    scale_color_manual(name = "Elephant Path", labels = c('pseudo-absence', 'presence'), values = c('grey30', 'red')) + 
     theme_minimal() 
   
   # make elephant movement on NDVI map without legends 
   image_map <- ggplot() +
     geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = F) +
-    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6)) + 
-    geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey50', linetype = 2, linewidth = 0.4) + 
-    geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'darkred', linetype = 1, linewidth = 0.4) +
+    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6) +
+    geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey30', linetype = 2, linewidth = 0.4) + 
+    geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'red', linetype = 1, linewidth = 0.7) +
     labs(title = title, subtitle = paste0('Elephant ', ID, ' from ', as.Date(min(dat$t1_), tz = 'Africa/Maputo') , ' to ', 
                                           as.Date(max(dat$t2_), tz = 'Africa/Maputo'),' (week ', week, ')'), x = "Longitude", y = "Latitude") +
     annotation_north_arrow(location = 'tl', which_north = 'true', 
@@ -135,4 +135,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.png'))
   print(final_map)
   dev.off()
+  
+  # save new dataset
+  write.csv(dat, paste0(output_filepath, '5_a2_elephant_movement_visualization_dataset', random_data_method, suffix, '.png'))
 }
