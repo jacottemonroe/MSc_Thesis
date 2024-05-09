@@ -132,7 +132,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   final_map <- plot_grid(image_map, legends, nrow = 1, align = 'h', axis = 't', rel_widths = c(1, 0.3))
 
   # save map as png
-  png(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.png'))
+  pdf(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.png'))
   print(final_map)
   dev.off()
   
