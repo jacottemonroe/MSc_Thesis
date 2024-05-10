@@ -1972,7 +1972,7 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
   xlab('Study Period') + ylab('Coefficient') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
-  theme(text=element_text(size=12))
+  theme(text=element_text(size=12)) #15 for png 12 for pdf
 dev.off()
 
 
@@ -2046,7 +2046,7 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
   xlab('Study Period') + ylab('VIF') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
-  theme(text=element_text(size=12))
+  theme(text=element_text(size=15)) #15 for png 12 for pdf
 dev.off()
 
 
