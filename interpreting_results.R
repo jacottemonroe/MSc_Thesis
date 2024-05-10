@@ -41,8 +41,8 @@ for(i in 1:nrow(run_settings)){
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
   step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
-  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.png')
-  step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
+  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
+  step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
   # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
   #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
   #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
@@ -53,7 +53,7 @@ for(i in 1:nrow(run_settings)){
   # check if each folder has the correct files and mark the answer in table 
   if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
   if(all(step2_files %in% data_files)){step2 = T}else{step2 = F}
-  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 6){step3 = T}else{step3 = F}
+  if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 1){step3 = T}else{step3 = F}
   if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
   if(all(step5_files %in% output_files)){step5 = T}else{step5 = F}
   if(all(step6_files %in% output_files)){step6 = T}else{step6 = F}
@@ -118,23 +118,33 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step3 == F, c(1:2, 4)]
+a <- df_progress[df_progress$step4 == T, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
 
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:7]
+# 
+# # change downscaling label because it causes issues that i don't get 
+# run_settings$downscaling[run_settings$downscaling == 'NULL'] <- 'nope'
+# run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
+# row.names(run_settings) <- 1:nrow(run_settings)
 
-# change downscaling label because it causes issues that i don't get 
-run_settings$downscaling[run_settings$downscaling == 'NULL'] <- 'nope'
-run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
-row.names(run_settings) <- 1:nrow(run_settings)
-#write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_504.csv')
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
+#write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_220.csv')
 
-r <- read.csv('data/run_settings_new_path_with_CV_until_504.csv')
-class(r$downscaling)
+# get indices of runs to remove from dataset
+rownames(run_settings) <- 1:nrow(run_settings)
+remove <- rownames(run_settings[(run_settings$ID == 'LA11' & run_settings$week %in% seq(2272, 2281)) | 
+                       (run_settings$ID == 'LA26' & run_settings$week %in% seq(2065, 2079)),])
+run_settings <- run_settings[!(rownames(run_settings) %in% remove), ]
+
+# can also remove LA11 2243 --> there is no data that single week 
+run_settings <- run_settings[-851,]
+
+write.csv(run_settings, 'data/run_settings_all_runs_new_path_with_CV.csv')
+
 # 
 # n <- data.frame(ID = unique(rr$ID), week = 2066, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
 # run_settings <- rbind(run_settings, n)

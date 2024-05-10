@@ -95,6 +95,10 @@ fitMovementModel <- function(input_directory = 'data/', ID, week, random_data_me
   training_steps$case_ <- factor(training_steps$case_, levels = c('absence', 'presence'))
   test_steps$case_ <- factor(test_steps$case_, levels = c('absence', 'presence'))
   
+  # remove any steps that contain NA in test steps (normally should not have any but for reason some slipped through so this is a fail safe)
+  test_steps <- test_steps[complete.cases(test_steps[,c('case_', 'ndvi_mean_scaled', 'ndvi_sd_scaled', 
+                                                        'ndvi_rate_mean_scaled', 'ndvi_rate_sd_scaled')]),]
+  
   
   ######## STEP 2: Implement cross-validation and fit GLM model on training step dataset
   
@@ -119,7 +123,7 @@ fitMovementModel <- function(input_directory = 'data/', ID, week, random_data_me
   # package: caret 
   glm_model_custom <- train(case_ ~ ndvi_mean_scaled + ndvi_sd_scaled + ndvi_rate_mean_scaled + ndvi_rate_sd_scaled, 
                             data = training_steps, method = custom_glm, family = binomial(link = 'logit'),
-                            metric = 'Dist', maximize = F, tuneLength = 20, trControl = cv_settings_custom, na.action = na.exclude)
+                            metric = 'Dist', maximize = F, tuneLength = 20, trControl = cv_settings_custom, na.action = na.pass)
   
   # also fit conditional logistic regression and general logistic regression models (without cross-validation)
   # note: models trained on full step dataset (no split into training and validation)

@@ -77,7 +77,11 @@ library(car) # needed to run vif()
 # if(!('GGally') %in% installed.packages()){install.packages('GGally')}
 # library(GGally)
 
-# run function 
+# # run function 
+# fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
+#                  input_suffix = input_suffix, output_suffix = output_suffix)
+
+
 fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
                  input_suffix = input_suffix, output_suffix = output_suffix)
 
@@ -90,5 +94,4 @@ fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downsc
 
 print(paste('(DONE) Fitting models for elephant', ID, 'of week', week))
 print(paste('(COMPLETE) Elephant', ID, 'has been successfully processed for week', week))
-
 

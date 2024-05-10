@@ -32,6 +32,9 @@ pseudo_abs_method <- run_settings[[3]]
 downscaling_setting <- run_settings[[4]]
 downscaling_model <- run_settings[[5]]
 
+print(downscaling_setting)
+print(class(downscaling_setting))
+
 # replace NA from suffix columns of run settings to empty strings
 if(is.na(run_settings[[6]])){run_settings[[6]] <- ''}
 if(is.na(run_settings[[7]])){run_settings[[7]] <- ''}
@@ -61,8 +64,12 @@ library(amt)
 # Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
 #         MODIS 250m retrieved through downscaling JN script (downscaling == F), MODIS 30m generated through downscaling in R (downscaling == T).
 # Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
+# loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, 
+#                          downscaling = downscaling_setting, downscaling_model = downscaling_model, 
+#                          input_suffix = input_suffix, output_directory = 'data/', output_suffix = output_suffix)
+
 loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, 
-                         downscaling = downscaling_setting, downscaling_model = downscaling_model, 
+                         downscaling = 'none', downscaling_model = downscaling_model, 
                          input_suffix = input_suffix, output_directory = 'data/', output_suffix = output_suffix)
 
 print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))

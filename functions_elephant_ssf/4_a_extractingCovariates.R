@@ -16,7 +16,7 @@
 # function that retrieves mean and sd (instead of original approach: percentiles)
 
 loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 7, random_data_method, 
-                                           downscaling = 'NULL', downscaling_model = 'ranger_full_selection', 
+                                           downscaling = 'none', downscaling_model = 'ranger_full_selection', 
                                            input_suffix = '', output_directory = 'data/', output_suffix = ''){ 
   
   # load step dataset RDS 
@@ -28,7 +28,7 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
   step_dataset[, empty_cols] <- NA
   
   # retrieve and stack all generated MODIS images together
-  if(downscaling == 'NULL'){
+  if(downscaling == 'none'){
     modis_directory <- paste0(input_directory, '3_a1_modis_images_', random_data_method, input_suffix, '/')
     
   }else if(downscaling == T){
@@ -41,7 +41,7 @@ loadAndExtractCovariates <- function(input_directory, ID, week, ndvi_rate_lag = 
     
     output_suffix <- paste0('_downscaling_modis_250m', output_suffix)
     
-  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
+  }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: none, T, F.')}
   
   modis_images <- rast(list.files(modis_directory, pattern = glob2rx('2*.tif'), full.names = T))
   

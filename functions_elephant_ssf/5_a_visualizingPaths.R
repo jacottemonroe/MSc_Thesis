@@ -22,7 +22,8 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # create data directory if it does not yet exist
   if(!dir.exists(output_filepath)){dir.create(output_filepath, recursive = T)}
   
-  
+  print(downscaling)
+  print(class(downscaling))
   
   # define data directory and suffix
   if(downscaling == 'NULL'){
@@ -132,10 +133,10 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   final_map <- plot_grid(image_map, legends, nrow = 1, align = 'h', axis = 't', rel_widths = c(1, 0.3))
 
   # save map as png
-  pdf(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.png'))
+  pdf(paste0(output_filepath, '5_a1_elephant_movement_map_', random_data_method, suffix,'.pdf'))
   print(final_map)
   dev.off()
   
   # save new dataset
-  write.csv(dat, paste0(output_filepath, '5_a2_elephant_movement_visualization_dataset', random_data_method, suffix, '.png'))
+  write.csv(dat, paste0(output_filepath, '5_a2_elephant_movement_visualization_dataset', random_data_method, suffix, '.csv'))
 }
