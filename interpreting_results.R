@@ -40,9 +40,9 @@ for(i in 1:nrow(run_settings)){
   step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
   step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
-  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr.csv')
-  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr.png')
-  step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_oldPathWithCV.RDS')
+  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
+  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.png')
+  step6_files <- c('6_c8_glm_custom_50p_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
   # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
   #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
   #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
@@ -118,7 +118,7 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step3 == T, c(1:2, 4)]
+a <- df_progress[df_progress$step3 == F, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
@@ -126,9 +126,15 @@ run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$dow
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:7]
 
+# change downscaling label because it causes issues that i don't get 
+run_settings$downscaling[run_settings$downscaling == 'NULL'] <- 'nope'
+run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
+row.names(run_settings) <- 1:nrow(run_settings)
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
 write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_504.csv')
 
+r <- read.csv('data/run_settings_new_path_with_CV_until_504.csv')
+class(r$downscaling)
 # 
 # n <- data.frame(ID = unique(rr$ID), week = 2066, pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
 # run_settings <- rbind(run_settings, n)
@@ -1830,10 +1836,10 @@ downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37
 print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
 
 # change label names of predictors 
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Median NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth Rate'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # change label for downscaling status to be more indicative 
 downscaling_coef$downscaling[downscaling_coef$downscaling == T] <- '30 m'
@@ -1848,94 +1854,200 @@ downscaling_coef$seasons[downscaling_coef$week == 2278] <- 'August'
 downscaling_coef$ID[downscaling_coef$ID == 'LA14'] <- 'Elephant LA14'
 downscaling_coef$ID[downscaling_coef$ID == 'LA26'] <- 'Elephant LA26'
 
+# try log scale the pvalue
+#downscaling_coef$model_sig_log <- log(downscaling_coef$model_sig)
+# 
+# # look at pvalue diff 
+# downscaling_coef$combo_id <- paste0(downscaling_coef$ID, downscaling_coef$week)
+# 
+# a <- downscaling_coef[downscaling_coef$downscaling == '250 m',c('combo_id', 'model_sig')]
+# b <- downscaling_coef[downscaling_coef$downscaling == '30 m',c('combo_id', 'model_sig')]
+# c <- merge(a, b, by = 'combo_id')
+# c <- c[!duplicated(c),]
+# c$diff <- c$model_sig.y - c$model_sig.x
+# names(c)[2] <- 'sig 250m'
+# names(c)[3] <- 'sig 30m'
+# 
+# 
+# # quick visualization to compare chisquare pvalues between model types
+# library(ggplot2)
+# ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), y = model_sig_log, fill = downscaling)) + 
+#   geom_bar(position = position_dodge(preserve = 'single'), stat = 'identity') + 
+#   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+#                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
+#                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
+#   #geom_hline(yintercept = 0.01, linetype = 'dashed') +
+#   # source: https://www.statology.org/ggplot-facet-order/
+#   facet_grid(c(predictor) ~ c(ID)) +
+#   #coord_cartesian(ylim = c(0, 0.015)) +
+#   xlab('Study Period') + ylab('Coefficient') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+#   theme_minimal() 
+
+# add column in dataset for custom spacing for text in plot based on value range 
+# source: https://stackoverflow.com/questions/51568656/find-difference-between-maximum-value-of-group-and-current-row-with-r
+library(dplyr)
+downscaling_coef <- downscaling_coef %>% group_by(predictor) %>% mutate(justify = round((max(glm_value) - min(glm_value))/10, 2))
+downscaling_coef <- downscaling_coef %>% group_by(predictor) %>% mutate(justify_vif = round((max(VIF) - min(VIF))/5, 2))
+
+# add column to determine if pvalue is sig based on 0.05 threshold (for text coloring)
+downscaling_coef$glm_significance_bool <- ifelse(downscaling_coef$glm_significance <= 0.05, 'significant', 'not significant')
+downscaling_coef$model_sig_bool <- ifelse(downscaling_coef$model_sig <= 0.05, 'significant', 'not significant')
+
+
+# only keep model significance for one predictor (no need to replicate 4 times)
+#downscaling_coef$model_sig[downscaling_coef$predictor != 'Dev. NDVI Growth Rate'] <- NA
+
 # sort the dataset to have same order of appearance of spatial res --> decreasing = F because dealing with characters not numbers
-downscaling_coef <- downscaling_coef[order(downscaling_coef$downscaling, decreasing = F),]
+downscaling_coef <- downscaling_coef[order(downscaling_coef$ID, downscaling_coef$week),]
 
 # save STS coef table 
 write.csv(downscaling_coef, 'output/downscaling_df_results.csv')
 
+
+
+
 downscaling_coef <- read.csv('output/downscaling_df_results.csv', row.names = 1)
 
-# define start and end dates for plotting 
-start_date <- min(downscaling_coef$date)
-end_date <- max(downscaling_coef$date)
-elephant <- 'LA14 and LA26'
+# # define start and end dates for plotting 
+# start_date <- min(downscaling_coef$date)
+# end_date <- max(downscaling_coef$date)
+# elephant <- 'LA14 and LA26'
 
 # plot results 
 if(!('ggpattern') %in% installed.packages()){install.packages('ggpattern')} # to read rasters
 library(ggpattern)
+library(ggplot2)
 
-png('output/downscaling_plot_glm_coef.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = downscaling, pattern = glm_significance)) + 
+# png('output/downscaling_plot_glm_coef.png')
+# ggplot(data = downscaling_coef, aes(x = seasons, y = glm_value, fill = downscaling, pattern = glm_significance)) + 
+#   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '250 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+#   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '30 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+#   # source: https://stackoverflow.com/questions/20060949/ggplot2-multiple-sub-groups-of-a-bar-chart
+#   #geom_bar(aes(x = interaction(seasons, downscaling), y = glm_value, fill = glm_significance, group = downscaling), stat = 'identity') + 
+#   # source: https://guslipkin.medium.com/grouped-and-stacked-bar-charts-in-r-e5f5ac5637de
+#   # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+#   geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+#                    pattern_angle = 45, pattern_density = 0.05,
+#                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+#   geom_hline(yintercept = 0, linetype = 'dashed') +
+#   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+#   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+#                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
+#                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
+#   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+#   scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
+#                        breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
+#                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+#   # source: https://www.statology.org/ggplot-facet-order/
+#   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+#   xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+#   theme_minimal() 
+# 
+# dev.off()
+
+
+pdf('output/downscaling_plot_glm_coef.pdf',  width = 12, height = 8.5)
+ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
+                                    y = glm_value, fill = factor(downscaling, level = c('250 m', '30 m')), 
+                                    color = glm_significance_bool)) + 
   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '250 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
   #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '30 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
   # source: https://stackoverflow.com/questions/20060949/ggplot2-multiple-sub-groups-of-a-bar-chart
   #geom_bar(aes(x = interaction(seasons, downscaling), y = glm_value, fill = glm_significance, group = downscaling), stat = 'identity') + 
   # source: https://guslipkin.medium.com/grouped-and-stacked-bar-charts-in-r-e5f5ac5637de
-  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
-  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
-                   pattern_angle = 45, pattern_density = 0.05,
-                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
-  geom_hline(yintercept = 0, linetype = 'dashed') +
+  geom_bar(position = position_dodge(preserve = "single"), stat = 'identity', color = NA) + 
+  # source: https://www.geeksforgeeks.org/formatting-numbers-and-strings-in-r-programming-format-function/
+  # note: set color at beginning to keep correct order of text (see source)
+  # source: https://stackoverflow.com/questions/51734285/ggplot-adding-color-aesthetic-changes-stack-order
+  geom_text(aes(label=format(glm_significance, scientific = T, digits = 2),
+                y = glm_value + justify * sign(glm_value)), position=position_dodge(.9), size = 4) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+  # source: https://stackoverflow.com/questions/41701960/ggplot2-adding-text-on-a-multiple-barplot
   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
-  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
-                       breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
-                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+  scale_color_manual(name = 'Predictor Significance', values = c('significant' = 'blue', 'not significant' = 'black')) +
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
-  xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal() 
-
+  xlab('Study Period') + ylab('Coefficient') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() + 
+  theme(text=element_text(size=12))
 dev.off()
 
 
 
-png('output/downscaling_plot_clr_coef.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = clr_value, fill = downscaling, pattern = clr_significance)) + 
-  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
-  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
-                   pattern_angle = 45, pattern_density = 0.05,
-                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
-  geom_hline(yintercept = 0, linetype = 'dashed') +
+# png('output/downscaling_plot_clr_coef.png')
+# ggplot(data = downscaling_coef, aes(x = seasons, y = clr_value, fill = downscaling, pattern = clr_significance)) + 
+#   # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+#   geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+#                    pattern_angle = 45, pattern_density = 0.05,
+#                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+#   geom_hline(yintercept = 0, linetype = 'dashed') +
+#   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+#   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+#                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
+#                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
+#   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+#   scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
+#                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+#   # source: https://www.statology.org/ggplot-facet-order/
+#   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+#   xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for CLR models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+#   theme_minimal() 
+# dev.off()
+
+# 
+# png('output/downscaling_plot_vif.png')
+# ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = downscaling, pattern = model_sig)) + 
+#   # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
+#   geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
+#                    pattern_angle = 45, pattern_density = 0.05,
+#                    pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
+#   geom_hline(yintercept = 0, linetype = 'dashed') +
+#   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+#   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
+#                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
+#                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
+#   # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
+#   scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
+#                        breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
+#                        guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+#   # source: https://www.statology.org/ggplot-facet-order/
+#   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
+#   xlab('Study Period') + ylab('VIF') + ggtitle('Comparison of VIF for models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+#   theme_minimal() 
+# dev.off()
+
+
+pdf('output/downscaling_plot_glm_vif.pdf',  width = 12, height = 8.5)
+ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
+                                    y = VIF, fill = factor(downscaling, level = c('250 m', '30 m')), 
+                                    color = model_sig_bool)) + 
+  #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '250 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+  #geom_bar(data= downscaling_coef[downscaling_coef$downscaling == '30 m',], aes(y = glm_value, fill = glm_significance), stat = 'identity') + 
+  # source: https://stackoverflow.com/questions/20060949/ggplot2-multiple-sub-groups-of-a-bar-chart
+  #geom_bar(aes(x = interaction(seasons, downscaling), y = glm_value, fill = glm_significance, group = downscaling), stat = 'identity') + 
+  # source: https://guslipkin.medium.com/grouped-and-stacked-bar-charts-in-r-e5f5ac5637de
+  geom_bar(position = position_dodge(preserve = "single"), stat = 'identity', color = NA) + 
+  # source: https://www.geeksforgeeks.org/formatting-numbers-and-strings-in-r-programming-format-function/
+  # note: set color at beginning to keep correct order of text (see source)
+  # source: https://stackoverflow.com/questions/51734285/ggplot-adding-color-aesthetic-changes-stack-order
+  geom_text(data = downscaling_coef[downscaling_coef$predictor == 'Dev. NDVI Growth Rate',], aes(label=format(model_sig, scientific = T, digits = 2),
+                y = VIF + justify_vif * sign(VIF)), position=position_dodge(.9), size = 4) +
+  geom_hline(data = data.frame(threshold = 5, predictor =c('Dev. NDVI', 'Dev. NDVI Growth Rate')), aes(yintercept = threshold), linetype = 'dashed', color = 'grey40') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
+  # source: https://stackoverflow.com/questions/41701960/ggplot2-adding-text-on-a-multiple-barplot
   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
                     breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
                     guide = guide_legend(override.aes = list(pattern = "none"))) + 
-  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
-                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
+  scale_color_manual(name = 'Model Significance', values = c('significant' = 'blue', 'not significant' = 'black')) +
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
-  xlab('Study Period') + ylab('Coefficient') + ggtitle('Comparison of estimated coefficients for CLR models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal() 
+  xlab('Study Period') + ylab('VIF') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  theme_minimal() + 
+  theme(text=element_text(size=12))
 dev.off()
-
-
-png('output/downscaling_plot_vif.png')
-ggplot(data = downscaling_coef, aes(x = seasons, y = VIF, fill = downscaling, pattern = model_sig)) + 
-  # source: https://stackoverflow.com/questions/62393159/how-can-i-add-hatches-stripes-or-another-pattern-or-texture-to-a-barplot-in-ggp
-  geom_bar_pattern(position = position_dodge(preserve = "single"), stat = 'identity', pattern_fill = "grey60",
-                   pattern_angle = 45, pattern_density = 0.05,
-                   pattern_spacing = 0.05, pattern_key_scale_factor = 0.6) + 
-  geom_hline(yintercept = 0, linetype = 'dashed') +
-  # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
-  scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
-                    breaks = c('250 m', '30 m'), labels = c('250 m', '30 m'), 
-                    guide = guide_legend(override.aes = list(pattern = "none"))) + 
-  # source: https://stackoverflow.com/questions/67164758/adding-hatches-or-patterns-to-ggplot-bars
-  scale_pattern_manual(name = 'Coefficient Significance', values = c('sig' = "none", 'not sig' = "stripe"), 
-                       breaks = c('sig', 'not sig'), labels = c('Significant', 'Not Significant'),
-                       guide = guide_legend(override.aes = list(fill = "white", color = 'black'))) +
-  # source: https://www.statology.org/ggplot-facet-order/
-  facet_grid(c(predictor) ~ c(ID), scale = 'free') +
-  xlab('Study Period') + ylab('VIF') + ggtitle('Comparison of VIF for models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal() 
-dev.off()
-
 
 
 
