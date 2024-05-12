@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- "_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -69,6 +69,46 @@ for(i in 1:nrow(run_settings)){
   
 }
 
+
+# s <- read.csv('data/run_settings_LTS_LA11_LA12_LA13_LA14.csv', row.names = 1)
+# s26 <- data.frame(ID = 'LA11', week = seq(2195, 2271), pseudo_abs_method = 'random_path_custom_distr', downscaling = 'NULL', downscaling_model = 'NULL')
+# 
+# s <- rbind(s, s26)
+# s <- s[!duplicated(s),]
+# 
+# write.csv(s, 'data/run_settings_LTS_full.csv')
+
+s <- read.csv('data/run_settings_LTS_full.csv', row.names = 1)
+
+# retrieve elephants from STS
+s_names <- unique(s$ID)
+
+a <- df_progress[df_progress$step6 == T, c(1:2, 4)]
+a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
+
+s$combo <- paste(s$ID, s$week, s$downscaling, sep = '_')
+
+s <- s[s$combo %in% a$combo,]
+s <- s[,1:5]
+
+# remove faulty LA12 and LA13 data
+s <- s[!(s$ID %in% c('LA12', 'LA13') & s$week %in% seq(2175, 2193)),]
+
+write.csv(s, 'data/run_settings_LTS_newPathWithCV_temp.csv')
+
+
+# 
+# d <- read.csv('output/LTS_df_results_aggregated.csv')[,c('ID', 'week', 'date', 'predictor', 'glm_value')]
+# d <- d[d$predictor == 'Avg. NDVI',]
+# 
+# d <- d %>% group_by(date) %>% mutate(coef = mean(glm_value))
+# 
+# dc <- d[,c('date', 'coef')]
+# 
+# dc <- dc[!duplicated(dc),]
+# 
+# ggplot(data = dc, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = coef)) + geom_line()
+
 # dfr <- df_progress$week[df_progress$step3 == F]
 # print(dfr)
 # 
@@ -118,7 +158,7 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step4 == T, c(1:2, 4)]
+a <- df_progress[df_progress$step4 == F, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
@@ -131,7 +171,7 @@ run_settings <- run_settings[,1:7]
 # run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
 # row.names(run_settings) <- 1:nrow(run_settings)
 
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_second_batch.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_220.csv')
 
 # get indices of runs to remove from dataset
@@ -874,14 +914,16 @@ dev.off()
 # run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
 
 #RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
-STS_run_table <- run_settings
+
+STS_run_table <- read.csv('data/run_settings_STS_newPathWithCV_temp.csv', row.names = 1)
+#STS_run_table <- run_settings
 STS_run_table <- STS_run_table[,1:5]
 
 row.names(STS_run_table) <- 1:nrow(STS_run_table)
 
 STS_coef <- data.frame()
 
-suffix <- '_scaled'
+suffix <- '_newPathWithCV'
 
 for(i in 1:nrow(STS_run_table)){
   
@@ -896,7 +938,7 @@ for(i in 1:nrow(STS_run_table)){
   
 
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_c4_glm_mean_sd_deviances_', method, suffix, '.csv'))
   
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
@@ -910,22 +952,23 @@ for(i in 1:nrow(STS_run_table)){
   if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
   dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_c3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
-  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
-  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.05] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.05] <- 'not sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.05] <- 'sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
   
   # create new entry with coefs and pvalues 
   entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], 
@@ -971,32 +1014,32 @@ for(i in 1:nrow(STS_run_table)){
 
 
 STS_coef_m <- STS_coef
-STS_coef_m[STS_coef_m$ID == 'LA11' & STS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
+#STS_coef_m[STS_coef_m$ID == 'LA11' & STS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
 
 
 start_date <- min(STS_coef_m$date)
 end_date <- max(STS_coef_m$date)
-elephant <- '13 elephants'
+elephant <- '12 elephants'
 
-# plot all at once - GLM
-png('output/STS_timeseries_glm_coef.png')
-ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = interaction(predictor, ID), color = ID)) + 
-  geom_line() + 
-  geom_point(data = STS_coef_m[STS_coef_m$glm_significance == 'sig',], aes(y = glm_value), shape = 8) + 
-  geom_hline(yintercept = 0) + 
-  facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
-dev.off()
-
-# plot all at once - CLR
-png('output/STS_timeseries_clr_coef.png')
-ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = interaction(predictor, ID), color = ID)) + 
-  geom_line() + 
-  geom_point(data = STS_coef_m[STS_coef_m$clr_significance == 'sig',], aes(y = clr_value), shape = 8) + 
-  geom_hline(yintercept = 0) + 
-  facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of CLR predictors for ', elephant, ' from ', start_date, ' to ', end_date))
-dev.off()
+# # plot all at once - GLM
+# png('output/STS_timeseries_glm_coef.png')
+# ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = interaction(predictor, ID), color = ID)) + 
+#   geom_line() + 
+#   geom_point(data = STS_coef_m[STS_coef_m$glm_significance == 'sig',], aes(y = glm_value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+# dev.off()
+# 
+# # plot all at once - CLR
+# png('output/STS_timeseries_clr_coef.png')
+# ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = interaction(predictor, ID), color = ID)) + 
+#   geom_line() + 
+#   geom_point(data = STS_coef_m[STS_coef_m$clr_significance == 'sig',], aes(y = clr_value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of CLR predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+# dev.off()
 
 
 # aggregate results of all elephants --> retrieve summary stats
@@ -1035,6 +1078,7 @@ ag_model_sig <- aggregate(STS_coef_m$model_sig, list(STS_coef_m$week, STS_coef_m
 ag_glm_sig <- aggregate(STS_coef_m$glm_significance, list(STS_coef_m$week, STS_coef_m$predictor), FUN = relative_sum)$x
 ag_clr_sig <- aggregate(STS_coef_m$clr_significance, list(STS_coef_m$week, STS_coef_m$predictor), FUN = relative_sum)$x
 
+
 agc <- paste0(ag_glm$Group.1, ag_glm$Group.2, sep = '_')
 
 agdf <- data.frame(combo = agc, total_models = ag_model, VIF_Q1 = ag_vif_q1, VIF_Mean = ag_vif_m, VIF_Q2 = ag_vif_q2, VIF_Q3 = ag_vif_q3,
@@ -1061,54 +1105,62 @@ STS_coef_m <- merge(STS_coef_m, agdf, by.x = 'combo')
 
 library("cowplot") # to add multiple plots as one
 
-STS_coef_m$date[STS_coef_m$week == 2065] <- min(summary_results$date)
-STS_coef_m$date[STS_coef_m$week == 2074] <- summary_results$date[129]
-STS_coef_m$date[STS_coef_m$week == 2080] <- summary_results$date[16]
-STS_coef_m$date[STS_coef_m$week == 2082] <- summary_results$date[18]
-STS_coef_m$date[STS_coef_m$week == 2084] <- summary_results$date[20]
-STS_coef_m$date[STS_coef_m$week == 2085] <- summary_results$date[21]
+
+print(length(unique(STS_coef_m$week)) == length(unique(STS_coef_m$date)))
+
+STS_coef_m$date[STS_coef_m$week == 2065] <- min(STS_coef_m$date)
+#STS_coef_m$date[STS_coef_m$week == 2074] <- summary_results$date[129]
+STS_coef_m$date[STS_coef_m$week == 2080] <- min(STS_coef_m$date[STS_coef_m$week == 2080])
+STS_coef_m$date[STS_coef_m$week == 2082] <- min(STS_coef_m$date[STS_coef_m$week == 2082])
+STS_coef_m$date[STS_coef_m$week == 2084] <- min(STS_coef_m$date[STS_coef_m$week == 2084])
+#STS_coef_m$date[STS_coef_m$week == 2085] <- summary_results$date[21]
 
 # addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
-ag_sig <- aggregate(STS_coef_m$Sig_Model_Proportion, list(STS_coef_m$week), FUN = quantile, probs = 0.5, na.rm = T)$x
-ag_di <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week), FUN = mean)$x
+# ag_sig <- aggregate(STS_coef_m$Sig_Model_Proportion, list(STS_coef_m$week), FUN = mean)$x
+# ag_di <- aggregate(STS_coef_m$deviance_improvement, list(STS_coef_m$week), FUN = mean)$x
+# #total_m <- aggregate(STS_coef_m$Sig_Model_Proportion, list(STS_coef_m$week, STS_coef_m$predictor), FUN = length)$x
 
 # retrieve the number of models from sst_w df 
-df_bar <- data.frame(week = unique(STS_coef_m$date), total_models = sst_w$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
+df_bar <- data.frame(STS_coef_m[!duplicated(STS_coef_m$date),c('date', 'total_models', 'Sig_Model_Proportion', 'DEV_IMP_Mean')])
+# df_bar <- data.frame(week = unique(STS_coef_m$date), total_models = STS_coef_m$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
 
 # change label names of predictors 
-STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
-STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # save STS coef table 
-write.csv(STS_coef_m, 'output/STS_df_results_aggregated.csv')
+write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPathWithoutCV.csv')
+#write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPathWithCV.csv')
 
 
-# retrieve dates that want to highlight 
-date_hl <- unique(STS_coef_m$date[grep('-09-', STS_coef_m$date)])
+# # retrieve dates that want to highlight 
+# date_hl <- unique(STS_coef_m$date[grep('-09-', STS_coef_m$date)])
+# 
+# # get a list of dates by year
+# # source: https://r-coder.com/split-r/
+# date_hl <- split(date_hl, f = sub('-.*', '', date_hl))
+# 
+# # get start and end dates for each year
+# # source: https://stackoverflow.com/questions/43425540/get-max-min-values-from-a-list-of-dataframes-without-loop
+# date_hl <- sapply(date_hl, function(x) range(x))
+# 
+# # convert to data frame (doesn't work if matrix) of xmin and xmax 
+# date_hl <- data.frame(t(date_hl))
+# colnames(date_hl) <- c('xmin', 'xmax')
+# 
+# # convert dates to date object
+# date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
+# date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
+STS_coef_m <- read.csv('output/STS_df_results_aggregated_newPathWithoutCV.csv')
 
-# get a list of dates by year
-# source: https://r-coder.com/split-r/
-date_hl <- split(date_hl, f = sub('-.*', '', date_hl))
-
-# get start and end dates for each year
-# source: https://stackoverflow.com/questions/43425540/get-max-min-values-from-a-list-of-dataframes-without-loop
-date_hl <- sapply(date_hl, function(x) range(x))
-
-# convert to data frame (doesn't work if matrix) of xmin and xmax 
-date_hl <- data.frame(t(date_hl))
-colnames(date_hl) <- c('xmin', 'xmax')
-
-# convert dates to date object
-date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
-date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
 
 
-png('output/STS_timeseries_glm_coef_aggregated.png')
+png('output/STS_timeseries_glm_coef_aggregated_newPathWithoutCV.png')
 
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1174,10 +1226,10 @@ dev.off()
 
 
 
-png('output/STS_timeseries_clr_coef_aggregated.png')
+png('output/STS_timeseries_clr_coef_aggregated_newPathWithoutCV.png')
 
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1242,14 +1294,16 @@ plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths =
 dev.off()
 
 # plot deviance improvement and VIF 
-png('output/STS_timeseries_dev_VIF_aggregated.png')
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = deviance_improvement, fill = sig_models), stat = 'identity', position = 'dodge') +
+png('output/STS_timeseries_dev_VIF_aggregated_newPathWithoutCV.png')
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
+  #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
+  #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
-  ylab('Deviance Improvement') + xlab('Time') +
-  theme_minimal() + 
-  theme(legend.position = 'none') 
+  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  ylab('No. of Elephants') + xlab('Time') +
+  theme(legend.position = 'none') + 
+  theme_minimal()
 
 lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
@@ -1258,7 +1312,8 @@ lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
-  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  geom_hline(yintercept = 1, linetype = 'dashed') + 
+  geom_hline(yintercept = 5, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
@@ -1358,14 +1413,15 @@ dev.off()
 # run_settings$combo <- paste(run_settings$ID, run_settings$week, sep = '_')
 
 #RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
-LTS_run_table <- run_settings
+# LTS_run_table <- run_settings
+LTS_run_table <- read.csv('data/run_settings_LTS_newPathWithCV_temp.csv', row.names = 1)
 LTS_run_table <- LTS_run_table[,1:5]
 
 row.names(LTS_run_table) <- 1:nrow(LTS_run_table)
 
 LTS_coef <- data.frame()
 
-suffix <- '_scaled'
+suffix <- '_newPathWithCV'
 
 for(i in 1:nrow(LTS_run_table)){
   
@@ -1380,7 +1436,7 @@ for(i in 1:nrow(LTS_run_table)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_c4_glm_mean_sd_deviances_', method, suffix, '.csv'))
   
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
@@ -1394,63 +1450,64 @@ for(i in 1:nrow(LTS_run_table)){
   if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
-  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, suffix, '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_c3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
-  c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
-  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.1] <- 'sig'
-  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
-  
-  # create new entry with coefs and pvalues 
-  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], 
-                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
-                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+  c$Pr...z..[as.numeric(c$Pr...z..) < 0.05] <- 'sig'
+  c$Pr...z..[as.numeric(c$Pr...z..) >= 0.05] <- 'not sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.05] <- 'sig'
+  c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
+
+  # create new entry with coefs and pvalues
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
+                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig,
+                      glm_value = c$Estimate, glm_significance = c$Pr...z..,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
-  
+
   LTS_coef <- rbind(LTS_coef, entry)
 }
 
-
 LTS_coef_m <- LTS_coef
 
-#LTS_coef_m[LTS_coef_m$ID == 'LA11' & LTS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
-LTS_coef_m$glm_value[LTS_coef_m$glm_value > 7 | LTS_coef_m$glm_value < -7] <- NA
-LTS_coef_m$clr_value[LTS_coef_m$clr_value > 7 | LTS_coef_m$clr_value < -7] <- NA
+# # this code no longer needed because just removed those datasets (faulty datasets from LA12 and LA13)
+# #LTS_coef_m[LTS_coef_m$ID == 'LA11' & LTS_coef_m$week == 2085, c('glm_value', 'clr_value')] <- NA
+# LTS_coef_m$glm_value[LTS_coef_m$glm_value > 7 | LTS_coef_m$glm_value < -7] <- NA
+# LTS_coef_m$clr_value[LTS_coef_m$clr_value > 7 | LTS_coef_m$clr_value < -7] <- NA
 
 start_date <- min(LTS_coef_m$date)
 end_date <- max(LTS_coef_m$date)
 elephant <- 'LA11, LA12, LA13, and LA14'
-
-library(ggplot2)
-# plot all at once - GLM
-png('output/LTS_timeseries_glm_coef.png')
-ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = interaction(predictor, ID), color = ID)) + 
-  geom_line() + 
-  geom_point(data = LTS_coef_m[LTS_coef_m$glm_significance == 'sig',], aes(y = glm_value), shape = 8) + 
-  geom_hline(yintercept = 0) + 
-  facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
-dev.off()
-
-# plot all at once - CLR
-png('output/LTS_timeseries_clr_coef.png')
-ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = interaction(predictor, ID), color = ID)) + 
-  geom_line() + 
-  geom_point(data = LTS_coef_m[LTS_coef_m$clr_significance == 'sig',], aes(y = clr_value), shape = 8) + 
-  geom_hline(yintercept = 0) + 
-  facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of CLR predictors for ', elephant, ' from ', start_date, ' to ', end_date))
-dev.off()
+# 
+# library(ggplot2)
+# # plot all at once - GLM
+# png('output/LTS_timeseries_glm_coef.png')
+# ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = glm_value, group = interaction(predictor, ID), color = ID)) + 
+#   geom_line() + 
+#   geom_point(data = LTS_coef_m[LTS_coef_m$glm_significance == 'sig',], aes(y = glm_value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of GLM predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+# dev.off()
+# 
+# # plot all at once - CLR
+# png('output/LTS_timeseries_clr_coef.png')
+# ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'), y = clr_value, group = interaction(predictor, ID), color = ID)) + 
+#   geom_line() + 
+#   geom_point(data = LTS_coef_m[LTS_coef_m$clr_significance == 'sig',], aes(y = clr_value), shape = 8) + 
+#   geom_hline(yintercept = 0) + 
+#   facet_grid(vars(predictor), scale = 'free') + 
+#   xlab('Time') + ylab('Coefficient Value') + ggtitle(paste0('Timeseries of CLR predictors for ', elephant, ' from ', start_date, ' to ', end_date))
+# dev.off()
 
 
 # aggregate results of all elephants --> retrieve summary stats
@@ -1508,57 +1565,60 @@ library("cowplot") # to add multiple plots as one
 # note: some dates differ because of missing data for certain elephants in that week 
 # this is hardcoded for now --> could write code to automate this 
 # indices correspond to dataset with all 4 elephants 
-LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(LTS_coef_m$date) # for both STS and LTS
-LTS_coef_m$date[LTS_coef_m$week == 2085] <- LTS_coef_m$date[317]
-LTS_coef_m$date[LTS_coef_m$week == 2104] <- LTS_coef_m$date[621]
-LTS_coef_m$date[LTS_coef_m$week == 2178] <- LTS_coef_m$date[1726]
+LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(LTS_coef_m$date)
+LTS_coef_m$date[LTS_coef_m$week == 2104] <- min(LTS_coef_m$date[LTS_coef_m$week == 2104])
+LTS_coef_m$date[LTS_coef_m$week == 2178] <- min(LTS_coef_m$date[LTS_coef_m$week == 2178])
+LTS_coef_m$date[LTS_coef_m$week == 2227] <- min(LTS_coef_m$date[LTS_coef_m$week == 2227])
 
 print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
 
 
 
-# addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
-ag_sig <- aggregate(LTS_coef_m$Sig_Model_Proportion, list(LTS_coef_m$week), FUN = quantile, probs = 0.5, na.rm = T)$x
-ag_di <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week), FUN = mean)$x
+# # addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
+# ag_sig <- aggregate(LTS_coef_m$Sig_Model_Proportion, list(LTS_coef_m$week), FUN = quantile, probs = 0.5, na.rm = T)$x
+# ag_di <- aggregate(LTS_coef_m$deviance_improvement, list(LTS_coef_m$week), FUN = mean)$x
+# 
+# # retrieve the number of models from sst_w df 
+# df_bar <- data.frame(week = unique(LTS_coef_m$date), total_models = sst_w$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
 
-# retrieve the number of models from sst_w df 
-df_bar <- data.frame(week = unique(LTS_coef_m$date), total_models = sst_w$total_models, deviance_improvement = ag_di, sig_models = ag_sig)
+df_bar <- data.frame(LTS_coef_m[!duplicated(LTS_coef_m$date),c('date', 'total_models', 'Sig_Model_Proportion', 'DEV_IMP_Mean')])
+
 
 # change label names of predictors 
-LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth'
-LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth' 
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # save STS coef table 
-write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated.csv')
+write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWithCV.csv')
+
+# 
+# 
+# # retrieve dates that want to highlight 
+# date_hl <- unique(LTS_coef_m$date[grep('-09-', LTS_coef_m$date)])
+# 
+# # get a list of dates by year
+# # source: https://r-coder.com/split-r/
+# date_hl <- split(date_hl, f = sub('-.*', '', date_hl))
+# 
+# # get start and end dates for each year
+# # source: https://stackoverflow.com/questions/43425540/get-max-min-values-from-a-list-of-dataframes-without-loop
+# date_hl <- sapply(date_hl, function(x) range(x))
+# 
+# # convert to data frame (doesn't work if matrix) of xmin and xmax 
+# date_hl <- data.frame(t(date_hl))
+# colnames(date_hl) <- c('xmin', 'xmax')
+# 
+# # convert dates to date object
+# date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
+# date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
 
 
+png('output/LTS_timeseries_glm_coef_aggregated_newPathWithCV.png')
 
-# retrieve dates that want to highlight 
-date_hl <- unique(LTS_coef_m$date[grep('-09-', LTS_coef_m$date)])
-
-# get a list of dates by year
-# source: https://r-coder.com/split-r/
-date_hl <- split(date_hl, f = sub('-.*', '', date_hl))
-
-# get start and end dates for each year
-# source: https://stackoverflow.com/questions/43425540/get-max-min-values-from-a-list-of-dataframes-without-loop
-date_hl <- sapply(date_hl, function(x) range(x))
-
-# convert to data frame (doesn't work if matrix) of xmin and xmax 
-date_hl <- data.frame(t(date_hl))
-colnames(date_hl) <- c('xmin', 'xmax')
-
-# convert dates to date object
-date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
-date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
-
-
-png('output/LTS_timeseries_glm_coef_aggregated.png')
-
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1621,10 +1681,10 @@ dev.off()
 
 
 
-png('output/LTS_timeseries_clr_coef_aggregated.png')
+png('output/LTS_timeseries_clr_coef_aggregated_newPathWithCV.png')
 
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = sig_models), stat = 'identity', position = 'dodge', show.legend = F) +
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1635,7 +1695,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
 
 lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
@@ -1645,7 +1705,7 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1659,7 +1719,7 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
 #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
+  #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
   geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
@@ -1667,7 +1727,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
   scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
@@ -1688,9 +1748,9 @@ dev.off()
 
 
 # plot deviance improvement and VIF 
-png('output/LTS_timeseries_dev_VIF_aggregated.png')
-bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = deviance_improvement, fill = sig_models), stat = 'identity', position = 'dodge') +
+png('output/LTS_timeseries_dev_VIF_aggregated_newPathWithCV.png')
+bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge') +
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('Deviance Improvement') + xlab('Time') +
@@ -1700,7 +1760,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(week, tz = 'Africa/Maputo'))) +
 lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/29648907/using-geom-rect-for-time-series-shading-in-r
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
-  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  geom_hline(yintercept = 1, linetype = 'dashed') + 
   geom_hline(yintercept = 5, linetype = 'dashed') +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
