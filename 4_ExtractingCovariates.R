@@ -77,3 +77,59 @@ print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
 
 
 
+
+run_settings <- read.csv('data/run_settings_downscaling.csv', row.names = 1)
+
+for(i in 1:nrow(run_settings)){
+  
+  # define elephant ID
+  ID <- run_settings$ID[i]
+  
+  # define week to test 
+  week <- run_settings$week[i]
+  
+  # define pseudo-absence path generator method --> Choices are 1) random_path_custom_distr 2) random_path_buffer_point 3) random_step
+  pseudo_abs_method <- run_settings$pseudo_abs_method[i]
+  
+  # set downscaling parameter
+  downscaling_setting <- run_settings$downscaling[i]
+  
+  # define run filepath 
+  run_filepath <- paste0('data/', ID, '/', week, '/')
+  
+  # define input and output suffixes
+  input_suffix <- '_newPathWithCV'
+  output_suffix <- '_newPathWithCV'
+  
+  ###########
+  ## Extract covariates or each step from the MODIS images 
+  ###########
+  # load function
+  source('functions_elephant_ssf/4_a_extractingCovariates.R')
+  
+  # load necessary packages 
+  if(!('terra') %in% installed.packages()){install.packages('terra')}
+  library(terra)
+  if(!('amt') %in% installed.packages()){install.packages('amt')}
+  library(amt)
+  
+  # run function
+  # Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
+  #         MODIS 250m retrieved through downscaling JN script (downscaling == F), MODIS 30m generated through downscaling in R (downscaling == T).
+  # Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
+  # loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, 
+  #                          downscaling = downscaling_setting, downscaling_model = downscaling_model, 
+  #                          input_suffix = input_suffix, output_directory = 'data/', output_suffix = output_suffix)
+  
+  loadAndExtractCovariates(run_filepath, ID, week, random_data_method = pseudo_abs_method, 
+                           downscaling = downscaling_setting, downscaling_model = downscaling_model, 
+                           input_suffix = input_suffix, output_directory = 'data/', output_suffix = output_suffix)
+  
+  print(paste('(DONE) Extracting covariates for elephant', ID, 'of week', week))
+  
+}
+  
+  
+  
+  
+  
