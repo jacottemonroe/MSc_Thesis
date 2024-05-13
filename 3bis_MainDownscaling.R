@@ -47,13 +47,16 @@ for(i in 1:nrow(run_table)){
   week <- run_table$week[i]
   pseudo_abs_method <- run_table$pseudo_abs_method[i]
   
-  # replace NA from suffix columns of run settings to empty strings
-  if(is.na(run_settings$input_suffix[i])){run_settings$input_suffix[i] <- ''}
-  if(is.na(run_settings$output_suffix[i])){run_settings$output_suffix[i] <- ''}
+  # # replace NA from suffix columns of run settings to empty strings
+  # if(is.na(run_settings$input_suffix[i])){run_settings$input_suffix[i] <- ''}
+  # if(is.na(run_settings$output_suffix[i])){run_settings$output_suffix[i] <- ''}
+  # 
+  # # define input and output suffixes
+  # input_suffix <- run_settings$input_suffix[i]
+  # output_suffix <- run_settings$output_suffix[i]
   
-  # define input and output suffixes
-  input_suffix <- run_settings$input_suffix[i]
-  output_suffix <- run_settings$output_suffix[i]
+  input_suffix <- '_newPathWithCV'
+  output_suffix <- '_newPathWithCV'
   
   # define run filepath 
   run_filepath <- paste0('data/', ID, '/', week, '/')
@@ -87,7 +90,7 @@ for(i in 1:nrow(run_table)){
   
   # run function if stitched Landsat images don't already exist (only stitch once)
   if(length(l_files) == 0){
-    stitchScenes(run_filepath)
+    stitchScenes(run_filepath, suffix)
   }
   
   
@@ -99,7 +102,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_downscaling/creatingLUT.R')
+  source('functions_downscaling/3_c_creatingLUT.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -255,25 +258,25 @@ for(i in 1:nrow(run_table)){
   
   
   
-  ###########
-  ## Create mean MODIS NDVI 30m raster 
-  ###########
-  
-  # load function 
-  source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
-  
-  # necessary packages 
-  # if(!('terra') %in% installed.packages()){install.packages('terra')}
-  # library(terra)
+  # ###########
+  # ## Create mean MODIS NDVI 30m raster 
+  # ###########
   # 
-  # define modis 30 filepath 
-  modis_30_filepath <- paste0(run_filepath, '3_g1_downscaled_modis_images_30m_ranger_full_selection/')
-  
-  # run function 
-  createMeanRaster(modis_30_filepath)
-  
-  print(paste('(DONE) Creating a mean MODIS 30m NDVI raster for', ID, week))
-  print(paste('(COMPLETE) Done running', ID, week, '!'))
+  # # load function 
+  # source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+  # 
+  # # necessary packages 
+  # # if(!('terra') %in% installed.packages()){install.packages('terra')}
+  # # library(terra)
+  # # 
+  # # define modis 30 filepath 
+  # modis_30_filepath <- paste0(run_filepath, '3_g1_downscaled_modis_images_30m_ranger_full_selection/')
+  # 
+  # # run function 
+  # createMeanRaster(modis_30_filepath)
+  # 
+  # print(paste('(DONE) Creating a mean MODIS 30m NDVI raster for', ID, week))
+  # print(paste('(COMPLETE) Done running', ID, week, '!'))
   
   
 }

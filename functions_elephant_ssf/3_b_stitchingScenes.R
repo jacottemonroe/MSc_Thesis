@@ -6,10 +6,10 @@
 ## Input: Landsat file containing the scenes, the date of images to stitch together 
 ## Output: A final Landsat scene for the relevant date. 
 
-stitchScenes <- function(input_directory = 'data/'){
+stitchScenes <- function(input_directory = 'data/', suffix = ''){
   
   # define landsat filepath 
-  landsat_filepath <- paste0(input_directory, '3_b2_landsat_images_downscaling_', pseudo_abs_method, '/')
+  landsat_filepath <- paste0(input_directory, '3_b2_landsat_images_downscaling_', pseudo_abs_method, suffix, '/')
   
   # list directories of scenes 
   scene_directories <- list.dirs(landsat_filepath, full.names = F)[-1]
@@ -38,7 +38,7 @@ stitchScenes <- function(input_directory = 'data/'){
   
   # remove scene folders and files since now have composite image
   # source: https://stackoverflow.com/questions/28097035/how-to-remove-a-directory-in-r
-  unlink(paste0(landsat_filepath, scene_directories), recursive = T)
+  #unlink(paste0(landsat_filepath, scene_directories), recursive = T)
   
   # need to do a second level of stitching to stitch different landsat tiles together (rows 73 and 74)
   # get all dates from file names 
@@ -70,9 +70,9 @@ stitchScenes <- function(input_directory = 'data/'){
     writeRaster(l8_mosaic, paste0(landsat_filepath, 'LC08_179073_4_', date, '_stitched.tif'), overwrite = T)
   }
   
-  # remove scene files since now have composite image
-  # list and remove files that do not match pattern
-  list_files <- list.files(landsat_filepath)
-  list_files <- list_files[grep('*3_4_2*', list_files, invert = T)]
-  file.remove(paste0(landsat_filepath, list_files))
+  # # remove scene files since now have composite image
+  # # list and remove files that do not match pattern
+  # list_files <- list.files(landsat_filepath)
+  # list_files <- list_files[grep('*3_4_2*', list_files, invert = T)]
+  # file.remove(paste0(landsat_filepath, list_files))
 }
