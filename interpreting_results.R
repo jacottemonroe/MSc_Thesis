@@ -171,7 +171,8 @@ run_settings <- run_settings[,1:7]
 # run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
 # row.names(run_settings) <- 1:nrow(run_settings)
 
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_second_batch.csv')
+write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
+#write.csv(run_settings, 'data/run_settings_new_path_with_CV_second_batch.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_220.csv')
 
 # get indices of runs to remove from dataset
@@ -1422,6 +1423,7 @@ row.names(LTS_run_table) <- 1:nrow(LTS_run_table)
 LTS_coef <- data.frame()
 
 suffix <- '_newPathWithCV'
+glm_type <- '_custom' # or '_custom'
 
 for(i in 1:nrow(LTS_run_table)){
   
@@ -1436,7 +1438,10 @@ for(i in 1:nrow(LTS_run_table)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_c4_glm_mean_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_c4_glm', glm_type, '_mean_sd_deviances_', method, suffix, '.csv'))
+  
+  # retrieve AIC
+  aic <- dev_df$AIC
   
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
@@ -1458,7 +1463,7 @@ for(i in 1:nrow(LTS_run_table)){
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_c3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_c3_glm', glm_type, '_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
   c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
@@ -1467,15 +1472,53 @@ for(i in 1:nrow(LTS_run_table)){
   c$Pr...z..[as.numeric(c$Pr...z..) >= 0.05] <- 'not sig'
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.05] <- 'sig'
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
+  
+  if(glm_type == '_custom'){
+    
+    # load CV results 
+    cv_results <- read.csv(paste0(output_path, '6_c6_glm', glm_type, '_mean_sd_CV_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
+    
+    # retrieve sensitivity and specificity from CV
+    recallCV <-  cv_results$Sens 
+    specCV <- cv_results$Spec
+    ROC_CV <- cv_results$ROC
+    thresholdCV <- cv_results$threshold
+    
+    # load test results 
+    test_results <- read.csv(paste0(output_path, '6_c7_glm', glm_type, '_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
+    
+    # retrieve precision and recall from predicted test 
+    recallTest <- test_results[6,1]
+    precisionTest <- test_results[5,1]
+    F1Test <- test_results[7,1]
+    balanced_accuracyTest <- test_results[11,1]
+    
+  }else{
+    
+    recallCV <- NA
+    specCV <- NA
+    ROC_CV <- NA
+    thresholdCV <- NA
+    
+    recallTest <- NA
+    precisionTest <- NA
+    F1Test <- NA
+    balanced_accuracyTest <- NA
+    
+  }
 
   # create new entry with coefs and pvalues
   entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
-                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig,
+                      VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
                       glm_value = c$Estimate, glm_significance = c$Pr...z..,
+                      CV_recall = recallCV, CV_specificity = specCV, CV_ROC = ROC_CV, CV_threshold = thresholdCV,
+                      test_recall = recallTest, test_precision = precisionTest, 
+                      test_F1 = F1Test, test_balanced_accuracy = balanced_accuracyTest,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
 
   LTS_coef <- rbind(LTS_coef, entry)
 }
+
 
 LTS_coef_m <- LTS_coef
 
@@ -1565,10 +1608,22 @@ library("cowplot") # to add multiple plots as one
 # note: some dates differ because of missing data for certain elephants in that week 
 # this is hardcoded for now --> could write code to automate this 
 # indices correspond to dataset with all 4 elephants 
-LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(LTS_coef_m$date)
-LTS_coef_m$date[LTS_coef_m$week == 2104] <- min(LTS_coef_m$date[LTS_coef_m$week == 2104])
-LTS_coef_m$date[LTS_coef_m$week == 2178] <- min(LTS_coef_m$date[LTS_coef_m$week == 2178])
-LTS_coef_m$date[LTS_coef_m$week == 2227] <- min(LTS_coef_m$date[LTS_coef_m$week == 2227])
+# LTS_coef_m$date[LTS_coef_m$week == 2065] <- min(LTS_coef_m$date)
+# LTS_coef_m$date[LTS_coef_m$week == 2104] <- min(LTS_coef_m$date[LTS_coef_m$week == 2104])
+# LTS_coef_m$date[LTS_coef_m$week == 2178] <- min(LTS_coef_m$date[LTS_coef_m$week == 2178])
+# LTS_coef_m$date[LTS_coef_m$week == 2227] <- min(LTS_coef_m$date[LTS_coef_m$week == 2227])
+
+d <- data.frame()
+
+for(i in unique(LTS_coef$week)){
+  df <- LTS_coef_m$date[LTS_coef_m$week == i]
+  entry <- data.frame(week = i, n = length(unique(df)))
+  d <- rbind(d, entry)
+}
+
+for(i in d$week[d$n > 1]){
+  LTS_coef_m$date[LTS_coef_m$week == i] <- min(LTS_coef_m$date[LTS_coef_m$week == i])
+}
 
 print(length(unique(LTS_coef_m$week)) == length(unique(LTS_coef_m$date)))
 
@@ -1811,6 +1866,10 @@ plot_grid(lp, lp_leg, ncol = 2, nrow = 1, rel_widths = c(3,1))
 dev.off()
 
 
+g <- LTS_coef_m %>% group_by(week) %>% mutate(AIC_mean = mean(AIC))
+
+ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+  geom_line(aes(y = test_precision))
 
 
 
@@ -1850,7 +1909,7 @@ for(i in 1:nrow(run_settings)){
     
   }else{stop('Incorrect term set for downscaling parameter. Should be one of the following: NULL, T, F.')}
   
-  suffix <- paste0(suffix, '_scaled')
+  suffix <- paste0(suffix, '_newPathWithCV')
   
   # define filepaths
   data_path <- paste0('data/', ID, '/', week, '/')
@@ -1858,7 +1917,7 @@ for(i in 1:nrow(run_settings)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_b4_glm_50p_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_b4_glm_custom_mean_sd_deviances_', method, suffix, '.csv'))
   
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
@@ -1872,16 +1931,16 @@ for(i in 1:nrow(run_settings)){
   #if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_50p_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_custom_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
   
   # retrieve date of week 
-  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '.csv'), row.names = 1)
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, suffix, '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_b3_glm_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_b3_glm_custom_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_b1_clr_50p_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_b1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   # c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
