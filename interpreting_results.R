@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- "_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_STS_final' #'_LTS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -37,12 +37,22 @@ for(i in 1:nrow(run_settings)){
   output_files <- list.files(output_path)
   
   # define files that should have for each step
-  step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
+  step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', 
+                   '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
   step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
+  # step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV', 
+  #                  '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
+  # stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_selection_newPathWithCV')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
   step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
+  # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv', 
+  #                  '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
+  # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf', 
+  #                  '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
+  # step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS', 
+  #                  '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
   # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
   #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
   #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
@@ -54,16 +64,17 @@ for(i in 1:nrow(run_settings)){
   if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
   if(all(step2_files %in% data_files)){step2 = T}else{step2 = F}
   if(all(step3_files %in% data_files) & length(list.files(paste0(data_path, step3_files))) > 1){step3 = T}else{step3 = F}
+  if(all(stepD_files %in% data_files) & length(list.files(paste0(data_path, stepD_files))) > 1){stepD = T}else{stepD = F}
   if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
   if(all(step5_files %in% output_files)){step5 = T}else{step5 = F}
   if(all(step6_files %in% output_files)){step6 = T}else{step6 = F}
   if(all(step7_files %in% output_files)){step7 = T}else{step7 = F}
   
   # check if all steps complete 
-  if(all(c(step1, step2, step3, step4, step5, step6, step7) == T)){complete = T}else{complete = F}
+  if(all(c(step1, step2, step3, stepD, step4, step5, step6, step7) == T)){complete = T}else{complete = F}
   
   # fill entry 
-  entry <- data.frame(ID = ID, week = week, method = method, downscaling = downscaling, step1 = step1, step2 = step2, step3 = step3, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
+  entry <- data.frame(ID = ID, week = week, method = method, downscaling = downscaling, step1 = step1, step2 = step2, step3 = step3, stepD = stepD, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
   
   df_progress <- rbind(df_progress, entry)
   
@@ -158,7 +169,7 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step4 == F, c(1:2, 4)]
+a <- df_progress[df_progress$step1 == F, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
@@ -171,7 +182,7 @@ run_settings <- run_settings[,1:7]
 # run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
 # row.names(run_settings) <- 1:nrow(run_settings)
 
-write.csv(run_settings, 'data/run_settings_new_path_with_CV_rerun.csv')
+write.csv(run_settings, 'data/run_settings_STS_rerun.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_second_batch.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_220.csv')
 
@@ -206,6 +217,43 @@ write.csv(run_settings, 'data/run_settings_all_runs_new_path_with_CV.csv')
 
 #write.csv(run_settings, 'data/run_settings_STS.csv')
 
+# f <- run_settings
+# ff <- rbind(f, run_settings)
+# write.csv(ff, 'data/run_settings_downscaling_full.csv')
+
+# remove weeks that don't have enough data = LA11 2085, 2103, 2243
+# r <- run_settings[!(run_settings$ID == 'LA11' & run_settings$week %in% c(2085, 2103, 2243)),]
+# r <- r[!(r$ID %in% c('LA12', 'LA13') & r$week >= 2175),]
+# r <- r[!(r$ID == 'LA14' & r$week == 2242),]
+# r$input_suffix <- '_newPathWithCV'
+# r$output_suffix <- '_newPathWithCV'
+# r <- data.frame(ID = 'LA11', week = seq(2140, 2147), pseudo_abs_method = 'random_path_custom_distr',
+#                 downscaling = 'NULL', downscaling_model = 'NULL', input_suffix = '_newPathWithCV', output_suffix = '_newPathWithCV')
+
+# r <- data.frame(ID = 'LA11', week = c(2152, seq(2154, 2164)), pseudo_abs_method = 'random_path_custom_distr', 
+#                 downscaling = 'NULL', downscaling_model = 'NULL', input_suffix = '_newPathWithCV', output_suffix = '_newPathWithCV')
+# run_settings <- rbind(run_settings, r)
+# run_settings <- run_settings[order(run_settings$week),]
+# 
+# write.csv(run_settings, 'data/run_settings_LTS_final.csv')
+
+run_settings$input_suffix <- '_newPathWithCV'
+run_settings$output_suffix <- '_newPathWithCV'
+r <- data.frame(ID = 'LA4', week = 2084, pseudo_abs_method = 'random_path_custom_distr',
+                downscaling = 'NULL', downscaling_model = 'NULL', input_suffix = '_newPathWithCV', output_suffix = '_newPathWithCV')
+run_settings <- rbind(run_settings, r)
+run_settings <- run_settings[order(run_settings$week),]
+r <- run_settings[!(run_settings$ID == 'LA11' & run_settings$week %in% c(2085)),]
+
+
+write.csv(r, 'data/run_settings_STS_final.csv')
+
+
+# trying to understand why some runs didn't pass phases 
+# LA11 2242 --> not even phase 1 
+e <- read.csv('data/elephant_etosha/africanElephantEtoshaNP_analysis.csv')
+d <- readRDS('data/LA14/2069/1_a1_elephant_full_track_xyt.RDS')
+a <- readRDS('data/LA11/2142/1_a2_elephant_track_xyt.RDS')
 
 
 
@@ -1917,7 +1965,7 @@ for(i in 1:nrow(run_settings)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_b4_glm_custom_mean_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_c4_glm_custom_mean_sd_deviances_', method, suffix, '.csv'))
   
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
@@ -1931,16 +1979,16 @@ for(i in 1:nrow(run_settings)){
   #if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_b5_glm_custom_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_custom_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
   
   # retrieve date of week 
   dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, suffix, '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_b3_glm_custom_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_c3_glm_custom_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_b1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   # c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
