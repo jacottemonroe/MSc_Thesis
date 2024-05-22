@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_STS_final' #'_LTS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_LTS_final' #'_LTS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -43,7 +43,7 @@ for(i in 1:nrow(run_settings)){
   step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
   # step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV', 
   #                  '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
-  # stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_selection_newPathWithCV')
+  stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_selection_newPathWithCV')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
   step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
@@ -169,20 +169,21 @@ run_settings <- run_settings[run_settings$week %in% dfr,]
 #a <- df_progress[df_progress$step2 == T & df_progress$step4 == F, 1:2]
 
 # to select when have multiple elephants 
-a <- df_progress[df_progress$step1 == F, c(1:2, 4)]
+a <- df_progress[df_progress$step4 == F, c(1:2, 4)]
 a$combo <- paste(a$ID, a$week, a$downscaling, sep = '_')
 
 run_settings$combo <- paste(run_settings$ID, run_settings$week, run_settings$downscaling, sep = '_')
 
 run_settings <- run_settings[run_settings$combo %in% a$combo,]
 run_settings <- run_settings[,1:7]
+row.names(run_settings) <- 1:nrow(run_settings)
 # 
 # # change downscaling label because it causes issues that i don't get 
 # run_settings$downscaling[run_settings$downscaling == 'NULL'] <- 'nope'
 # run_settings$downscaling_model[run_settings$downscaling_model == 'NULL'] <- 'nope'
 # row.names(run_settings) <- 1:nrow(run_settings)
 
-write.csv(run_settings, 'data/run_settings_STS_rerun.csv')
+write.csv(run_settings, 'data/run_settings_LTS_rerun.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_second_batch.csv')
 #write.csv(run_settings, 'data/run_settings_new_path_with_CV_until_220.csv')
 
