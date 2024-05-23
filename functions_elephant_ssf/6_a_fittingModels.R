@@ -84,8 +84,10 @@ fitMovementModel <- function(input_directory = 'data/', ID, week, random_data_me
   # generate random split in indices of step pairs
   # package: caret
   # source: https://rforhr.com/kfold.html
+  # Note: the CreateDataPartition function didn't work on very small sample size --> had to write alternative command that simulated this function
   set.seed(152)
-  partition <- unname(createDataPartition(pair_id_list, p=.7, list=F, times=1))
+  #partition <- unname(createDataPartition(pair_id_list, p=.7, list=F, times=1))
+  partition <- sample(pair_id_list, size = floor(0.7*length(pair_id_list)), replace = F)
   
   # split dataset into training and testing based on partition
   training_steps <- step_dataset[step_dataset$pair_id %in% partition,]
