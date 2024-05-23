@@ -20,10 +20,10 @@ do
    echo "$line" > data/single_run_settings.csv
    
   # extract the NDVI values for each step and store in covariate/response dataframe
-  Rscript 4_ExtractingCovariates.R
+  #Rscript 4_ExtractingCovariates.R
   
   # visualize movement paths of elephant for week of interest
-  Rscript 5_VisualizingPaths.R
+  #Rscript 5_VisualizingPaths.R
   
   # fit general and conditional logistic regression models and save the model outputs
   Rscript 6_FittingModels.R
