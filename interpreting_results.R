@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_downscaling_final' #'_STS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_STS_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -53,12 +53,12 @@ for(i in 1:nrow(run_settings)){
                    '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
   step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS',
                    '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
-  step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS',
-                   '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv',
-                   '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv',
-                   '6_b4_glm_50p_sd_deviances_random_path_custom_distr_scaled.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr_scaled.csv')
-  step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr_scaled.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr_scaled.png',
-                  '7_b3_50p_sd_plot_curve_random_path_custom_distr_scaled.png')
+  # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS',
+  #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv',
+  #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv',
+  #                  '6_b4_glm_50p_sd_deviances_random_path_custom_distr_scaled.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr_scaled.csv')
+  # step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr_scaled.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr_scaled.png',
+  #                 '7_b3_50p_sd_plot_curve_random_path_custom_distr_scaled.png')
   
   # check if each folder has the correct files and mark the answer in table 
   if(all(step1_files %in% data_files)){step1 = T}else{step1 = F}
@@ -249,6 +249,10 @@ write.csv(run_settings, 'data/run_settings_all_runs_new_path_with_CV.csv')
 # write.csv(run_settings, 'data/run_settings_downscaling_final.csv')
 # write.csv(r, 'data/run_settings_STS_final.csv')
 
+run_settings$downscaling_model[run_settings$downscaling_model == 'ranger_full_selection'] <- 'ranger_full'
+write.csv(run_settings, 'data/run_settings_downscaling_final.csv')
+r <- run_settings[run_settings$downscaling == T,]
+write.csv(r, 'data/run_settings_downscaling_rerun.csv')
 
 # trying to understand why some runs didn't pass phases 
 # LA11 2242 --> not even phase 1 
@@ -965,7 +969,7 @@ dev.off()
 
 #RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
 
-STS_run_table <- read.csv('data/run_settings_STS_newPathWithCV_temp.csv', row.names = 1)
+STS_run_table <- read.csv('data/run_settings_STS_final.csv', row.names = 1)
 #STS_run_table <- run_settings
 STS_run_table <- STS_run_table[,1:5]
 
@@ -1343,6 +1347,9 @@ plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths =
 
 dev.off()
 
+
+
+
 # plot deviance improvement and VIF 
 png('output/STS_timeseries_dev_VIF_aggregated_newPathWithoutCV.png')
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
@@ -1376,7 +1383,7 @@ lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('VIF') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
   theme(legend.position = 'none') 
 
@@ -1464,7 +1471,7 @@ dev.off()
 
 #RQ2_run_table <- run_settings[run_settings$combo %in% srsig$combo,]
 # LTS_run_table <- run_settings
-LTS_run_table <- read.csv('data/run_settings_LTS_newPathWithCV_temp.csv', row.names = 1)
+LTS_run_table <- read.csv('data/run_settings_LTS_final.csv', row.names = 1)
 LTS_run_table <- LTS_run_table[,1:5]
 
 row.names(LTS_run_table) <- 1:nrow(LTS_run_table)
@@ -1881,7 +1888,7 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('VIF') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
   theme(legend.position = 'none') 
 
@@ -1931,7 +1938,7 @@ ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
 
 ######## RQ3 spatial detail visualizations 
 
-run_settings <- read.csv('data/run_settings_downscaling.csv', row.names = 1)
+run_settings <- read.csv('data/run_settings_downscaling_final.csv', row.names = 1)
 
 # create a dataset that summarizes all predictor coefficients for all models and whether they are significant 
 downscaling_coef <- data.frame()
@@ -1980,10 +1987,11 @@ for(i in 1:nrow(run_settings)){
   #if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_custom_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
-  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, suffix, '.csv'), row.names = 1)
+  dfile <- read.csv(paste0(data_path, '2_a1_step_extents_LUT_', method, '_newPathWithCV', '.csv'), row.names = 1)
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
@@ -1998,9 +2006,9 @@ for(i in 1:nrow(run_settings)){
   # c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
   
   # create new entry with coefs and pvalues 
-  entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1], 
-                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
-                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+  entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1],
+                     VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
+                      glm_value = c$Estimate, glm_significance = c$Pr...z..,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
   downscaling_coef <- rbind(downscaling_coef, entry)
@@ -2008,15 +2016,26 @@ for(i in 1:nrow(run_settings)){
 
 
 
-# manually adapt the dates in case they don't match per week (this happens when there is missing data)
-downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37]
 
+# manually adapt the dates in case they don't match per week (this happens when there is missing data)
+# downscaling_coef$date[downscaling_coef$week == 2278] <- downscaling_coef$date[37]
+d <- data.frame()
+
+for(i in unique(downscaling_coef$week)){
+  df <- downscaling_coef$date[downscaling_coef$week == i]
+  entry <- data.frame(week = i, n = length(unique(df)))
+  d <- rbind(d, entry)
+}
+
+for(i in downscaling_coef$week[d$n > 1]){
+  downscaling_coef$date[downscaling_coef$week == i] <- min(downscaling_coef$date[downscaling_coef$week == i])
+}
 print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$date)))
 
 # change label names of predictors 
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_50_scaled'] <- 'Avg. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_50_scaled'] <- 'Avg. NDVI Growth Rate'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # change label for downscaling status to be more indicative 
@@ -2079,12 +2098,12 @@ downscaling_coef$model_sig_bool <- ifelse(downscaling_coef$model_sig <= 0.05, 's
 downscaling_coef <- downscaling_coef[order(downscaling_coef$ID, downscaling_coef$week),]
 
 # save STS coef table 
-write.csv(downscaling_coef, 'output/downscaling_df_results.csv')
+write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWithCV.csv')
 
 
 
 
-downscaling_coef <- read.csv('output/downscaling_df_results.csv', row.names = 1)
+downscaling_coef <- read.csv('output/downscaling_df_results_newPathWithCV.csv', row.names = 1)
 
 # # define start and end dates for plotting 
 # start_date <- min(downscaling_coef$date)
@@ -2124,7 +2143,7 @@ library(ggplot2)
 # dev.off()
 
 
-pdf('output/downscaling_plot_glm_coef.pdf',  width = 12, height = 8.5)
+pdf('output/downscaling_plot_glm_coef_newPathWithCV.pdf',  width = 12, height = 8.5)
 ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
                                     y = glm_value, fill = factor(downscaling, level = c('250 m', '30 m')), 
                                     color = glm_significance_bool)) + 
@@ -2198,7 +2217,7 @@ dev.off()
 # dev.off()
 
 
-pdf('output/downscaling_plot_glm_vif.pdf',  width = 12, height = 8.5)
+pdf('output/downscaling_plot_glm_vif_newPathWithCV.pdf',  width = 12, height = 8.5)
 ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
                                     y = VIF, fill = factor(downscaling, level = c('250 m', '30 m')), 
                                     color = model_sig_bool)) + 
