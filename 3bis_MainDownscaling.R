@@ -26,7 +26,7 @@ library(tidyterra)
 
 
 # read run settings 
-run_table <- read.csv('data/run_settings_downscaling.csv', row.names = 1) #[-4,]
+run_table <- read.csv('data/run_settings_downscaling_full.csv', row.names = 1)[c(7, 8, 9),]
 #row.names(run_table) <- 1:nrow(run_table)
 
 # ID <- run_table$ID[i]
@@ -62,7 +62,7 @@ for(i in 1:nrow(run_table)){
   run_filepath <- paste0('data/', ID, '/', week, '/')
   
   # define landsat filepath 
-  landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, input_suffix, '/')
+  landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pseudo_abs_method, input_suffix, '/', 'stitched/')
   
   # define modis filepath 
   modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, input_suffix, '/')
@@ -85,11 +85,8 @@ for(i in 1:nrow(run_table)){
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
   # library(terra)
   
-  # list files in landsat directory 
-  l_files <- list.files(landsat_filepath, pattern = glob2rx('*_stitched.tif'))
-  
   # run function if stitched Landsat images don't already exist (only stitch once)
-  if(length(l_files) == 0){
+  if(!dir.exists(paste0(landsat_filepath, 'stitched/'))){
     stitchScenes(run_filepath, suffix)
   }
   
@@ -102,7 +99,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_downscaling/3_c_creatingLUT.R')
+  source('functions_elephant_ssf/3_c_creatingLUT.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -963,3 +960,7 @@ for(i in 1:nrow(run_table)){
 # 
 # 
 # rl <- rast()
+
+
+
+

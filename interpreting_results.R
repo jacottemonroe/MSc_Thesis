@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_LTS_final' #'_STS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_downscaling_final' #'_STS_final' #'_downscaling_full' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -40,23 +40,23 @@ for(i in 1:nrow(run_settings)){
   step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', 
                    '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
-  step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
-  # step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV', 
-  #                  '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
-  stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_selection_newPathWithCV')
-  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
-  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
-  step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
-  # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv', 
-  #                  '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
-  # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf', 
-  #                  '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
-  # step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS', 
-  #                  '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
-  # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS', 
-  #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv', 
-  #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv', 
-  #                  '6_b4_glm_50p_sd_deviances_random_path_custom_distr_scaled.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr_scaled.csv')
+  #step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
+  step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV',
+                   '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
+  stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_newPathWithCV')
+  # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
+  # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
+  # step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
+  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv',
+                   '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
+  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf',
+                   '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
+  step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS',
+                   '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
+  step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS',
+                   '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv',
+                   '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv',
+                   '6_b4_glm_50p_sd_deviances_random_path_custom_distr_scaled.csv', '6_b5_glm_50p_sd_vif_random_path_custom_distr_scaled.csv')
   step7_files <- c('7_b1_50p_sd_plot_log_odds_random_path_custom_distr_scaled.png', '7_b2_50p_sd_plot_odd_ratios_random_path_custom_distr_scaled.png',
                   '7_b3_50p_sd_plot_curve_random_path_custom_distr_scaled.png')
   
@@ -237,17 +237,17 @@ write.csv(run_settings, 'data/run_settings_all_runs_new_path_with_CV.csv')
 # run_settings <- run_settings[order(run_settings$week),]
 # 
 # write.csv(run_settings, 'data/run_settings_LTS_final.csv')
-
-run_settings$input_suffix <- '_newPathWithCV'
-run_settings$output_suffix <- '_newPathWithCV'
-r <- data.frame(ID = 'LA4', week = 2084, pseudo_abs_method = 'random_path_custom_distr',
-                downscaling = 'NULL', downscaling_model = 'NULL', input_suffix = '_newPathWithCV', output_suffix = '_newPathWithCV')
-run_settings <- rbind(run_settings, r)
-run_settings <- run_settings[order(run_settings$week),]
-r <- run_settings[!(run_settings$ID == 'LA11' & run_settings$week %in% c(2085)),]
-
-
-write.csv(r, 'data/run_settings_STS_final.csv')
+# 
+# run_settings$input_suffix <- '_newPathWithCV'
+# run_settings$output_suffix <- '_newPathWithCV'
+# r <- data.frame(ID = 'LA4', week = 2084, pseudo_abs_method = 'random_path_custom_distr',
+#                 downscaling = 'NULL', downscaling_model = 'NULL', input_suffix = '_newPathWithCV', output_suffix = '_newPathWithCV')
+# run_settings <- rbind(run_settings, r)
+# run_settings <- run_settings[order(run_settings$week),]
+# r <- run_settings[!(run_settings$ID == 'LA11' & run_settings$week %in% c(2085)),]
+# row.names(run_settings) <- 1:nrow(run_settings)
+# write.csv(run_settings, 'data/run_settings_downscaling_final.csv')
+# write.csv(r, 'data/run_settings_STS_final.csv')
 
 
 # trying to understand why some runs didn't pass phases 

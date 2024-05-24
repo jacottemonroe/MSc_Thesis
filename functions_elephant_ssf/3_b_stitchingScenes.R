@@ -66,8 +66,11 @@ stitchScenes <- function(input_directory = 'data/', suffix = ''){
     # source: https://rdrr.io/cran/terra/man/merge.html
     l8_mosaic <- do.call(merge, scenes)
     
+    # create new file to store stitched images 
+    if(!dir.exists(paste0(landsat_filepath, 'stitched/'))){dir.create(paste0(landsat_filepath, 'stitched/'), recursive = T)}
+    
     # save new image 
-    writeRaster(l8_mosaic, paste0(landsat_filepath, 'LC08_179073_4_', date, '_stitched.tif'), overwrite = T)
+    writeRaster(l8_mosaic, paste0(landsat_filepath, 'stitched/', 'LC08_179073_4_', date, '_stitched.tif'), overwrite = T)
   }
   
   # # remove scene files since now have composite image
