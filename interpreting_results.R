@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_STS_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_LTS_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -40,19 +40,19 @@ for(i in 1:nrow(run_settings)){
   step1_files <- c('1_a1_elephant_full_track_xyt.RDS', '1_a2_elephant_track_xyt.RDS', 
                    '1_b1_all_steps_random_path_custom_distr_newPathWithCV.RDS')
   step2_files <- c('2_a1_step_extents_LUT_random_path_custom_distr_newPathWithCV.csv')
-  #step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
-  step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV',
-                   '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
+  step3_files <- c('3_a1_modis_images_random_path_custom_distr_newPathWithCV')
+  # step3_files <- c('3_b1_modis_images_downscaling_random_path_custom_distr_newPathWithCV',
+  #                  '3_b2_landsat_images_downscaling_random_path_custom_distr_newPathWithCV')
   stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_newPathWithCV')
-  # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
-  # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
-  # step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_newPathWithCV.RDS')
-  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv',
-                   '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
-  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf',
-                   '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
-  step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS',
-                   '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
+  step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
+  step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
+  step6_files <- c('6_d6_glm_mean_sd_test_results_random_path_custom_distr_newPathWithCV.csv')
+  # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv',
+  #                  '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
+  # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf',
+  #                  '5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.pdf')
+  # step6_files <- c('6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.RDS',
+  #                  '6_c8_glm_custom_mean_sd_confusion_matrix_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.RDS')
   # step6_files <- c('6_b0_clr_50p_sd_model_random_path_custom_distr_scaled.RDS', '6_b0_glm_50p_sd_model_random_path_custom_distr_scaled.RDS',
   #                  '6_b1_clr_50p_sd_coefs_random_path_custom_distr_scaled.csv', '6_b2_clr_50p_sd_tests_random_path_custom_distr_scaled.csv',
   #                  '6_a1_correlation_matrix_random_path_custom_distr.png', '6_b3_glm_50p_sd_coefs_random_path_custom_distr_scaled.csv',
@@ -68,13 +68,13 @@ for(i in 1:nrow(run_settings)){
   if(all(step4_files %in% data_files)){step4 = T}else{step4 = F}
   if(all(step5_files %in% output_files)){step5 = T}else{step5 = F}
   if(all(step6_files %in% output_files)){step6 = T}else{step6 = F}
-  if(all(step7_files %in% output_files)){step7 = T}else{step7 = F}
+  #if(all(step7_files %in% output_files)){step7 = T}else{step7 = F}
   
   # check if all steps complete 
-  if(all(c(step1, step2, step3, stepD, step4, step5, step6, step7) == T)){complete = T}else{complete = F}
+  if(all(c(step1, step2, step3, stepD, step4, step5, step6) == T)){complete = T}else{complete = F}
   
   # fill entry 
-  entry <- data.frame(ID = ID, week = week, method = method, downscaling = downscaling, step1 = step1, step2 = step2, step3 = step3, stepD = stepD, step4 = step4, step5 = step5, step6 = step6, step7 = step7, complete = complete)
+  entry <- data.frame(ID = ID, week = week, method = method, downscaling = downscaling, step1 = step1, step2 = step2, step3 = step3, stepD = stepD, step4 = step4, step5 = step5, step6 = step6, complete = complete)
   
   df_progress <- rbind(df_progress, entry)
   
@@ -1925,9 +1925,10 @@ dev.off()
 g <- LTS_coef_m %>% group_by(week) %>% mutate(AIC_mean = mean(AIC))
 
 ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_line(aes(y = test_precision))
+  geom_line(aes(y = AIC))
 
-
+LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWithCV.csv', row.names = 1)
+names(LTS_coef_m)
 
 
 

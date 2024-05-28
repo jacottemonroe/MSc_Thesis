@@ -72,6 +72,8 @@ if(!('amt') %in% installed.packages()){install.packages('amt')}
 library(amt) # CLR modeling 
 if(!('car') %in% installed.packages()){install.packages('car')}
 library(car) # needed to run vif()
+if(!('cutpointr') %in% installed.packages()){install.packages('cutpointr')}
+library(cutpointr) # for hyperparameter tunning on test set 
 # if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')}
 # library(ggplot2) # needed for loading GGally package for confusion matrix
 # if(!('GGally') %in% installed.packages()){install.packages('GGally')}
@@ -82,7 +84,10 @@ library(car) # needed to run vif()
 #                  input_suffix = input_suffix, output_suffix = output_suffix)
 
 
-fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
+# fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
+#                  input_suffix = input_suffix, output_suffix = output_suffix)
+
+fitMovementModelWithoutCV(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
                  input_suffix = input_suffix, output_suffix = output_suffix)
 
 # OUTDATED: run function with more settings (confusion matrix, all predictors, not scaled...)
