@@ -68,8 +68,8 @@ if(!('dplyr') %in% installed.packages()){install.packages('dplyr')}
 library(dplyr) # group data
 if(!('caret') %in% installed.packages()){install.packages('caret')}
 library(caret) # GLM modeling and cross-validation
-if(!('amt') %in% installed.packages()){install.packages('amt')}
-library(amt) # CLR modeling 
+# if(!('amt') %in% installed.packages()){install.packages('amt')}
+# library(amt) # CLR modeling 
 if(!('car') %in% installed.packages()){install.packages('car')}
 library(car) # needed to run vif()
 if(!('cutpointr') %in% installed.packages()){install.packages('cutpointr')}
@@ -87,7 +87,7 @@ library(cutpointr) # for hyperparameter tunning on test set
 # fitMovementModel(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
 #                  input_suffix = input_suffix, output_suffix = output_suffix)
 
-fitMovementModelWithoutCV(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
+fitMovementModelWith10fCV(run_filepath, ID, week, pseudo_abs_method, downscaling = downscaling_setting, 
                  input_suffix = input_suffix, output_suffix = output_suffix)
 
 # OUTDATED: run function with more settings (confusion matrix, all predictors, not scaled...)

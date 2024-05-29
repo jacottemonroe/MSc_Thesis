@@ -994,6 +994,9 @@ for(i in 1:nrow(STS_run_table)){
   # load and retrieve difference in deviance 
   dev_df <- read.csv(paste0(output_path, '6_c4_glm_mean_sd_deviances_', method, suffix, '.csv'))
   
+  # retrieve AIC
+  aic <- dev_df$AIC
+  
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
   
@@ -1024,11 +1027,15 @@ for(i in 1:nrow(STS_run_table)){
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.05] <- 'sig'
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
   
-  # create new entry with coefs and pvalues 
-  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1], 
-                      VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
-                      glm_value = c$Estimate, glm_significance = c$Pr...z.., 
+  # load validation results 
+  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
+  
+  # create new entry with coefs and pvalues and performance metrics 
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
+                      VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
+  
   
   STS_coef <- rbind(STS_coef, entry)
 }
@@ -1479,7 +1486,7 @@ row.names(LTS_run_table) <- 1:nrow(LTS_run_table)
 LTS_coef <- data.frame()
 
 suffix <- '_newPathWithCV'
-glm_type <- '_custom' # or '_custom'
+glm_type <- '' # or '_custom'
 
 for(i in 1:nrow(LTS_run_table)){
   
@@ -1529,47 +1536,55 @@ for(i in 1:nrow(LTS_run_table)){
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) < 0.05] <- 'sig'
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
   
-  if(glm_type == '_custom'){
+  # if(glm_type == '_custom'){
+  #   
+  #   # load CV results 
+  #   cv_results <- read.csv(paste0(output_path, '6_c6_glm', glm_type, '_mean_sd_CV_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
+  #   
+  #   # retrieve sensitivity and specificity from CV
+  #   recallCV <-  cv_results$Sens 
+  #   specCV <- cv_results$Spec
+  #   ROC_CV <- cv_results$ROC
+  #   thresholdCV <- cv_results$threshold
+  #   
+  #   # load test results 
+  #   test_results <- read.csv(paste0(output_path, '6_c7_glm', glm_type, '_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
+  #   
+  #   # retrieve precision and recall from predicted test 
+  #   recallTest <- test_results[6,1]
+  #   precisionTest <- test_results[5,1]
+  #   F1Test <- test_results[7,1]
+  #   balanced_accuracyTest <- test_results[11,1]
+  #   
+  # }else{
+  #   
+  #   recallCV <- NA
+  #   specCV <- NA
+  #   ROC_CV <- NA
+  #   thresholdCV <- NA
+  #   
+  #   recallTest <- NA
+  #   precisionTest <- NA
+  #   F1Test <- NA
+  #   balanced_accuracyTest <- NA
     
-    # load CV results 
-    cv_results <- read.csv(paste0(output_path, '6_c6_glm', glm_type, '_mean_sd_CV_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
+  # }
     
-    # retrieve sensitivity and specificity from CV
-    recallCV <-  cv_results$Sens 
-    specCV <- cv_results$Spec
-    ROC_CV <- cv_results$ROC
-    thresholdCV <- cv_results$threshold
+  # load validation results 
+  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
     
-    # load test results 
-    test_results <- read.csv(paste0(output_path, '6_c7_glm', glm_type, '_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T, row.names = 1)
-    
-    # retrieve precision and recall from predicted test 
-    recallTest <- test_results[6,1]
-    precisionTest <- test_results[5,1]
-    F1Test <- test_results[7,1]
-    balanced_accuracyTest <- test_results[11,1]
-    
-  }else{
-    
-    recallCV <- NA
-    specCV <- NA
-    ROC_CV <- NA
-    thresholdCV <- NA
-    
-    recallTest <- NA
-    precisionTest <- NA
-    F1Test <- NA
-    balanced_accuracyTest <- NA
-    
-  }
-
   # create new entry with coefs and pvalues
+  # entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
+  #                     VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
+  #                     glm_value = c$Estimate, glm_significance = c$Pr...z..,
+  #                     CV_recall = recallCV, CV_specificity = specCV, CV_ROC = ROC_CV, CV_threshold = thresholdCV,
+  #                     test_recall = recallTest, test_precision = precisionTest, 
+  #                     test_F1 = F1Test, test_balanced_accuracy = balanced_accuracyTest,
+  #                     clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
+  
   entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
                       VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
-                      glm_value = c$Estimate, glm_significance = c$Pr...z..,
-                      CV_recall = recallCV, CV_specificity = specCV, CV_ROC = ROC_CV, CV_threshold = thresholdCV,
-                      test_recall = recallTest, test_precision = precisionTest, 
-                      test_F1 = F1Test, test_balanced_accuracy = balanced_accuracyTest,
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
 
   LTS_coef <- rbind(LTS_coef, entry)
@@ -1702,7 +1717,7 @@ LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. N
 LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # save STS coef table 
-write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWithCV.csv')
+write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWithoutCV.csv')
 
 # 
 # 
@@ -1922,17 +1937,77 @@ plot_grid(lp, lp_leg, ncol = 2, nrow = 1, rel_widths = c(3,1))
 dev.off()
 
 
-g <- LTS_coef_m %>% group_by(week) %>% mutate(AIC_mean = mean(AIC))
 
-ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_line(aes(y = AIC))
+
+LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWithoutCV.csv', row.names = 1)
+names(LTS_coef_m)
+
+lts <- LTS_coef_m[, -c(6, 7, 11, 12, 20:41)]
+
+lts$combo <- paste0(lts$ID, '_', lts$week)
+
+lts <- lts[!duplicated(lts$combo), ]
+
+# lts <- lts[lts$model_sig == "sig",]
+
+lts$month <- matrix(unlist(strsplit(lts$date, '-')), ncol = 3, byrow = T)[,2]
+
+lts <- lts %>% group_by(month) %>% mutate(total_models = n())
+
+lts <- lts %>% group_by(month) %>% mutate(sig_models = sum(model_sig == 'sig'))
+
+lts$proportion_sig <- lts$sig_models/lts$total_models
+
+g <- lts %>% group_by(month) %>% summarize_all('mean')
+
+
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#   geom_line(aes(y = test_specificity))
+
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = AIC))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_AUC))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_F1_score))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_accuracy))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_cutoff))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_recall))
+ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+   geom_line(aes(y = test_specificity))
+
+
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = AIC, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = test_AUC, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = test_F1_score, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = test_accuracy, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = test_cutoff, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = test_recall, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+ggplot(data = g, aes(x = month)) + 
+  geom_line(aes(y = test_specificity, group = 1, color = proportion_sig)) + 
+  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
 
 LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWithCV.csv', row.names = 1)
 names(LTS_coef_m)
 
 
 
-
+names(LTS_coef_m)
 
 
 
@@ -1976,6 +2051,9 @@ for(i in 1:nrow(run_settings)){
   # load and retrieve difference in deviance 
   dev_df <- read.csv(paste0(output_path, '6_c4_glm_custom_mean_sd_deviances_', method, suffix, '.csv'))
   
+  # retrieve AIC
+  aic <- dev_df$AIC
+  
   # calculate deviance improvement 
   dev_diff <- dev_df$null_deviance - dev_df$residual_deviance
   
@@ -2000,6 +2078,9 @@ for(i in 1:nrow(run_settings)){
   c <- c[2:nrow(c),]
   c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   
+  # load validation results 
+  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
+  
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   # c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
   # c$Pr...z..[as.numeric(c$Pr...z..) >= 0.1] <- 'not sig'
@@ -2008,8 +2089,8 @@ for(i in 1:nrow(run_settings)){
   
   # create new entry with coefs and pvalues 
   entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1],
-                     VIF = vif_df$vif_results, deviance_improvement = dev_diff, model_sig = dev_sig, 
-                      glm_value = c$Estimate, glm_significance = c$Pr...z..,
+                     VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig, 
+                      glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results, 
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
   downscaling_coef <- rbind(downscaling_coef, entry)
@@ -2099,7 +2180,7 @@ downscaling_coef$model_sig_bool <- ifelse(downscaling_coef$model_sig <= 0.05, 's
 downscaling_coef <- downscaling_coef[order(downscaling_coef$ID, downscaling_coef$week),]
 
 # save STS coef table 
-write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWithCV.csv')
+write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWithoutCV.csv')
 
 
 
