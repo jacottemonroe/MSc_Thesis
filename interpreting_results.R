@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_LTS_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_downscaling_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -46,7 +46,7 @@ for(i in 1:nrow(run_settings)){
   stepD_files <- c('3_g1_downscaled_modis_images_30m_ranger_full_newPathWithCV')
   step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_newPathWithCV.csv')
   step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_newPathWithCV.pdf')
-  step6_files <- c('6_d6_glm_mean_sd_test_results_random_path_custom_distr_newPathWithCV.csv')
+  step6_files <- c('6_e6_glm_mean_sd_test_results_random_path_custom_distr_newPathWithCV.csv')
   # step4_files <- c('4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.csv',
   #                  '4_a1_cov_resp_dataset_random_path_custom_distr_downscaling_modis_30m_newPathWithCV.csv')
   # step5_files <- c('5_a1_elephant_movement_map_random_path_custom_distr_downscaling_modis_250m_newPathWithCV.pdf',
@@ -992,7 +992,7 @@ for(i in 1:nrow(STS_run_table)){
   
 
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_c4_glm_mean_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_e4_glm_mean_sd_deviances_', method, suffix, '.csv'))
   
   # retrieve AIC
   aic <- dev_df$AIC
@@ -1009,7 +1009,7 @@ for(i in 1:nrow(STS_run_table)){
   if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_e5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)[,2]
   names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
@@ -1017,9 +1017,13 @@ for(i in 1:nrow(STS_run_table)){
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_c3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_e3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'), header = T)
+  names(c_clr) <- c('predictor', 'coef', 'exp.coef.', 'se.coef.', 'z', 'Pr...z..')
+  # reorder rows to match order of GLM predictors 
+  # source: https://www.statology.org/dplyr-arrange-custom-order/
+  c_clr <- c_clr %>% arrange(match(predictor, c('ndvi_mean_scaled', 'ndvi_rate_mean_scaled', 'ndvi_rate_sd_scaled', 'ndvi_sd_scaled')))
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   c$Pr...z..[as.numeric(c$Pr...z..) < 0.05] <- 'sig'
@@ -1028,11 +1032,11 @@ for(i in 1:nrow(STS_run_table)){
   c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.05] <- 'not sig'
   
   # load validation results 
-  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
+  test_results <- read.csv(paste0(output_path, '6_e6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:10]
   
   # create new entry with coefs and pvalues and performance metrics 
-  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
-                      VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,'predictor'],
+                      VIF = vif_df, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
                       glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
@@ -1166,15 +1170,31 @@ STS_coef_m <- merge(STS_coef_m, agdf, by.x = 'combo')
 
 library("cowplot") # to add multiple plots as one
 
+# 
+# print(length(unique(STS_coef_m$week)) == length(unique(STS_coef_m$date)))
+# 
+# STS_coef_m$date[STS_coef_m$week == 2065] <- min(STS_coef_m$date)
+# #STS_coef_m$date[STS_coef_m$week == 2074] <- summary_results$date[129]
+# STS_coef_m$date[STS_coef_m$week == 2080] <- min(STS_coef_m$date[STS_coef_m$week == 2080])
+# STS_coef_m$date[STS_coef_m$week == 2082] <- min(STS_coef_m$date[STS_coef_m$week == 2082])
+# STS_coef_m$date[STS_coef_m$week == 2084] <- min(STS_coef_m$date[STS_coef_m$week == 2084])
+# #STS_coef_m$date[STS_coef_m$week == 2085] <- summary_results$date[21]
+
+
+d <- data.frame()
+
+for(i in unique(STS_coef$week)){
+  df <- STS_coef_m$date[STS_coef_m$week == i]
+  entry <- data.frame(week = i, n = length(unique(df)))
+  d <- rbind(d, entry)
+}
+
+for(i in d$week[d$n > 1]){
+  STS_coef_m$date[STS_coef_m$week == i] <- min(STS_coef_m$date[STS_coef_m$week == i])
+}
 
 print(length(unique(STS_coef_m$week)) == length(unique(STS_coef_m$date)))
 
-STS_coef_m$date[STS_coef_m$week == 2065] <- min(STS_coef_m$date)
-#STS_coef_m$date[STS_coef_m$week == 2074] <- summary_results$date[129]
-STS_coef_m$date[STS_coef_m$week == 2080] <- min(STS_coef_m$date[STS_coef_m$week == 2080])
-STS_coef_m$date[STS_coef_m$week == 2082] <- min(STS_coef_m$date[STS_coef_m$week == 2082])
-STS_coef_m$date[STS_coef_m$week == 2084] <- min(STS_coef_m$date[STS_coef_m$week == 2084])
-#STS_coef_m$date[STS_coef_m$week == 2085] <- summary_results$date[21]
 
 # addign a column for proportion of sig models --> have to aggregate because unique would omit some values that repeat for diff weeks
 # ag_sig <- aggregate(STS_coef_m$Sig_Model_Proportion, list(STS_coef_m$week), FUN = mean)$x
@@ -1192,7 +1212,7 @@ STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. N
 STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # save STS coef table 
-write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPathWithoutCV.csv')
+write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPath10fCV_final.csv')
 #write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPathWithCV.csv')
 
 
@@ -1214,11 +1234,11 @@ write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPathWithoutCV.csv')
 # # convert dates to date object
 # date_hl$xmin <- as.Date(date_hl$xmin, tz = 'Africa/Maputo')
 # date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
-STS_coef_m <- read.csv('output/STS_df_results_aggregated_newPathWithoutCV.csv')
+STS_coef_m <- read.csv('output/STS_df_results_aggregated_newPath10fCV_final.csv')
 
 
 
-png('output/STS_timeseries_glm_coef_aggregated_newPathWithoutCV.png')
+png('output/STS_timeseries_glm_coef_aggregated_newPath10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
@@ -1287,7 +1307,7 @@ dev.off()
 
 
 
-png('output/STS_timeseries_clr_coef_aggregated_newPathWithoutCV.png')
+png('output/STS_timeseries_clr_coef_aggregated_newPath10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
@@ -1358,7 +1378,7 @@ dev.off()
 
 
 # plot deviance improvement and VIF 
-png('output/STS_timeseries_dev_VIF_aggregated_newPathWithoutCV.png')
+png('output/STS_timeseries_dev_VIF_aggregated_newPath10fCV_final.png')
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
@@ -1501,7 +1521,7 @@ for(i in 1:nrow(LTS_run_table)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_c4_glm', glm_type, '_mean_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_e4_glm', glm_type, '_mean_sd_deviances_', method, suffix, '.csv'))
   
   # retrieve AIC
   aic <- dev_df$AIC
@@ -1518,7 +1538,7 @@ for(i in 1:nrow(LTS_run_table)){
   if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_e5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)[,2]
   names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
@@ -1526,9 +1546,14 @@ for(i in 1:nrow(LTS_run_table)){
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_c3_glm', glm_type, '_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_e3_glm', glm_type, '_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'), header = T)
+  names(c_clr) <- c('predictor', 'coef', 'exp.coef.', 'se.coef.', 'z', 'Pr...z..')
+  # reorder rows to match order of GLM predictors 
+  # source: https://www.statology.org/dplyr-arrange-custom-order/
+  c_clr <- c_clr %>% arrange(match(predictor, c('ndvi_mean_scaled', 'ndvi_rate_mean_scaled', 'ndvi_rate_sd_scaled', 'ndvi_sd_scaled')))
+  
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   c$Pr...z..[as.numeric(c$Pr...z..) < 0.05] <- 'sig'
@@ -1571,7 +1596,7 @@ for(i in 1:nrow(LTS_run_table)){
   # }
     
   # load validation results 
-  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
+  test_results <- read.csv(paste0(output_path, '6_e6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:10]
     
   # create new entry with coefs and pvalues
   # entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
@@ -1582,8 +1607,8 @@ for(i in 1:nrow(LTS_run_table)){
   #                     test_F1 = F1Test, test_balanced_accuracy = balanced_accuracyTest,
   #                     clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
-  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,1],
-                      VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
+  entry <- data.frame(ID = ID, week = week, method = method, date = date, predictor = c[,'predictor'],
+                      VIF = vif_df, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig,
                       glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results,
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
 
@@ -1717,7 +1742,7 @@ LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. N
 LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
 
 # save STS coef table 
-write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWithoutCV.csv')
+write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWith10fCV_final.csv')
 
 # 
 # 
@@ -1741,7 +1766,7 @@ write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWithoutCV.csv')
 # date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
 
 
-png('output/LTS_timeseries_glm_coef_aggregated_newPathWithCV.png')
+png('output/LTS_timeseries_glm_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
@@ -1807,7 +1832,7 @@ dev.off()
 
 
 
-png('output/LTS_timeseries_clr_coef_aggregated_newPathWithCV.png')
+png('output/LTS_timeseries_clr_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
@@ -1874,7 +1899,7 @@ dev.off()
 
 
 # plot deviance improvement and VIF 
-png('output/LTS_timeseries_dev_VIF_aggregated_newPathWithCV.png')
+png('output/LTS_timeseries_dev_VIF_aggregated_newPathWith10fCV_final.png')
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge') +
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -2049,7 +2074,7 @@ for(i in 1:nrow(run_settings)){
   
   
   # load and retrieve difference in deviance 
-  dev_df <- read.csv(paste0(output_path, '6_c4_glm_custom_mean_sd_deviances_', method, suffix, '.csv'))
+  dev_df <- read.csv(paste0(output_path, '6_e4_glm_mean_sd_deviances_', method, suffix, '.csv'))
   
   # retrieve AIC
   aic <- dev_df$AIC
@@ -2066,7 +2091,7 @@ for(i in 1:nrow(run_settings)){
   #if(dev_sig <=0.05){dev_sig <- 'sig'}else{dev_sig <- 'not sig'}
   
   # load and retrieve VIF 
-  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_c5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)
+  vif_df <- read.csv(paste0('output/', ID, '/', week, '/6_e5_glm_mean_sd_vif_', method, suffix, '.csv'), row.names = 1, header = T)[,2]
   names(vif_df) <- 'vif_results'
   
   # retrieve date of week 
@@ -2074,12 +2099,16 @@ for(i in 1:nrow(run_settings)){
   date <- dfile$start_date[1]
   
   # retrieve coefs glm 
-  c <- read.csv(paste0(output_path, '6_c3_glm_custom_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c <- read.csv(paste0(output_path, '6_e3_glm_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
   c <- c[2:nrow(c),]
-  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'))
+  c_clr <- read.csv(paste0(output_path, '6_c1_clr_mean_sd_coefs_random_path_custom_distr', suffix, '.csv'), header = T)
+  names(c_clr) <- c('predictor', 'coef', 'exp.coef.', 'se.coef.', 'z', 'Pr...z..')
+  # reorder rows to match order of GLM predictors 
+  # source: https://www.statology.org/dplyr-arrange-custom-order/
+  c_clr <- c_clr %>% arrange(match(predictor, c('ndvi_mean_scaled', 'ndvi_rate_mean_scaled', 'ndvi_rate_sd_scaled', 'ndvi_sd_scaled')))
   
   # load validation results 
-  test_results <- read.csv(paste0(output_path, '6_d6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:8]
+  test_results <- read.csv(paste0(output_path, '6_e6_glm_mean_sd_test_results_random_path_custom_distr', suffix, '.csv'), header = T)[,2:10]
   
   # specify if sig or not with 90% confidence (so pvalue < 0.1)
   # c$Pr...z..[as.numeric(c$Pr...z..) < 0.1] <- 'sig'
@@ -2088,8 +2117,8 @@ for(i in 1:nrow(run_settings)){
   # c_clr$Pr...z..[as.numeric(c_clr$Pr...z..) >= 0.1] <- 'not sig'
   
   # create new entry with coefs and pvalues 
-  entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,1],
-                     VIF = vif_df$vif_results, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig, 
+  entry <- data.frame(ID = ID, week = week, date = date, method = method, downscaling = downscaling_setting, predictor = c[,'predictor'],
+                     VIF = vif_df, AIC = aic, deviance_improvement = dev_diff, model_sig = dev_sig, 
                       glm_value = c$Estimate, glm_significance = c$Pr...z.., test_results, 
                       clr_value = c_clr$coef, clr_significance = c_clr$Pr...z..)
   
@@ -2180,12 +2209,12 @@ downscaling_coef$model_sig_bool <- ifelse(downscaling_coef$model_sig <= 0.05, 's
 downscaling_coef <- downscaling_coef[order(downscaling_coef$ID, downscaling_coef$week),]
 
 # save STS coef table 
-write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWithoutCV.csv')
+write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWith10fCV_final.csv')
 
 
 
 
-downscaling_coef <- read.csv('output/downscaling_df_results_newPathWithCV.csv', row.names = 1)
+downscaling_coef <- read.csv('output/downscaling_df_results_newPathWith10fCV_final.csv', row.names = 1)
 
 # # define start and end dates for plotting 
 # start_date <- min(downscaling_coef$date)
@@ -2225,7 +2254,7 @@ library(ggplot2)
 # dev.off()
 
 
-pdf('output/downscaling_plot_glm_coef_newPathWithCV.pdf',  width = 12, height = 8.5)
+pdf('output/downscaling_plot_glm_coef_newPathWith10fCV_final.pdf',  width = 12, height = 8.5)
 ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
                                     y = glm_value, fill = factor(downscaling, level = c('250 m', '30 m')), 
                                     color = glm_significance_bool)) + 
@@ -2299,7 +2328,7 @@ dev.off()
 # dev.off()
 
 
-pdf('output/downscaling_plot_glm_vif_newPathWithCV.pdf',  width = 12, height = 8.5)
+pdf('output/downscaling_plot_glm_vif_newPathWith10fCV_final.pdf',  width = 12, height = 8.5)
 ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June', 'August')), 
                                     y = VIF, fill = factor(downscaling, level = c('250 m', '30 m')), 
                                     color = model_sig_bool)) + 
