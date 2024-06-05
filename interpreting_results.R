@@ -1208,8 +1208,8 @@ df_bar <- data.frame(STS_coef_m[!duplicated(STS_coef_m$date),c('date', 'total_mo
 # change label names of predictors 
 STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
-STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI\nGrowth Rate'
+STS_coef_m$predictor[STS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI\nGrowth Rate' 
 
 # save STS coef table 
 write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPath10fCV_final.csv')
@@ -1245,7 +1245,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
@@ -1256,23 +1256,23 @@ lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5, show.legend = F) + 
   geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_GLM_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
   #geom_line(aes(y = GLM_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
-  #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
+  #scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey', 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('Coefficient Value') + #ggtitle('Aggregated time-series of estimated GLM model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
   # source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
   #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
@@ -1281,15 +1281,15 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_GLM_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
-  #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
+  #scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey', 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1301,7 +1301,7 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(4,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(5,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1314,7 +1314,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
@@ -1325,23 +1325,23 @@ lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5, show.legend = F) + 
   geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_CLR_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
   #geom_line(aes(y = CLR_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
   #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('Coefficient Value') + #ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
 # source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
 #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
@@ -1350,15 +1350,15 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_CLR_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
   #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1370,7 +1370,7 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(5,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1384,7 +1384,7 @@ bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
@@ -1394,38 +1394,38 @@ lp <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
   geom_hline(yintercept = 1, linetype = 'dashed') + 
   geom_hline(yintercept = 5, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
   #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('VIF') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('VIF') + #ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
   theme(legend.position = 'none') 
 
 lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = STS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + 
   #scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey', 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1437,7 +1437,7 @@ lp_leg <- ggplot(data = STS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, ncol = 2, rel_widths = c(3,1))
 dev.off()
 
 
@@ -1738,8 +1738,8 @@ df_bar <- data.frame(LTS_coef_m[!duplicated(LTS_coef_m$date),c('date', 'total_mo
 # change label names of predictors 
 LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
-LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI\nGrowth Rate'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI\nGrowth Rate' 
 
 # save STS coef table 
 write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWith10fCV_final.csv')
@@ -1769,11 +1769,11 @@ write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWith10fCV_final.c
 png('output/LTS_timeseries_glm_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6, show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
@@ -1783,16 +1783,16 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5, show.legend = F) + 
   geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_GLM_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
   #geom_line(aes(y = GLM_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1807,14 +1807,14 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = GLM_Q1, ymax = GLM_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = GLM_Mean, group = predictor, color = Sig_GLM_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1835,11 +1835,11 @@ dev.off()
 png('output/LTS_timeseries_clr_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', show.legend = F) +
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6, show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('No. of Elephants') + xlab('Time') +
   theme(legend.position = 'none') + 
   theme_minimal()
@@ -1849,22 +1849,22 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1, show.legend = F) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5, show.legend = F) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5, show.legend = F) + 
   geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_CLR_Proportion, linetype = 'Mean'), linewidth = 1, show.legend = F) +
   #geom_line(aes(y = CLR_Q2, color = 'Median')) +
   geom_hline(yintercept = 0, linetype = 'dashed') + 
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('Coefficient Value') + ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('Coefficient Value') + #ggtitle('Aggregated time-series of estimated CLR model coefficients', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() 
 # source: https://stackoverflow.com/questions/68719513/ggplot-wont-remove-axis-ticks
 #theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
@@ -1873,14 +1873,14 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = CLR_Q1, ymax = CLR_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = CLR_Mean, group = predictor, color = Sig_CLR_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   #scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Model with Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -1892,7 +1892,7 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
 lp_leg <- get_legend(lp_leg)
 
 # source: https://wilkelab.org/cowplot/articles/plot_grid.html
-plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(3,1), rel_widths = c(3,1))
+plot_grid(lp, lp_leg, bp, ncol = 2, nrow = 2, rel_heights = c(5,1), rel_widths = c(3,1))
 
 dev.off()
 
@@ -1901,9 +1901,9 @@ dev.off()
 # plot deviance improvement and VIF 
 png('output/LTS_timeseries_dev_VIF_aggregated_newPathWith10fCV_final.png')
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge') +
+  geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6) +
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
-  scale_fill_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('Deviance Improvement') + xlab('Time') +
   theme_minimal() + 
   theme(legend.position = 'none') 
@@ -1915,20 +1915,20 @@ lp <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   geom_hline(yintercept = 5, linetype = 'dashed') +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margins', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margins', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(predictor), scale = 'free') + 
-  xlab('Time') + ylab('VIF') + ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
+  xlab('Time') + ylab('VIF') + #ggtitle('Aggregated time-series of VIF and Deviance Improvement', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
   theme_minimal() + 
   theme(legend.position = 'none') 
 
@@ -1937,14 +1937,14 @@ lp_leg <- ggplot(data = LTS_coef_m, aes(x = as.Date(date, tz = 'Africa/Maputo'))
   #geom_rect(data = date_hl, mapping=aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill = 'Transition Period'), alpha = 0.1) +
   # source: https://stackoverflow.com/questions/14704909/plotting-depth-range-in-time-series-using-ggplot
   # source: https://stackoverflow.com/questions/28648698/alpha-transparency-not-working-in-ggplot2
-  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Qu. Range', group = predictor), alpha = 0.5) + 
+  geom_ribbon(data = LTS_coef_m, aes(ymin = VIF_Q1, ymax = VIF_Q3, fill = 'Quartile Range', group = predictor), alpha = 0.5) + 
   geom_line(aes(y = VIF_Mean, group = predictor, color = Sig_Model_Proportion, linetype = 'Mean'), linewidth = 1) +
   # source: https://www.geeksforgeeks.org/combine-and-modify-ggplot2-legends-with-ribbons-and-lines/
   scale_linetype_manual(name = 'Function', values = c('Mean' = 'solid')) +
   # source: https://www.geeksforgeeks.org/how-to-remove-legend-title-in-r-with-ggplot2/
-  scale_fill_manual(name = 'Margin', values = c('Qu. Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
+  scale_fill_manual(name = 'Margin', values = c('Quartile Range' = 'grey')) + #, 'Transition Period' = 'orange')) + 
   # scale_color_continuous(name = '% Significant Models', type = 'gradient') + 
-  scale_color_gradientn(name = '% Significant Models', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   guides(colour = guide_colourbar(order = 3),
          linetype = guide_legend(order = 1),
          fill = guide_legend(order = 2)) +
@@ -2146,8 +2146,8 @@ print(length(unique(downscaling_coef$week)) == length(unique(downscaling_coef$da
 # change label names of predictors 
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_mean_scaled'] <- 'Avg. NDVI'
 downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_sd_scaled'] <- 'Dev. NDVI'
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI Growth Rate'
-downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI Growth Rate' 
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_mean_scaled'] <- 'Avg. NDVI\nGrowth Rate'
+downscaling_coef$predictor[downscaling_coef$predictor == 'ndvi_rate_sd_scaled'] <- 'Dev. NDVI\nGrowth Rate' 
 
 # change label for downscaling status to be more indicative 
 downscaling_coef$downscaling[downscaling_coef$downscaling == T] <- '30 m'
@@ -2268,7 +2268,7 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   # note: set color at beginning to keep correct order of text (see source)
   # source: https://stackoverflow.com/questions/51734285/ggplot-adding-color-aesthetic-changes-stack-order
   geom_text(aes(label=format(glm_significance, scientific = T, digits = 2),
-                y = glm_value + justify * sign(glm_value)), position=position_dodge(.9), size = 4) +
+                y = glm_value + justify * sign(glm_value)), position=position_dodge(.9), size = 3) +
   geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
   # source: https://stackoverflow.com/questions/41701960/ggplot2-adding-text-on-a-multiple-barplot
@@ -2279,8 +2279,8 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
   xlab('Study Period') + ylab('Coefficient') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal() + 
-  theme(text=element_text(size=12)) #15 for png 12 for pdf
+  theme_minimal() 
+  #theme(text=element_text(size=12)) #15 for png 12 for pdf
 dev.off()
 
 
@@ -2341,9 +2341,9 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   # source: https://www.geeksforgeeks.org/formatting-numbers-and-strings-in-r-programming-format-function/
   # note: set color at beginning to keep correct order of text (see source)
   # source: https://stackoverflow.com/questions/51734285/ggplot-adding-color-aesthetic-changes-stack-order
-  geom_text(data = downscaling_coef[downscaling_coef$predictor == 'Dev. NDVI Growth Rate',], aes(label=format(model_sig, scientific = T, digits = 2),
-                y = VIF + justify_vif * sign(VIF)), position=position_dodge(.9), size = 4) +
-  geom_hline(data = data.frame(threshold = 5, predictor =c('Dev. NDVI', 'Dev. NDVI Growth Rate')), aes(yintercept = threshold), linetype = 'dashed', color = 'grey40') +
+  geom_text(data = downscaling_coef[downscaling_coef$predictor == 'Dev. NDVI\nGrowth Rate',], aes(label=format(model_sig, scientific = T, digits = 2),
+                y = VIF + justify_vif * sign(VIF)), position=position_dodge(.9), size = 3) +
+  geom_hline(data = data.frame(threshold = 5, predictor =c('Dev. NDVI', 'Dev. NDVI\nGrowth Rate')), aes(yintercept = threshold), linetype = 'dashed', color = 'grey40') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
   # source: https://stackoverflow.com/questions/41701960/ggplot2-adding-text-on-a-multiple-barplot
   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
@@ -2353,8 +2353,8 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   # source: https://www.statology.org/ggplot-facet-order/
   facet_grid(c(predictor) ~ c(ID), scale = 'free') +
   xlab('Study Period') + ylab('VIF') + #ggtitle('Comparison of estimated coefficients for GLM models trained with 250m and 30m data', subtitle = paste0(elephant, ' from ', start_date, ' to ', end_date)) + 
-  theme_minimal() + 
-  theme(text=element_text(size=15)) #15 for png 12 for pdf
+  theme_minimal()
+  #theme(text=element_text(size=15)) #15 for png 12 for pdf
 dev.off()
 
 
