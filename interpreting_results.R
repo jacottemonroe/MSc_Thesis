@@ -1964,72 +1964,147 @@ dev.off()
 
 
 
-LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWithoutCV.csv', row.names = 1)
-names(LTS_coef_m)
+## VALIDATION PLOTS 
 
-lts <- LTS_coef_m[, -c(6, 7, 11, 12, 20:41)]
+# retrieve result summary table
+df <- read.csv('output/STS_df_results_aggregated_newPath10fCV_final.csv', row.names = 1) #'output/LTS_df_results_aggregated_newPathWith10fCV_final.csv'
 
-lts$combo <- paste0(lts$ID, '_', lts$week)
+# remove cols that do not contain information about model and model performance
+df <- df[, -c(6, 7, 11, 12, 22:41)]
 
-lts <- lts[!duplicated(lts$combo), ]
+# calculate significant model propertions
+df$combo <- paste0(df$ID, '_', df$week)
+df <- df[!duplicated(df$combo), ]
+df$month <- matrix(unlist(strsplit(df$date, '-')), ncol = 3, byrow = T)[,2]
+df <- df %>% group_by(month) %>% mutate(total_models = n())
+df <- df %>% group_by(month) %>% mutate(sig_models = sum(model_sig == 'sig'))
+df$proportion_sig <- df$sig_models/df$total_models
 
-# lts <- lts[lts$model_sig == "sig",]
+# average elephants, days, and years into months only
+df_ag <- df %>% group_by(month) %>% summarize_all('mean')
 
-lts$month <- matrix(unlist(strsplit(lts$date, '-')), ncol = 3, byrow = T)[,2]
+# adapt dataset 
+df_ag <- df_ag[,c('month', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'proportion_sig')]
+cv_df <- data.frame()
+for(i in 2:6){
+  entry <- data.frame(month = df_ag$month, value = df_ag[[i]], metric = names(df_ag)[i], proportion_sig = df_ag$proportion_sig)
+  cv_df <- rbind(cv_df, entry)
+}
 
-lts <- lts %>% group_by(month) %>% mutate(total_models = n())
+cv_df$month <- paste0('2023-', cv_df$month, '-01')
 
-lts <- lts %>% group_by(month) %>% mutate(sig_models = sum(model_sig == 'sig'))
+# FOR STS ONLY 
+cv_df$month[cv_df$month == '2023-01-01'] <- '2024-01-01'
 
-lts$proportion_sig <- lts$sig_models/lts$total_models
+cv_df$month <- as.Date(cv_df$month, '%Y-%m-%d')
 
-g <- lts %>% group_by(month) %>% summarize_all('mean')
+cv_df$metric[cv_df$metric == 'F1_score'] <- 'F1'
+cv_df$metric[cv_df$metric == 'cutoff'] <- 'Cutoff Probability'
+cv_df$metric[cv_df$metric == 'recall'] <- 'Recall'
+cv_df$metric[cv_df$metric == 'precision'] <- 'Precision'
+
+# combined plot
+library(scales)
+png('output/STS_glm_cv.png')
+cv_plot <- ggplot(data = cv_df, aes(x = month)) +
+  geom_line(aes(y = value, group = metric, color = proportion_sig), linewidth = 1) + 
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
+  scale_x_date(labels = date_format('%b')) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(factor(metric, levels = c('AUC', 'F1', 'Precision', 'Recall', 'Cutoff Probability'))), scale = 'free') + 
+  xlab('Month') + ylab('Score') + 
+  theme_minimal()
+
+cv_plot
+dev.off()
 
 
 # ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
 #   geom_line(aes(y = test_specificity))
-
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = AIC))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_AUC))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_F1_score))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_accuracy))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_cutoff))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_recall))
-ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-   geom_line(aes(y = test_specificity))
-
-
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = AIC, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = test_AUC, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = test_F1_score, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# 
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = AIC))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_AUC))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_F1_score))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_accuracy))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_cutoff))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_recall))
+# ggplot(data = lts, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
+#    geom_line(aes(y = test_specificity))
+# 
+# 
 # ggplot(data = g, aes(x = month)) + 
-#   geom_line(aes(y = test_accuracy, group = 1, color = proportion_sig)) + 
+#   geom_line(aes(y = AIC, group = 1, color = proportion_sig)) + 
 #   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = test_cutoff, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = test_recall, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
-ggplot(data = g, aes(x = month)) + 
-  geom_line(aes(y = test_specificity, group = 1, color = proportion_sig)) + 
-  scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = AUC, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = F1_score, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# # ggplot(data = g, aes(x = month)) + 
+# #   geom_line(aes(y = test_accuracy, group = 1, color = proportion_sig)) + 
+# #   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = cutoff, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = recall, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = precision, group = 1, color = proportion_sig)) + 
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+# 
+# # source: https://r-graph-gallery.com/line-chart-dual-Y-axis-ggplot2.html
+# ggplot(data = g, aes(x = month)) + 
+#   geom_line(aes(y = precision, group = 1, color = proportion_sig)) + 
+#   geom_line(aes(y = recall, group = 1, color = proportion_sig)) + 
+#   scale_y_continuous(name = 'Precision', sec.axis = sec_axis(trans = ~., name = 'Recall')) +
+#   scale_color_gradientn(name = '% Significant Models', colors = rainbow(3))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWithCV.csv', row.names = 1)
 names(LTS_coef_m)
 
+scale_y_continuous(
+  
+  # Features of the first axis
+  name = "First Axis",
+  
+  # Add a second axis and specify its features
+  sec.axis = sec_axis(~.*coeff, name="Second Axis")
+)
 
 
 names(LTS_coef_m)
