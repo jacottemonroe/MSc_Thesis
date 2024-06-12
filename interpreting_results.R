@@ -2443,7 +2443,7 @@ dev.off()
 ## VALIDATION PLOTS FOR LTS AND STS 
 
 # retrieve result summary table
-df <- read.csv('output/STS_df_results_aggregated_newPath10fCV_final.csv', row.names = 1) #'LTS_df_results_aggregated_newPathWith10fCV_final.csv' STS_df_results_aggregated_newPath10fCV_final.csv
+df <- read.csv('output/LTS_df_results_aggregated_newPathWith10fCV_final.csv', row.names = 1) #'LTS_df_results_aggregated_newPathWith10fCV_final.csv' STS_df_results_aggregated_newPath10fCV_final.csv
 
 # remove cols that do not contain information about model and model performance
 df <- df[, -c(6, 7, 11, 12, 22:41)]
@@ -2461,7 +2461,7 @@ df$proportion_sig <- df$sig_models/df$total_models
 # average elephants, days, and years into months only
 df_ag <- df %>% group_by(month) %>% summarize_all('mean')
 
-# adapt dataset 
+# adapt dataset for MONTH
 df_ag <- df_ag[,c('month', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'proportion_sig')]
 cv_df <- data.frame()
 for(i in 2:6){
@@ -2481,20 +2481,91 @@ cv_df$metric[cv_df$metric == 'cutoff'] <- 'Cutoff Probability'
 cv_df$metric[cv_df$metric == 'recall'] <- 'Recall'
 cv_df$metric[cv_df$metric == 'precision'] <- 'Precision'
 
+cv_plot <- ggplot(data = cv_df, aes(x = as.Date(month, tz = 'Africa/Maputo'))) +
+  geom_line(aes(y = value, group = metric, color = proportion_sig), linewidth = 1) + 
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
+  #scale_x_date(labels = date_format('%b')) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(factor(metric, levels = c('AUC', 'F1', 'Precision', 'Recall', 'Cutoff Probability'))), scale = 'free') + 
+  xlab('Date') + ylab('Score') + 
+  theme_minimal()
+
+cv_plot
+
+
+# adapt dataset for WEEKS 
+# retrieve result summary table
+df <- read.csv('output/LTS_df_results_aggregated_newPathWith10fCV_final.csv', row.names = 1) #'LTS_df_results_aggregated_newPathWith10fCV_final.csv' STS_df_results_aggregated_newPath10fCV_final.csv
+
+# remove cols that do not contain information about model and model performance
+df <- df[, -c(6, 7, 11, 12, 22:41)]
+# calculate significant model propertions
+df <- df %>% group_by(week) %>% mutate(total_models = n())
+df <- df %>% group_by(week) %>% mutate(sig_models = sum(model_sig == 'sig'))
+df$proportion_sig <- df$sig_models/df$total_models
+
+# average elephants, days, and years into months only
+df_ag_w <- df %>% group_by(week) %>% summarize_all('mean')
+df_ag_w <- df_ag_w[,c('week', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'proportion_sig')]
+df_date <- df[!duplicated(df$week), c('week', 'date')]
+cv_df <- data.frame()
+for(i in 2:6){
+  entry <- data.frame(week = df_ag_w$week, date = df_date$date,value = df_ag_w[[i]], metric = names(df_ag_w)[i], proportion_sig = df_ag_w$proportion_sig)
+  cv_df <- rbind(cv_df, entry)
+}
+
+cv_df$metric[cv_df$metric == 'F1_score'] <- 'F1'
+cv_df$metric[cv_df$metric == 'cutoff'] <- 'Cutoff Probability'
+cv_df$metric[cv_df$metric == 'recall'] <- 'Recall'
+cv_df$metric[cv_df$metric == 'precision'] <- 'Precision'
+
 # combined plot
 library(scales)
-png('output/STS_glm_cv.png')
-cv_plot <- ggplot(data = cv_df, aes(x = month)) +
+#png('output/STS_glm_cv.png')
+cv_plot <- ggplot(data = cv_df, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
+  geom_line(aes(y = value, group = metric, color = proportion_sig), linewidth = 1) + 
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
+  #scale_x_date(labels = date_format('%b')) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(factor(metric, levels = c('AUC', 'F1', 'Precision', 'Recall', 'Cutoff Probability'))), scale = 'free') + 
+  xlab('Date') + ylab('Score') + 
+  theme_minimal()
+
+cv_plot
+dev.off()
+
+# for WEEKS but YEAR aggregated 
+#cv_df_week <- cv_df %>% group_by(week_date) %>% summarize_all('mean')
+
+df$week_date <- strftime(df$date, tz = 'Africa/Maputo', format = '%W')
+
+df_ag_wd <- df %>% group_by(week_date) %>% summarize_all('mean')
+df_ag_wd <- df_ag_wd[,c('week_date', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'proportion_sig')]
+df_date <- df[!duplicated(df$week_date), c('week_date', 'date')]
+cv_df <- data.frame()
+for(i in 2:6){
+  entry <- data.frame(week_date = df_ag_wd$week_date, value = df_ag_wd[[i]], metric = names(df_ag_wd)[i], proportion_sig = df_ag_wd$proportion_sig)
+  cv_df <- rbind(cv_df, entry)
+}
+cv_df$metric[cv_df$metric == 'F1_score'] <- 'F1'
+cv_df$metric[cv_df$metric == 'cutoff'] <- 'Cutoff Probability'
+cv_df$metric[cv_df$metric == 'recall'] <- 'Recall'
+cv_df$metric[cv_df$metric == 'precision'] <- 'Precision'
+
+cv_df <- merge(cv_df, df_date, by.x = 'week_date')
+
+cv_df$date <- sub('^....', '2010', cv_df$date)
+
+cv_plot <- ggplot(data = cv_df, aes(x = as.Date(date, tz = 'Africa/Maputo'))) +
   geom_line(aes(y = value, group = metric, color = proportion_sig), linewidth = 1) + 
   scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
   scale_x_date(labels = date_format('%b')) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
   facet_grid(vars(factor(metric, levels = c('AUC', 'F1', 'Precision', 'Recall', 'Cutoff Probability'))), scale = 'free') + 
-  xlab('Month') + ylab('Score') + 
+  xlab('Week') + ylab('Score') + 
   theme_minimal()
 
 cv_plot
-dev.off()
 
 
 
@@ -2512,17 +2583,20 @@ df$combo <- paste0(df$ID, '_', df$week, '_', df$downscaling)
 df <- df[!duplicated(df$combo), ]
 
 # adapt dataset 
-df <- df[,c('ID', 'week', 'downscaling', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'model_sig', 'model_sig_bool')]
-df$week <- replace(df$week, df$week %in% c(2260, 2267, 2278), c('April', 'June', 'August'))
+df <- df[,c('combo', 'ID', 'week', 'downscaling', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'model_sig', 'model_sig_bool')]
+#df$week <- replace(df$week, df$week %in% c(2260, 2267, 2278), c('April', 'June', 'August'))
 
 cv_df <- data.frame()
-for(i in 4:8){
-  entry <- data.frame(ID = df$ID, week = df$week, downscaling = df$downscaling, value = df[[i]], metric = names(df)[i], sig = df$model_sig, sig_bool = df$model_sig_bool)
+for(i in 5:9){
+  entry <- data.frame(combo = df$combo, ID = df$ID, week = df$week, downscaling = df$downscaling, value = df[[i]], metric = names(df)[i], sig = df$model_sig, sig_bool = df$model_sig_bool)
   cv_df <- rbind(cv_df, entry)
 }
 
 #cv_df$metric <- replace(cv_df$metric, cv_df$metric %in% c('F1_score', 'cutoff', 'recall', 'precision'), c('F1', 'Cutoff Probability', 'Recall', 'Precision'))
-cv_df$week <- replace(cv_df$week, cv_df$week %in% c(2260, 2267, 2278), c('April', 'June', 'August'))
+#cv_df$week <- replace(cv_df$week, cv_df$week %in% c(2260, 2267, 2278), c('April', 'June', 'August'))
+cv_df$week[cv_df$week == 2260] <- 'April'
+cv_df$week[cv_df$week == 2267] <- 'June'
+cv_df$week[cv_df$week == 2278] <- 'August'
 
 cv_df$metric[cv_df$metric == 'F1_score'] <- 'F1'
 cv_df$metric[cv_df$metric == 'cutoff'] <- 'Cutoff Probability'
@@ -2535,7 +2609,7 @@ library(dplyr)
 cv_df <- cv_df %>% group_by(metric) %>% mutate(justify = round((max(value) - min(value))/10, 2))
 
 
-png('output/downscaling_glm_cv.png')
+#png('output/downscaling_glm_cv.png')
 cv_plot <- ggplot(data = cv_df, aes(x = factor(week, level = c('April', 'June', 'August')), 
                                     y = value, fill = factor(downscaling, level = c('250 m', '30 m')), 
                                     color = sig_bool)) + 
@@ -2560,6 +2634,9 @@ cv_plot <- ggplot(data = cv_df, aes(x = factor(week, level = c('April', 'June', 
 
 cv_plot
 dev.off()
+
+write.csv(cv_df, 'output/downscaling_glm_cv_aggregated.csv')
+
 
 
 
@@ -2756,7 +2833,7 @@ for(i in 1:nrow(run_table)){
 
   ## PLOTTING
 
-  # make elephant movement on NDVI map without legends
+  # make elephant movement on NDVI map without legendsF
   image_map <- ggplot() +
     # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
     geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = F) +
@@ -2933,8 +3010,8 @@ final_map
 
 
 ## quick calculation of stats 
-mean(STS_coef_m$glm_value[STS_coef_m$predictor == 'Avg. NDVI Growth Rate'])
-sd(STS_coef_m$glm_value[STS_coef_m$predictor == 'Avg. NDVI Growth Rate'])
+mean(LTS_coef_m$glm_value[LTS_coef_m$predictor == 'Avg. NDVI'])
+sd(LTS_coef_m$glm_value[LTS_coef_m$predictor == 'Avg. NDVI'])
 
 a <- STS_coef_m[STS_coef_m$predictor == 'Avg. NDVI',]
 a_ag <- data.frame(a[!duplicated(a$date),c('date', 'total_models', 'Sig_Model_Proportion', 'Sig_GLM_Proportion', 'DEV_IMP_Mean')])
@@ -2944,6 +3021,8 @@ b <- LTS_coef_m
 b$dataset <- paste0(b$ID, '_', b$week)
 b <- b[b$VIF >= 5,]
 b <- b[!duplicated(b$dataset),]
+
+
 
 
 
@@ -2963,3 +3042,99 @@ for(i in 2:6){
   entry <- data.frame(month = df_ag$month, value = df_ag[[i]], metric = names(df_ag)[i], proportion_sig = df_ag$proportion_sig)
   cv_df <- rbind(cv_df, entry)
 }
+
+
+
+# LTS yearly profile of coef 
+df <- LTS_coef_m
+# keep one row per model (remove duplicate rows)
+#df$combo <- paste0(df$ID, '_', df$week)
+#df <- df[!duplicated(df$combo), ]
+#df <- df[df$predictor == 'Avg. NDVI',]
+
+# calculate significant model propertions
+df$month <- matrix(unlist(strsplit(df$date, '-')), ncol = 3, byrow = T)[,2]
+df <- df %>% group_by(month, predictor) %>% mutate(total_models = n())
+df <- df %>% group_by(month, predictor) %>% mutate(sig_models = sum(model_sig == 'sig'))
+df$proportion_sig <- df$sig_models/df$total_models
+
+# average elephants, days, and years into months only
+df_ag <- df %>% group_by(month, predictor) %>% summarize_all('mean')
+
+
+
+# df_ag_w <- df_ag_w[,c('week', 'AUC', 'F1_score', 'cutoff', 'recall', 'precision', 'proportion_sig')]
+# df_date <- df[!duplicated(df$month), c('month', 'date')]
+# cv_df <- data.frame()
+# for(i in 2:6){
+#   entry <- data.frame(month = df_ag$month, date = df_date$date,value = df_ag[[i]], metric = names(df_ag_w)[i], proportion_sig = df_ag_w$proportion_sig)
+#   cv_df <- rbind(cv_df, entry)
+# }
+
+cv_df <- df_ag 
+
+
+cv_df$month <- paste0('2023-', cv_df$month, '-01')
+
+cv_df$month <- as.Date(cv_df$month, '%Y-%m-%d')
+
+# combined plot
+library(scales)
+#png('output/STS_glm_cv.png')
+cv_plot <- ggplot(data = cv_df, aes(x = as.Date(month, tz = 'Africa/Maputo'))) +
+  geom_line(aes(y = glm_value, group = predictor, color = proportion_sig), linewidth = 1) + 
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
+  #scale_x_date(labels = date_format('%b')) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI Growth Rate', 
+                                               'Dev. NDVI', 'Dev. NDVI Growth Rate'))), scale = 'free') + 
+  xlab('Month') + ylab('Coefficient') + 
+  theme_minimal()
+
+cv_plot
+
+cv_plot <- ggplot(data = cv_df, aes(x = as.Date(month, tz = 'Africa/Maputo'))) +
+  geom_line(aes(y = VIF, group = predictor, color = proportion_sig), linewidth = 1) + 
+  scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
+  #scale_x_date(labels = date_format('%b')) +
+  # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
+  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI Growth Rate', 
+                                               'Dev. NDVI', 'Dev. NDVI Growth Rate'))), scale = 'free') + 
+  xlab('Month') + ylab('VIF') + 
+  theme_minimal()
+
+cv_plot
+
+write.csv(cv_df, 'output/LTS_glm_coef_annual_profile.csv')
+
+
+
+c <- df %>% group_by(predictor) %>% mutate(total_models = n())
+c <- c %>% group_by(predictor) %>% mutate(sig_coef = sum(glm_significance == 'sig'))
+c$proportion_sig <- c$sig_coef/c$total_models
+c_ag <- c %>% group_by(predictor) %>% summarize_all('mean')
+c_sd <- c %>% group_by(predictor) %>% summarize_all('sd')
+
+
+
+# calculate % increase in VIF between 250m and 30m models 
+df <- read.csv('output/downscaling_df_results_newPathWith10fCV_final.csv', row.names = 1)
+df$combo <- paste0(df$ID, '_', df$week, '_', df$predictor)
+df_30 <- df[df$downscaling == '30 m',c('combo', 'VIF')]
+df_250 <- df[df$downscaling == '250 m', c('combo', 'VIF')]
+df_ag <- merge(df_30, df_250, by.x = 'combo', by.y = 'combo')
+names(df_ag) <- c('combo', 'VIF_30', 'VIF_250')
+df_ag <- merge(df, df_ag, by = 'combo')
+df_ag$VIF_diff <- ((df_ag$VIF_30 - df_ag$VIF_250)/df_ag$VIF_250)*100
+df_summary <- df_ag[!duplicated(df_ag$combo), c('ID', 'week', 'date', 'predictor', 'VIF_diff')]
+
+# calculate % difference in performance metric between 250m and 30m models 
+df <- read.csv('output/downscaling_glm_cv_aggregated.csv', row.names = 1)
+df$combo <- paste0(df$ID, '_', df$week, '_', df$metric)
+df_30 <- df[df$downscaling == '30 m',c('combo', 'value')]
+df_250 <- df[df$downscaling == '250 m', c('combo', 'value')]
+df_ag <- merge(df_30, df_250, by.x = 'combo', by.y = 'combo')
+names(df_ag) <- c('combo', 'value_30', 'value_250')
+df_ag <- merge(df, df_ag, by = 'combo')
+df_ag$value_diff <- ((df_ag$value_30 - df_ag$value_250)/df_ag$value_250)*100
+df_summary <- df_ag[!duplicated(df_ag$combo), c('ID', 'week', 'metric', 'value_diff')]
