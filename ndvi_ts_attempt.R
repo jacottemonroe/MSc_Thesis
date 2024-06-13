@@ -154,27 +154,61 @@ ggplot() +
 scaleFUN <- function(x) sprintf("%.1f", x)
 
 plot_precip <- ggplot() + 
+  geom_vline(xintercept = as.Date(c('2009-09-23', '2010-11-12', '2011-09-27', '2012-10-26')), linetype = 'dotted', alpha = 0.5) + 
+  geom_vline(xintercept = as.Date(c('2009-11-18', '2010-11-26', '2011-11-17', '2012-11-30')), linetype = 'dashed', alpha = 0.4) + 
+  geom_vline(aes(xintercept = as.Date(c('2011-01-20', '2011-03-17', '2012-03-08')), linetype = 'Peaks', alpha = 0.2, color = 'pink')) + 
   geom_line(data = precip_etosha, aes(x = date, y = total_precipitation_sum*100), color = '#43A5C5') + 
   scale_y_continuous(labels=scaleFUN) +
   theme_minimal() + 
   xlab('Time') + ylab('Accumulated\nPrecipitation [cm]')
 
 plot_ndvi <- ggplot() + 
+  geom_vline(xintercept = as.Date(c('2009-09-23', '2010-11-12', '2011-09-27', '2012-10-26')), linetype = 'dotted', alpha = 0.5) + 
+  geom_vline(xintercept = as.Date(c('2009-11-18', '2010-11-26', '2011-11-17', '2012-11-30')), linetype = 'dashed', alpha = 0.4) + 
+  geom_vline(aes(xintercept = as.Date(c('2011-01-20', '2011-03-17', '2012-03-08')), linetype = 'Peaks', alpha = 0.2, color = 'pink')) + 
   geom_line(data = ndvi_etosha, aes(x = date, y = ndvi), color = '#bce784') + 
   scale_y_continuous(labels=scaleFUN) +
   theme_minimal() + 
   xlab('Time') + ylab('\nNDVI')
 
-plot_model <- ggplot() + 
+model_leg <- ggplot() + 
+  geom_vline(aes(xintercept = as.Date(c('2009-09-23', '2010-11-12', '2011-09-27', '2012-10-26')), color = 'First Rain > 0 cm', linetype = 'First Rain > 0 cm')) + 
+  geom_vline(aes(xintercept = as.Date(c('2009-11-18', '2010-11-26', '2011-11-17', '2012-11-30')), color = 'First Rain > 1 cm', linetype = 'First Rain > 1 cm')) + 
   geom_line(data = lts_model, aes(x = date, y = glm_value), color = 'red') + 
   scale_y_continuous(labels=scaleFUN) +
+  scale_color_manual(name = "Rain Events", values = c('First Rain > 0 cm' = "grey70", 'First Rain > 1 cm' = "grey70")) + 
+  scale_linetype_manual(name = 'Rain Events', values = c('First Rain > 0 cm' = "dotted", 'First Rain > 1 cm' = "dashed")) + 
   theme_minimal() + 
   xlab('Time') + ylab('Average NDVI\nModel Coefficient')
 
+# package: cowplot
+model_leg <- get_legend(model_leg)
+
+d <- as.character(lts_model$date[lts_model$glm_value > 2])
+
+plot_model <- ggplot() + 
+  geom_vline(aes(xintercept = as.Date(c('2009-09-23', '2010-11-12', '2011-09-27', '2012-10-26')), 
+                 color = 'First Rain > 0 cm', linetype = 'First Rain > 0 cm')) + 
+  geom_vline(aes(xintercept = as.Date(c('2009-11-18', '2010-11-26', '2011-11-17', '2012-11-30')), 
+                 color = 'First Rain > 1 cm', linetype = 'First Rain > 1 cm')) + 
+  geom_vline(aes(xintercept = as.Date(c('2011-01-20', '2011-03-17', '2012-03-08')), color = 'Peaks', linetype = 'Peaks')) + 
+  geom_line(data = lts_model, aes(x = date, y = glm_value), color = 'red') + 
+  scale_y_continuous(labels=scaleFUN) +
+  scale_color_manual(name = "Rain Events", values = c('First Rain > 0 cm' = "grey70", 
+                                                      'First Rain > 1 cm' = "grey70", 'Peaks' = 'grey70')) + 
+  scale_linetype_manual(name = 'Rain Events', values = c('First Rain > 0 cm' = "dotted", 
+                                                         'First Rain > 1 cm' = "dashed", 'Peaks' = 'solid')) + 
+  theme_minimal() + 
+  theme(legend.position = 'None') + 
+  xlab('Time') + ylab('Average NDVI\nModel Coefficient')
+
+blank_plot <- ggplot() + theme_minimal()
+
 #library(cowplot)
+# plot_grid(plot_ndvi, blank_plot, plot_model, model_leg, plot_precip, blank_plot, ncol = 2, nrow = 3, align = 'h', rel_widths = 2:1)
+# plot_grid(plot_ndvi, '', plot_model, model_leg, plot_precip, '', ncol = 2, nrow = 3, align = 'h', rel_widths = 8:1)
 plot_grid(plot_ndvi, plot_model, plot_precip, nrow = 3, align = 'h')
-
-
+plot_grid(model_leg)
 
 # plot derivatives 
 ggplot() + 
