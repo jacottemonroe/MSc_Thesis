@@ -361,6 +361,25 @@ for (ID in elephant_IDs) {
 # remove first row that had NA (it was the default start row)
 presence <- na.omit(presence)
 
+presence$combo <- paste0(presence$ID, '_', presence$week)
+
+S <- read.csv(paste0('data/run_settings', '_STS_final', '.csv'), row.names = 1)
+S$combo <- paste0(S$ID, '_', S$week)
+
+L <- read.csv(paste0('data/run_settings', '_LTS_final', '.csv'), row.names = 1)
+L$combo <- paste0(L$ID, '_', L$week)
+
+D <- read.csv(paste0('data/run_settings', '_downscaling_final', '.csv'), row.names = 1)
+D$combo <- paste0(D$ID, '_', D$week)
+
+presence$phase[presence$combo %in% S$combo] <- 'STS'
+presence$phase[presence$combo %in% L$combo] <- 'LTS'
+presence$phase[presence$combo %in% D$combo] <- 'DS'
+presence$phase[presence$combo %in% S$combo & presence$combo %in% L$combo] <- 'STS&LTS'
+presence$phase[presence$combo %in% L$combo & presence$combo %in% D$combo] <- 'LTS&DS'
+presence$phase[is.na(presence$phase)] <- 'Omitted'
+
+
 # define start and end of green up
 GU_start <- c("2008-11-01", "2009-11-01", "2010-11-01", "2011-11-01", "2012-11-01", "2013-11-01")
 GU_end <- c("2009-04-30", "2010-04-30", "2011-04-30", "2012-04-30", "2013-04-30", "2014-04-30")
@@ -372,15 +391,32 @@ green_up <- data.frame(start_greenup = as.Date(GU_start), end_greenup = as.Date(
 
 # plot elephant temporal presence 
 # source: https://stackoverflow.com/questions/72165869/plotting-date-ranges-for-each-id-and-marking-specific-dates-using-ggplot # for line ranges 
+# elephant_presence_plot <- ggplot(presence) + 
+#   # geom_rect(data = green_up, aes(xmin = start_observ, xmax = end_observ, ymin = -Inf, 
+#   #                                ymax = Inf), fill = 'grey70', alpha = 0.2) +
+#   geom_rect(data = green_up, aes(xmin = start_greenup, xmax = end_greenup, ymin = -Inf, 
+#                                  ymax = Inf, fill = 'Wet Season', alpha = 'Wet Season')) +
+#   geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date, color = 'Elephant Path Data'), linewidth = 4) + 
+#   scale_fill_manual(name = '', values = c('Wet Season' = '#5dd39e')) +
+#   scale_color_manual(name = '', values = c('Elephant Path Data' = 'orange')) +
+#   scale_alpha_manual(name = '', values = c('Wet Season' = 0.5)) +
+#   #guide_legend(override.aes = list(alpha = 0.1)) +
+#   xlab('Time') + ylab('Elephant ID') + 
+#   theme_minimal()
+
 elephant_presence_plot <- ggplot(presence) + 
   # geom_rect(data = green_up, aes(xmin = start_observ, xmax = end_observ, ymin = -Inf, 
   #                                ymax = Inf), fill = 'grey70', alpha = 0.2) +
   geom_rect(data = green_up, aes(xmin = start_greenup, xmax = end_greenup, ymin = -Inf, 
-                                 ymax = Inf, fill = 'Wet Season'), alpha = 0.1) +
-  geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date, color = 'Elephant Path Data'), linewidth = 4) + 
-  scale_fill_manual(name = '', values = c('Wet Season' = 'green4')) +
-  scale_color_manual(name = '', values = c('Elephant Path Data' = 'orange')) +
-  guide_legend(override.aes = list(alpha = 0.1)) +
+                                 ymax = Inf, fill = 'Wet Season', alpha = 'Wet Season')) +
+  geom_linerange(aes(y = ID, xmin = start_date, xmax = end_date, color = factor(phase, 
+                            level = c('STS', 'STS&LTS', 'LTS', 'LTS&DS', 'Omitted'))), linewidth = 4) + 
+  scale_fill_manual(name = 'Season', values = c('Wet Season' = '#bce784')) +
+  scale_color_manual(name = 'Data Used per\nResearch Question', values = c('STS' = '#004D40', 'STS&LTS' = '#FFC107', 'LTS' = '#1E88E5', 
+                                           'LTS&DS' = '#D81B60', 'Omitted' = 'grey70'), 
+                     labels = c('RQ1', 'RQ1 & RQ2', 'RQ2', 'RQ2 & RQ3', 'Omitted')) +
+  scale_alpha_manual(name = 'Season', values = c('Wet Season' = 0.2)) +
+  #guide_legend(override.aes = list(alpha = 0.1)) +
   xlab('Time') + ylab('Elephant ID') + 
   theme_minimal()
 

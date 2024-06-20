@@ -94,7 +94,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # source: https://dieghernan.github.io/tidyterra/reference/geom_spatraster.html
   modis_ndvi_map <- ggplot() +
     geom_spatraster(data = ndvi_data, aes(fill = ndvi), alpha = 0.6, show.legend = T) +
-    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6)
+    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.8)
 
   # make rough path graph with legend (legend is what's important here)
   path_map <- ggplot(data = dat, aes(x = x1_, y = y1_, colour = case_, group = pathID, linetype = case_)) +
@@ -109,7 +109,7 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # make elephant movement on NDVI map without legends 
   image_map <- ggplot() +
     geom_spatraster(data = ndvi_data, aes(fill = ndvi), show.legend = F) +
-    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.6) +
+    scale_fill_terrain_c(name = 'NDVI', limits = c(0,0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), alpha = 0.8) +
     geom_path(data = subset(dat, case_ == 1), aes(x = x1_, y = y1_, group = pathID), colour = 'grey30', linetype = 2, linewidth = 0.4) + 
     geom_path(data = subset(dat, case_ == 2), aes(x = x1_, y = y1_, group = pathID,), colour = 'red', linetype = 1, linewidth = 0.7) +
     labs(title = title, subtitle = paste0('Elephant ', ID, ' from ', as.Date(min(dat$t1_), tz = 'Africa/Maputo') , ' to ', 

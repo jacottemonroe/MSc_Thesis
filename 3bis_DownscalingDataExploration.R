@@ -146,8 +146,8 @@ for(i in 1:nrow(run_table)){
 
 
 # enter settings
-ID <- 'LA14'
-week <- 2260
+ID <- 'LA26'
+week <- 2267
 pseudo_abs_method <- 'random_path_custom_distr'
 
 # define run filepath 
@@ -160,7 +160,7 @@ landsat_filepath <- paste0(run_filepath, '3_b2_landsat_images_downscaling_', pse
 modis_filepath <- paste0(run_filepath, '3_b1_modis_images_downscaling_', pseudo_abs_method, '/')
 
 # load LUT
-LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
+LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT_newPathWithCV.RData'))
 
 
 
@@ -180,13 +180,15 @@ LUT <- readRDS(paste0(run_filepath, '3_c1_MODISLandsatLUT.RData'))
 # create empty dataframe to store metrics 
 results_df <- data.frame()
 
-suffix = '_selection'
+suffix = '_newPathWithCV'
 #w <- list.files(run_filepath, pattern = glob2rx(paste0('3_f2_', modis_date, '_*', suffix, '.csv')))
 # w <- list.files(r, pattern = glob2rx(paste0('3_g2_', m, '_*', suffix, '.csv')))
 # w <- list.files(run_filepath, pattern = glob2rx(paste0('3_*_', m, '_ranger_full_*results', suffix, '.csv')))
 # w
 # #sub('_predNDVI_30m_results', '', sub(paste0('3_g2_', m, '_'), '', sub('.csv', '', w[1])))
 # sub('.csv', '', sub('_results_selection', '', sub(paste0('3_.._', m, '_'), '', w[1])))
+
+#LUT <- read.csv(paste0('data/run_settings', '_downscaling_final', '.csv'), row.names = 1)
 
 for(i in 1:nrow(LUT)){
   
@@ -216,7 +218,7 @@ for(i in 1:nrow(LUT)){
     #model <- sub('_results', '', sub(paste0('3_f2_', modis_date, '_'), '', sub('.csv', '', file)))
     #model <- sub(paste0('3_f7_', modis_date, '_'), '', sub('_predNDVI_250m_results.csv', '', file))
     #model <- sub('_predNDVI_250m_results', '', sub(paste0('3_f7_', modis_date, '_'), '', sub('.csv', '', file)))
-    model <- sub('.csv', '', sub('_results_selection', '', sub(paste0('3_.._', modis_date, '_'), '', file)))
+    model <- sub('.csv', '', sub('_results_newPathWithCV', '', sub(paste0('3_.._', modis_date, '_'), '', file)))
     names(item) <- c(paste0(model, '.', 'RMSE'), paste0(model, '.', 'R2'), paste0(model, '.', 'MAE'))
     
     # attach results to dataframe 
@@ -233,7 +235,7 @@ for(i in 1:nrow(LUT)){
 # save summary table 
 # for cv metrics: '3_g1_summary_metrics_CV.csv'
 # for prediction metrics: '3_g2_summary_metrics_prediction.csv'
-write.csv(results_df, paste0(run_filepath, '3_g1_RF_metrics_comparison_table.csv'))
+#write.csv(results_df, paste0(run_filepath, '3_g1_RF_metrics_comparison_table.csv'))
 
 d <- results_df
 
@@ -286,35 +288,73 @@ d <- results_df
 
 # plot metrics side by side 
 # source: https://stackoverflow.com/questions/1249548/side-by-side-plots-with-ggplot2
+# 
+# plot_rmse <- ggplot(data = d, aes(x = date)) + 
+#   geom_line(aes(y = ranger_full.RMSE, color = 'Cross Validation')) + 
+#   geom_line(aes(y = ranger_full_predNDVI_250m.RMSE, color = 'Prediction 250m')) +
+#   geom_line(aes(y = ranger_full_predNDVI_30m.RMSE, color = 'Prediction 30m')) +
+#   scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+#   labs(x ="Date", y = "RMSE") + 
+#   theme_minimal() + 
+#   theme(legend.position = 'none')
+# 
+# # plot_mae <- ggplot(data = d, aes(x = date)) + 
+# #   geom_line(aes(y = ranger_full.MAE, color = 'Cross Validation')) + 
+# #   geom_line(aes(y = ranger_full_predNDVI_250m.MAE, color = 'Prediction 250m')) +
+# #   geom_line(aes(y = ranger_full_predNDVI_30m.MAE, color = 'Prediction 30m')) +
+# #   scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+# #   labs(title="Comparing RF Model MAE of LA14 over week 2260",
+# #        x ="Date", y = "MAE") + 
+# #   theme_minimal()
+# 
+# plot_r2 <- ggplot(data = d, aes(x = date)) + 
+#   geom_line(aes(y = ranger_full.R2, color = 'Cross Validation')) + 
+#   geom_line(aes(y = (ranger_full_predNDVI_250m.R2)**2, color = 'Prediction 250m')) +
+#   geom_line(aes(y = (ranger_full_predNDVI_30m.R2)**2, color = 'Prediction 30m')) +
+#   scale_color_manual(name = 'Test Product for LA14 April', values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+#   labs(x ="Date", y = "R2") + 
+#   theme_minimal() + 
+#   theme(legend.position = 'none')
+#   
+# plot_r2_leg <- ggplot(data = d, aes(x = date)) + 
+#   geom_line(aes(y = ranger_full.R2, color = 'Cross Validation')) + 
+#   geom_line(aes(y = (ranger_full_predNDVI_250m.R2)**2, color = 'Prediction 250m')) +
+#   geom_line(aes(y = (ranger_full_predNDVI_30m.R2)**2, color = 'Prediction 30m')) +
+#   scale_color_manual(name = 'Test Product for LA14 April', values = c("#D81B60", '#1E88E5', '#FFC107')) + 
+#   labs(x ="Date", y = "R2") + 
+#   theme_minimal()
+# 
+# leg <- get_legend(plot_r2_leg)
+# 
+# blank <- ggplot() + labs(title = 'LA14 April') + theme_minimal()
+# 
+# #library(cowplot)
+# plot_grid(blank, plot_rmse, plot_r2, nrow = 3) #plot_mae
+# 
+
+
 
 plot_rmse <- ggplot(data = d, aes(x = date)) + 
-  geom_line(aes(y = ranger_full.RMSE, color = 'Cross Validation')) + 
-  geom_line(aes(y = ranger_full_predNDVI_250m.RMSE, color = 'Prediction 250m')) +
-  geom_line(aes(y = ranger_full_predNDVI_30m.RMSE, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
-  labs(title="Comparing RF Model RMSE of LA14 over week 2260",
-       x ="Date", y = "RMSE") + 
-  theme_minimal()
+  geom_line(aes(y = ranger_full.R2, linetype = 'Cross Validation'), color = '#1E88E5') + 
+  geom_line(aes(y = ranger_full_predNDVI_250m.R2, linetype = 'Prediction 250m'), color = '#1E88E5') +
+  geom_line(aes(y = ranger_full_predNDVI_30m.R2, linetype = 'Prediction 30m'), color = '#1E88E5') +
+  geom_line(aes(y = ranger_full.RMSE*20, linetype = 'Cross Validation'), color = '#D81B60') + 
+  geom_line(aes(y = ranger_full_predNDVI_250m.RMSE*20, linetype = 'Prediction 250m'), color = '#D81B60') +
+  geom_line(aes(y = ranger_full_predNDVI_30m.RMSE*20, linetype = 'Prediction 30m'), color = '#D81B60') +
+  #scale_color_manual(name = 'Test Products', values = c('grey30')) + 
+  scale_linetype_manual(name = 'Test Products', values = c('Cross Validation' = 'solid', 'Prediction 250m' = 'dashed', 'Prediction 30m' = 'dotted')) +
+  labs(title = 'LA26 - August', x ="Date") + 
+  scale_y_continuous(name = 'R2', sec.axis = sec_axis(~.*0.05, name = 'RMSE')) + 
+  theme_minimal() + 
+  theme(axis.text.y.right = element_text(color = '#D81B60'), 
+        axis.text.y.left = element_text(color = '#1E88E5')) + 
+  guides(color = 'none')
 
-plot_mae <- ggplot(data = d, aes(x = date)) + 
-  geom_line(aes(y = ranger_full.MAE, color = 'Cross Validation')) + 
-  geom_line(aes(y = ranger_full_predNDVI_250m.MAE, color = 'Prediction 250m')) +
-  geom_line(aes(y = ranger_full_predNDVI_30m.MAE, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
-  labs(title="Comparing RF Model MAE of LA14 over week 2260",
-       x ="Date", y = "MAE") + 
-  theme_minimal()
+plot_rmse
 
-plot_r2 <- ggplot(data = d, aes(x = date)) + 
-  geom_line(aes(y = ranger_full.R2, color = 'Cross Validation')) + 
-  geom_line(aes(y = (ranger_full_predNDVI_250m.R2)**2, color = 'Prediction 250m')) +
-  geom_line(aes(y = (ranger_full_predNDVI_30m.R2)**2, color = 'Prediction 30m')) +
-  scale_color_manual(values = c("#D81B60", '#1E88E5', '#FFC107')) + 
-  labs(title="Comparing RF Model R2 of LA14 over week 2260",
-       x ="Date", y = "R2") + 
-  theme_minimal()
 
-grid.arrange(plot_rmse, plot_mae, plot_r2, ncol=2, title = paste0('Metrics & Absolute Error RF LA', ID, ' w', week))
+
+
 
 
 

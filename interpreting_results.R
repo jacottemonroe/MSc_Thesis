@@ -3,7 +3,7 @@
 
 
 # define name of run (downscaling, RQ2, specific week or elephant idk)
-run_label <- '_downscaling_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
+run_label <- '_LTS_final' #'_STS_final' #'_downscaling_finql' #'_STS' #"_all_runs_new_path_with_CV"  #"_new_path_with_CV_second_batch" #"_new_path_with_CV_rerun" #'_all_runs_new_path_with_CV' #'_LTS_LA11_LA12_LA13_LA14' #'_STS' #'_downscaling' #'_LA14_LTS_full' #'_LTS_LA11_LA12_LA14' #'_LA14_LTS' #'_LA14_LTS_rerun'  #'_LA14_LTS_full'
 
 ################ CHECK RUN PROGRESS AND COMPLETION ####################
 
@@ -1236,6 +1236,10 @@ write.csv(STS_coef_m, 'output/STS_df_results_aggregated_newPath10fCV_final.csv')
 # date_hl$xmax <- as.Date(date_hl$xmax, tz = 'Africa/Maputo')
 STS_coef_m <- read.csv('output/STS_df_results_aggregated_newPath10fCV_final.csv')
 
+STS_coef_m$predictor[STS_coef_m$predictor == 'Avg. NDVI'] <- 'Avg. NDVI'
+STS_coef_m$predictor[STS_coef_m$predictor == 'Dev. NDVI'] <- 'Std. NDVI'
+STS_coef_m$predictor[STS_coef_m$predictor == 'Avg. NDVI Growth Rate'] <- 'Avg. NDVI\nChange Rate'
+STS_coef_m$predictor[STS_coef_m$predictor == 'Dev. NDVI Growth Rate'] <- 'Std. NDVI\nChange Rate' 
 
 
 png('output/STS_timeseries_glm_coef_aggregated_newPath10fCV_final.png')
@@ -1767,10 +1771,16 @@ write.csv(LTS_coef_m, 'output/LTS_df_results_aggregated_newPathWith10fCV_final.c
 LTS_coef_m <- read.csv('output/LTS_df_results_aggregated_newPathWith10fCV_final.csv')
 
 
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'Avg. NDVI'] <- 'Avg. NDVI'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'Dev. NDVI'] <- 'Std. NDVI'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'Avg. NDVI Growth Rate'] <- 'Avg. NDVI\nChange Rate'
+LTS_coef_m$predictor[LTS_coef_m$predictor == 'Dev. NDVI Growth Rate'] <- 'Std. NDVI\nChange Rate' 
+
+
 png('output/LTS_timeseries_glm_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6, show.legend = F) +
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 7, show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1836,7 +1846,7 @@ dev.off()
 png('output/LTS_timeseries_clr_coef_aggregated_newPathWith10fCV_final.png')
 
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6, show.legend = F) +
+  geom_bar(aes(y = total_models, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 7, show.legend = F) +
   #geom_histogram(aes(y = total_models, color = Sig_Model_Proportion), stat = 'identity') +
   #scale_color_grey(name = '% Significant Models') + 
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
@@ -1902,7 +1912,7 @@ dev.off()
 # plot deviance improvement and VIF 
 png('output/LTS_timeseries_dev_VIF_aggregated_newPathWith10fCV_final.png')
 bp <- ggplot(data = df_bar, aes(x = as.Date(date, tz = 'Africa/Maputo'))) + 
-  geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 6) +
+  geom_bar(aes(y = DEV_IMP_Mean, fill = Sig_Model_Proportion), stat = 'identity', position = 'dodge', width = 7) +
   # scale_fill_continuous(name = '% Significant Models', type = 'gradient') +
   scale_fill_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#348aa7', '#5dd39e', '#bce784')) +
   ylab('Deviance Improvement') + xlab('Time') +
@@ -2292,6 +2302,12 @@ write.csv(downscaling_coef, 'output/downscaling_df_results_newPathWith10fCV_fina
 
 downscaling_coef <- read.csv('output/downscaling_df_results_newPathWith10fCV_final.csv', row.names = 1)
 
+downscaling_coef$predictor[downscaling_coef$predictor == 'Avg. NDVI'] <- 'Avg. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'Dev. NDVI'] <- 'Std. NDVI'
+downscaling_coef$predictor[downscaling_coef$predictor == 'Avg. NDVI Growth Rate'] <- 'Avg. NDVI\nChange Rate'
+downscaling_coef$predictor[downscaling_coef$predictor == 'Dev. NDVI Growth Rate'] <- 'Std. NDVI\nChange Rate' 
+
+
 # # define start and end dates for plotting 
 # start_date <- min(downscaling_coef$date)
 # end_date <- max(downscaling_coef$date)
@@ -2417,9 +2433,9 @@ ggplot(data = downscaling_coef, aes(x = factor(seasons, level = c('April', 'June
   # source: https://www.geeksforgeeks.org/formatting-numbers-and-strings-in-r-programming-format-function/
   # note: set color at beginning to keep correct order of text (see source)
   # source: https://stackoverflow.com/questions/51734285/ggplot-adding-color-aesthetic-changes-stack-order
-  geom_text(data = downscaling_coef[downscaling_coef$predictor == 'Dev. NDVI\nGrowth Rate',], aes(label=format(model_sig, scientific = T, digits = 2),
+  geom_text(data = downscaling_coef[downscaling_coef$predictor == 'Std. NDVI\nChange Rate',], aes(label=format(model_sig, scientific = T, digits = 2),
                 y = VIF + justify_vif * sign(VIF)), position=position_dodge(.9), size = 3) +
-  geom_hline(data = data.frame(threshold = 5, predictor =c('Dev. NDVI', 'Dev. NDVI\nGrowth Rate')), aes(yintercept = threshold), linetype = 'dashed', color = 'grey40') +
+  geom_hline(data = data.frame(threshold = 5, predictor =c('Std. NDVI', 'Std. NDVI\nChange Rate')), aes(yintercept = threshold), linetype = 'dashed', color = 'grey40') +
   # source: https://ggplot2.tidyverse.org/reference/scale_manual.html
   # source: https://stackoverflow.com/questions/41701960/ggplot2-adding-text-on-a-multiple-barplot
   scale_fill_manual(name = 'Spatial Resolution', values = c('250 m' = '#bce784', '30 m' = '#43A5C5'), 
@@ -3084,10 +3100,10 @@ library(scales)
 cv_plot <- ggplot(data = cv_df, aes(x = as.Date(month, tz = 'Africa/Maputo'))) +
   geom_line(aes(y = glm_value, group = predictor, color = proportion_sig), linewidth = 1) + 
   scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
-  #scale_x_date(labels = date_format('%b')) +
+  scale_x_date(labels = date_format('%b')) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
-  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI Growth Rate', 
-                                               'Dev. NDVI', 'Dev. NDVI Growth Rate'))), scale = 'free') + 
+  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI\nChange Rate', 
+                                               'Std. NDVI', 'Std. NDVI\nChange Rate'))), scale = 'free') + 
   xlab('Month') + ylab('Coefficient') + 
   theme_minimal()
 
@@ -3098,8 +3114,8 @@ cv_plot <- ggplot(data = cv_df, aes(x = as.Date(month, tz = 'Africa/Maputo'))) +
   scale_color_gradientn(name = 'Percent of Models\nwith Significance', colors = c('#525174', '#5dd39e', '#bce784')) +
   #scale_x_date(labels = date_format('%b')) +
   # source: https://ggplot2.tidyverse.org/reference/facet_grid.html
-  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI Growth Rate', 
-                                               'Dev. NDVI', 'Dev. NDVI Growth Rate'))), scale = 'free') + 
+  facet_grid(vars(factor(predictor, levels = c('Avg. NDVI', 'Avg. NDVI\nChange Rate', 
+                                               'Std. NDVI', 'Std. NDVI\nChange Rate'))), scale = 'free') + 
   xlab('Month') + ylab('VIF') + 
   theme_minimal()
 
