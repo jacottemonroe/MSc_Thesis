@@ -1,9 +1,7 @@
 ## MSc Thesis 
+## Elephant preprocessing 
 ## Jacotte Monroe 
-
-## Elephant Preprocessing 
-
-## Function script
+## 29/01/24
 
 
 # Function that reprojects the data frame (coordinates) to a new coordinate system 
@@ -12,8 +10,8 @@
 
 
 # Necessary package 
-if(!('sp') %in% installed.packages()){install.packages('sp')}
-library(sp)
+# if(!('sp') %in% installed.packages()){install.packages('sp')}
+# library(sp)
 
 reprojectElephantData <- function(elephant_dataset, crs = 'EPSG: 4326', new_crs = 'EPSG:32733'){
   

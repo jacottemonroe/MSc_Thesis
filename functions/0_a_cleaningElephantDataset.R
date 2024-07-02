@@ -1,6 +1,7 @@
 ## MSc Thesis 
-## Data Exploration 
+## Elephant Preprocessing
 ## Jacotte Monroe 
+## 29/01/24
 
 # function to clean dataset 
 # INPUT: elephant dataset, ID

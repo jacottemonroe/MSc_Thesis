@@ -1,18 +1,24 @@
 ## MSc Thesis
+## Elephant preprocessing
 ## Jacotte Monroe 
+## 29/01/24
 
-## Preprocessing 
+## Function script 
 
-## function to resample elephant dataset
+## Function resamples the elephant fixes to a fixed interval (default 4h).
+## Standalone gaps in the data after resampling are linearly interpolated. Consecutive missing points are left as missing data. 
+## Input: elephant fixes dataframe, time interval, acceptable gap of NA, interpolation method
+## Output: elephant fixes dataframe resampled and partially linearly interpolated (when applicable)
 
-if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for dataframe slicing & resampling & path spliting 
-library(dplyr)
+# necessary packages (already installed and loaded in main preprocessing script)
+# if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for dataframe slicing & resampling & path spliting 
+# library(dplyr)
+# if(!('padr') %in% installed.packages()){install.packages('padr')} # for resampling (thicken function)
+# library(padr)
+# if(!('zoo') %in% installed.packages()){install.packages('zoo')} # for linear interpolation
+# library(zoo)
 
-if(!('padr') %in% installed.packages()){install.packages('padr')} # for resampling (thicken function)
-library(padr)
 
-if(!('zoo') %in% installed.packages()){install.packages('zoo')} # for linear interpolation
-library(zoo)
 
 resampleElephantData <- function(elephant_data, time_interval = 4, acceptable_NA_gap = 1, interpolation_method = 'linear interpolation') {
   
@@ -37,9 +43,9 @@ resampleElephantData <- function(elephant_data, time_interval = 4, acceptable_NA
   elephant_gaps[elephant_gaps$date_time %in% elephant_resampled$resampled_time, ]$location.long = elephant_resampled$location.long
   elephant_gaps[elephant_gaps$date_time %in% elephant_resampled$resampled_time, ]$location.lat = elephant_resampled$location.lat
   
-  # calculate NA gap that is less than 24h 
-  #gap <- (24-time_interval)/time_interval
+  # specify the gap based on input parameters OR calculate NA gap that is less than 24h 
   gap <- acceptable_NA_gap
+  #gap <- (24-time_interval)/time_interval
   
   # interpolation of missing coordinate values (if gap is less than 24h, otherwise NAs remain)
   if (interpolation_method == 'linear interpolation'){
