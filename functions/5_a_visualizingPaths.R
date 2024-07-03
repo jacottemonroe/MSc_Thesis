@@ -1,17 +1,21 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
+## 19/03/24
+## Function script
 
 ## Visualization function of paths on mean MODIS NDVI
 
 # Function takes filenames of step dataset and MODIS mean NDVI (mean week value).
-# Note: Downscaling term makes the distinction between MODIS dataset that was retrieved without running any downscaling scripts (downscaling = NULL), 
-#         MODIS 250m retrieved through downscaling JN script (downscaling = F), MODIS 30m generated through downscaling in R (downscaling = T).
+# Note: Downscaling term makes the distinction between 1) MODIS dataset that was retrieved without running any downscaling scripts (skips step 3 bis) (downscaling = 'NULL'), 
+#         2) MODIS 250m retrieved through downscaling script step 3 bis (downscaling == F), 3) MODIS 30m generated through downscaling in R (downscaling == T).
 # Note: Specify downscaling model if downscaling = T --> should match last section of name of MODIS 30m folder 
 # Packages: tidyr (fill data frame column with values above), ggplot2 (general plotting), ggspatial and tidyterra (plot raster), 
 #           cowplot (retrieve plot legend), patchwork (create blank plot and mosaic plots together)
 # Input: filepaths for modis and step dataset, elephant ID and week of interest, 
 #         the map title, and the directory for output. All inputs are strings. 
 # Output: Map of filepaths on top of NDVI raster saved as png. 
+
+
 
 visualizePaths <- function(input_filepath, ID, week, random_data_method, downscaling= 'NULL', downscaling_model = 'ranger_full_selection',
                            input_suffix = '', title = 'Elephant Movement on NDVI', output_directory = 'output/', output_suffix = ''){
@@ -50,19 +54,6 @@ visualizePaths <- function(input_filepath, ID, week, random_data_method, downsca
   # read step dataset
   dat <- read.csv(paste0(input_filepath, '4_a1_cov_resp_dataset_', random_data_method, suffix, '.csv'), row.names = 1)
   dat$random_id_ <- as.factor(dat$random_id_)
-  # 
-  # # add new step ID column that restarts count at each burst (so doesn't connect the different paths) --> consistency in dataset
-  # dat$stepID <- NA
-  # 
-  # for(b in unique(dat$burst_)){
-  #   # select rows of that burst that are true
-  #   steps <- dat[dat$burst_ == b & dat$case_ == T,]
-  #   dat$stepID[min(as.numeric(steps$step_id_)):max(as.numeric(steps$step_id_))] <- 1:nrow(steps)
-  # }
-  # 
-  # # transfer the step ID of random steps to new column 
-  # # NOTE: could move the code to some other script (unless the columns are useful)
-  # dat$stepID[dat$case_ == F] <- dat$step_id_[dat$case_ == F]
   
   # new column for pathID --> every different path (true and false) has a different ID, necessary for plotting paths separately 
   dat$pathID <- NA
