@@ -58,14 +58,14 @@ library(lubridate)
 
 
 ### create directories 
-if(!dir.exists('data')){dir.create('data')}
+if(!dir.exists('data')){dir.create(file.path('data', 'elephant_etosha'), recursive = T)}
 if(!dir.exists('output')){dir.create('output')}
 
 
 
 ### load elephant dataset and set up parameters
 # define filename for elephant dataset *change accordingly*
-elephant_dataset_filename <- 'data/elephant_etosha/africanElephantEtoshaNP.csv'
+elephant_dataset_filename <- 'data/africanElephantEtoshaNP.csv'
 
 # read in the tracking data csv file 
 elephant_original_dataset <- read.table(file = elephant_dataset_filename, sep = ',', header = T)

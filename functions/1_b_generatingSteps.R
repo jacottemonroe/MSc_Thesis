@@ -1,6 +1,7 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-## Function SSF script 
+## 18/03/24
+## Function script 
 
 
 # Function that takes the elephant fixes dataset (as track object) and transforms it into steps
@@ -10,6 +11,9 @@
 #   distribution type for step length and turning angle (string), output filename (string).
 #   
 # Output: step dataset saved as csv 
+
+# NOTE: This script has kept the option of generating pseudo-absence steps by means of 1) sampling from density distributions, 
+#       2) buffering the points 3) randomly generating single step at each step. THE FIRST METHOD SHOULD BE USED (SET AS DEFAULT ALREADY). The other methods are less realistic.
 
 # if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)
 # library(dplyr)
@@ -89,7 +93,7 @@ generateSteps <- function(track_dataset_directory,
   
   ##### generate random pseudo-absence paths 
 
-  source('functions_elephant_ssf/1_b_generatingRandomPath.R')
+  source('functions/1_b_generatingRandomPath.R')
   
   if(random_data_method == 'random_path_custom_distr'){
     

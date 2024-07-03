@@ -1,6 +1,7 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-## Function SSF script 
+## 18/03/24
+## Function script 
 
 
 # Function that takes the elephant dataset of steps and derives the spatiotemporal extents of the dataset

@@ -46,7 +46,7 @@ print(paste('Now creating step extent look-up table for elephant', ID, 'of week'
 ###########
 
 # load function 
-source('functions_elephant_ssf/2_a_creatingStepExtentsLUT.R')
+source('functions/2_a_creatingStepExtentsLUT.R')
 
 # necessary packages 
 if(!('dplyr') %in% installed.packages()){install.packages('dplyr')} #for grouping in table (max/min)

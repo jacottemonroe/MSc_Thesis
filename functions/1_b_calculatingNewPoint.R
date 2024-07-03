@@ -1,7 +1,7 @@
 ## MSc Thesis 
 ## Jacotet Monroe 
-
-## Function elephant modeling script
+## 18/03/24
+## Function script
 
 # Function takes initial (x,y) coordinates, a step length and turning angle. The position is shifted by doing basic trigonometry.
 # The coordinates of the new position are returned.  

@@ -1,7 +1,7 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-
-## Function elephant modeling script
+## 18/03/24
+## Function script
 
 # Function takes the true observations and corresponding probability density distribution, 
 #   samples a random x value from uniform distribution bounded by min and max observation values (to keep it realistic), 
