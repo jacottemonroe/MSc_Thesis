@@ -1,37 +1,50 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
+## 13/05/24
+## Downscaling
 
-## Run main steps and functions
+# Note: Have run 3bis_RetrieveDownscalingImages.ipynb beforehand to have the images necessary for downscaling.
 
-# Packages 
+## Main script for downscaling the MODIS NDVI 250m images to MODIS NDVI 30m by fusing with Landsat images. 
+## Step 1: Landsat subscenes are stitched back together into full scenes (this was done due to computational limitations when retrieving large scenes). 
+## Step 2: Match the Landsat and MODIS scenes in a look-up table (LUT). 
+## Step 3: Stack MODIS NDVI 250m scenes with corresponding resampled Landsat images (250m) according to LUT. 
+## Step 4: Create training set as sample points with Landsat bands and band-ratios (predictors) and MODIS NDVI 250m (response variable). 
+## Step 5: Train Random Forest regression with k-fold cross validation. 
+## Step 6: Stack MODIS NDVI 250m scenes with corresponding original Landsat images (30m) according to LUT. 
+## Step 7: Predict MODIS 30m with trained Random Forest model, using Landsat bands and band-ratios (30m) as predictors. 
+## Input: 
+##       3_b1_modis_images_downscaling (directory) --> [dateDailyMODISNDVI250m].tif 
+##       3_b2_landsat_images_downscaling (directory) --> [subSceneGridPositionLevel1_subSceneGridPositionLevel2] (directory) x 16 --> LC08_17907[3/4]_[DateLandsat].tif 
+## Output: 
+##       Stitched Landsat scenes (intermediate product).
+##       MODIS NDVI 30m scenes.
+
+
+# necessary packages 
 if(!('terra') %in% installed.packages()){install.packages('terra')}
 library(terra)
 if(!('sf') %in% installed.packages()){install.packages('sf')} # to read rasters
 library(sf)
-if(!('CAST') %in% installed.packages()){install.packages('CAST')} # to read rasters
+if(!('CAST') %in% installed.packages()){install.packages('CAST')}
 library(CAST)
-if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
+if(!('caret') %in% installed.packages()){install.packages('caret')} 
 library(caret)
 if(!('car') %in% installed.packages()){install.packages('car')} 
 library(car)
 if(!('ranger') %in% installed.packages()){install.packages('ranger')} # fit Random Forest regression 
 library(ranger)
-
 if(!('ggplot2') %in% installed.packages()){install.packages('ggplot2')} # to plot timeseries
 library(ggplot2)
-
+if(!('tidyterra') %in% installed.packages()){install.packages('tidyterra')} 
 library(tidyterra)
 
 
 
 
 # read run settings 
-run_table <- read.csv('data/run_settings_downscaling_full.csv', row.names = 1)[c(7, 8, 9),]
-#row.names(run_table) <- 1:nrow(run_table)
+run_table <- read.csv('data/run_settings_downscaling_final.csv', row.names = 1)[c(7, 8, 9),]
 
-# ID <- run_table$ID[i]
-# week <- run_table$week[i]
-# pseudo_abs_method <- run_table$pseudo_abs_method[i]
 
 for(i in 1:nrow(run_table)){
   
@@ -79,7 +92,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_b_stitchingScenes.R')
+  source('functions/3bis_b_stitchingScenes.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -99,7 +112,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_c_creatingLUT.R')
+  source('functions_elephant_ssf/3bis_c_creatingLUT.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -123,7 +136,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
+  source('functions/3bis_d_creatingCovariatesSets.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -148,7 +161,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_e_samplingTrainingPoints.R')
+  source('functions/3bis_e_samplingTrainingPoints.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -170,11 +183,11 @@ for(i in 1:nrow(run_table)){
   
   
   ###########
-  ## fit regressions with k-fold cross validation 
+  ## fit Random Forest regression with k-fold cross validation 
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_f_fittingRegressions.R')
+  source('functions/3bis_f_fittingRegressions.R')
   
   # # necessary packages 
   # if(!('caret') %in% installed.packages()){install.packages('caret')} # to read rasters
@@ -205,7 +218,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_d_creatingCovariatesSets.R')
+  source('functions/3bis_d_creatingCovariatesSets.R')
   
   # necessary packages 
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -232,7 +245,7 @@ for(i in 1:nrow(run_table)){
   ###########
   
   # load function 
-  source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+  source('functions/3bis_g_predictingDownscaledModis.R')
   
   # necessary packages
   # if(!('terra') %in% installed.packages()){install.packages('terra')}
@@ -260,7 +273,7 @@ for(i in 1:nrow(run_table)){
   # ###########
   # 
   # # load function 
-  # source('functions_elephant_ssf/3_g_predictingDownscaledModis.R')
+  # source('functions/3bis_g_predictingDownscaledModis.R')
   # 
   # # necessary packages 
   # # if(!('terra') %in% installed.packages()){install.packages('terra')}

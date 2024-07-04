@@ -1,11 +1,13 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-## Downscaling script 
+## 13/05/24
+## Downscaling
+## Function script
 
 ## Function that loads a MODIS 250m raster image and its corresponding Landsat 8 30m image.
 ## The outliers in L8 surface reflectance and MODIS NDVI (negative values) are masked or set to 0.
 ## Then the Landsat image is upscaled to 250m to match the MODIS resolution. 
-## Band ratios are calculated for the Landsta 8 raster and returned in addition to the original bands as covariates. 
+## Band ratios are calculated for the Landsat 8 raster and returned in addition to the original bands as covariates. 
 ## Input: the filepaths for the Landsat and MODIS images and an optional output name for covariates/response dataset. Also ID, week, and method.
 ## Output: a SpatRaster dataset containing the L8 bands at 250m (covariates) and the MODIS NDVI as a layer.
 

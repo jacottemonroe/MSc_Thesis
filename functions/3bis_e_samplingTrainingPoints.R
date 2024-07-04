@@ -1,16 +1,15 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-## Downscaling Script 
+## 13/05/24
+## Downscaling
+## Function script
 
 ## Function samples regularly spaced points from the dataset of covariates and response. 
 ## The points get an ID depending on where they are in the image (grid ID), as well as the covariates and response values.
 ## A set of folds is defined for cross-validation (9 folds corresponding to the grid cells). 
+
 ## Input: dataset path, ID, week, the date of interest, output directory.
 ## Output: the sampled training points (saved as RDS) and the list of point indices in each CV fold (saved as RDS).
-
-
-
-
 
 
 

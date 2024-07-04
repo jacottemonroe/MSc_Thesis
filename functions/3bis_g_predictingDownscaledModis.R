@@ -1,6 +1,8 @@
 ## MSc_Thesis
 ## Jacotte Monroe 
-## Downscaling function 
+## 13/05/24
+## Downscaling
+## Function script
 
 ## Function takes a raster of covariates and a model. 
 ## It predicts MODIS 30m from the Landsat covariate raster using the specified model.

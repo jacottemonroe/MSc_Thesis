@@ -1,10 +1,12 @@
 ## MSc Thesis 
 ## Jacotte Monroe 
-## Downscaling Script
+## 13/05/24
+## Downscaling
+## Function script
 
-## Functions that take the dataset and sampling points and fit different regressions (linear, cubist, or random forest). 
+## Functions that take the dataset and sampling points and fit different regressions (linear, cubist, or random forest). RF = default.
 ## There is an option to run the model with all predictors or to set certain predictors to run. 
-## It is also possible to run a forward feature selection to select the optimal model. 
+## It is also possible to run a forward feature selection to select the optimal model. Default = OFF (takes time).
 ## Each model is trained on the sampled points and validated through a 9-fold cross-validation. 
 ## The full image is then predicted and the R², RMSE, and MAE are calculated. 
 ## Necessary packages: caret, car (for vif), terra, ranger, CAST (for ffs)
