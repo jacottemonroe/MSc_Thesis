@@ -1,3 +1,13 @@
+## MSc Thesis 
+## Jacotte Monroe 
+## 10/06/24
+## Visualization script 
+
+
+## Script compares the timeseries of estimated mean NDVI coefficient from GLM models against the mean daily NDVI of true steps 
+##    and the accumulated precipitation for the entire Etosha national park. 
+## The timeseries for the accumulated precipitation was generated in GEE and manually downloaded as csv. 
+## GEE script: https://code.earthengine.google.com/95f09938b192e02838b86aea1f180803
 
 
 run_table <- read.csv('data/run_settings_LTS_final.csv', row.names = 1)
@@ -75,6 +85,11 @@ ggplot() +
   theme(axis.text.y.right = element_text(color = 'red3'), 
         axis.text.y.left = element_text(color = '#80C626')) + 
   xlab('Time')
+
+
+
+
+
 
 # FOR STS timeseries
 ggplot() + 
