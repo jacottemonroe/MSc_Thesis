@@ -26,7 +26,9 @@ The model results and performance metrics are then compiled in three ways:
 
 The repository contains some preliminary logistics files, such as a license, this README file, and a yaml file to set up the proper environment (see [Installation]). More importantly, the scripts used to process and analyze the data are numbered chronologically by step of the project, starting with elephant data pre-processing and ending with some scripts to visualize the modeled response as time-series. Steps 1 and 2 can be automated for each iteration (weekly elephant data) by running the *Main_runSteps1_2.sh* bash script. Similarly *Main_runSteps4_5_6.sh* iterates through the run table, automatically running steps 4, 5, and 6 for each week of elephant data. A full run table of all elephant datasets can be compiled by running *0_PreprocessingElephantFixData.R.* However, the exact run tables are provided in the *run_tables* directory to generate the short time-series, long time-series, and downscaled models. The scripts corresponding to downscaling are distinguished, in Figure 1, as dashed, as they are optional steps to run in the process. Each (pre)processing script is structured with a heading describing the purpose of the script. Finally, the functions corresponding to the scripts can be found in the *functions* directory. The *extra_functions_deprecated* directory can be ignored, as none of the functions are necessary to run the script (they are a trace of historical attempts that I wish to keep).
 
-![Figure 1: Project structure diagram.](Project_structure_flowchart.png)
+![](Project_structure_flowchart.png)
+
+*Figure 1: Project structure diagram.*
 
 \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
