@@ -64,9 +64,9 @@ The repository contains some preliminary logistics files, such as a license, thi
 
 1.  First, check that the environment has been set up and that it is activated.
 
-2.  Manually retrieve the elephant data from Movebank (see [Data Sources]). Place the file renamed *africanElephantEtoshaNP.csv* in a *data* directory.
+2.  The elephant data is provided in the *data* folder or can be manually retrieved from Movebank (see [Data Sources]). Check that the file is named *africanElephantEtoshaNP.csv* and located in a *data* directory. The metadata can be found in the file *africanElephantEtoshaNP_referenceData.csv.*
 
-3.  You can now run the pre-processing script (step 0) *0_PreprocessingElephantFixData.R* in RStudio. This will clean the raw data and generate different datasets for each elephant.
+3.  You can now run the pre-processing script (step 0) *0_PreprocessingElephantFixData.R* in RStudio. This will clean the raw data and generate different datasets for each elephant. One of the outputs is a run table for running each week of elephant data. The *data* folder also contains the exact run tables of the datasets that were run in the thesis (as some weeks were omitted due to insufficient data).
 
 4.  We now want to transform the elephant fixes into movement data for each week of elephant data. This can be done by running manually step 1 and 2 scripts or automating the process by running *main_runSteps1_2.sh* in the terminal. *Note: You may need to give permission for the file to be read.*
 
